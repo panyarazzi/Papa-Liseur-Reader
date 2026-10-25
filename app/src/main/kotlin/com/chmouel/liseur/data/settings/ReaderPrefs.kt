@@ -217,6 +217,7 @@ enum class FooterMode(val id: String) {
      * the middle one would jump every time the font size did.
      */
     PAGES_LEFT_CHAPTER("pages_chapter"),
+    PAGES_LEFT_CHAPTER_TITLE("pages_chapter_title"),
     TIME_LEFT_BOOK("time_book"),
     CHAPTER_TITLE("chapter"),
     EMPTY("empty"),
