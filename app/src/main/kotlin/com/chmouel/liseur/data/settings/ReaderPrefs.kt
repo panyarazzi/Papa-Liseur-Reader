@@ -855,7 +855,7 @@ data class ReaderPrefs(
 ) {
     companion object {
         const val MIN_FONT_SIZE = 0.6
-        const val MAX_FONT_SIZE = 2.5
+        const val MAX_FONT_SIZE = 3.5
 
         /**
          * How many sizes the reader can actually choose between.
