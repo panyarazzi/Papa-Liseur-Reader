@@ -50,6 +50,23 @@ class ReaderPreferencesRepositoryTest {
     }
 
     @Test
+    fun `reader display preferences persist and are clamped`() = runTest {
+        val repo = ReaderPreferencesRepository(store())
+        repo.setFullscreen(true)
+        repo.setTopProgressMode(TopProgressMode.PAGES_LEFT_CHAPTER_TITLE)
+        repo.setProgressFontSizeSp(25f)
+        repo.setMarginTopDp(60f)
+        repo.setMarginBottomDp(-4f)
+
+        val prefs = repo.prefs.first()
+        assertTrue(prefs.isFullscreen)
+        assertEquals(TopProgressMode.PAGES_LEFT_CHAPTER_TITLE, prefs.topProgressMode)
+        assertEquals(20f, prefs.progressFontSizeSp)
+        assertEquals(48f, prefs.marginTopDp)
+        assertEquals(0f, prefs.marginBottomDp)
+    }
+
+    @Test
     fun `a reader who never chose a size reads at the default`() = runTest {
         val repo = ReaderPreferencesRepository(store())
         assertEquals(ReaderPrefs.DEFAULT_FONT_SIZE, repo.prefs.first().fontSize, 0.0)
