@@ -66,6 +66,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextOverflow
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -3241,7 +3242,7 @@ internal fun ReaderScreen(
             navigateLater(target.locator, NavigatorPositionEvent.LOCAL_JUMP)
         }
     }
-    ImmersiveMode(hideSystemBars = !chromeVisible)
+    ImmersiveMode(hideSystemBars = prefs.isFullscreen || !chromeVisible)
     // While the way-back pill shows, Back takes it (#275). This must be
     // registered before the overlays' handlers: the last one registered
     // wins, so search, the contents, a footnote or an image still close
@@ -3837,8 +3838,12 @@ internal fun ReaderScreen(
                             Modifier
                                 .windowInsetsPadding(WindowInsets.displayCutout)
                                 .padding(
-                                    top = 12.dp,
-                                    bottom = if (footerShowing) footerReserve else 12.dp,
+                                    top = (prefs.marginTopDp +
+                                        if (prefs.topProgressMode != TopProgressMode.OFF) {
+                                            prefs.progressFontSizeSp * 1.5f + 8f
+                                        } else 0f).dp,
+                                    bottom = (prefs.marginBottomDp +
+                                        if (footerShowing) footerReserve.value else 0f).dp,
                                 )
                         },
                     ),
@@ -3934,6 +3939,41 @@ internal fun ReaderScreen(
                 placed.mapTo(mutableSetOf(), PageSwap::by)
             }.distinctUntilChanged()
         }.collectAsStateWithLifecycle(emptySet())
+        if (!showingEnd && !chromeVisible && prefs.topProgressMode != TopProgressMode.OFF) {
+            val topProgressText = when (prefs.topProgressMode) {
+                TopProgressMode.OFF -> null
+                TopProgressMode.PERCENT -> progress?.let { "${it.percent}%" }
+                TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> progress?.let { current ->
+                    val title = current.chapterTitle?.takeIf { it.isNotBlank() }
+                    val pagesLeft = if (reflowableText) {
+                        sectionScreens?.let { (it.screens - it.screen).coerceAtLeast(0) }
+                    } else {
+                        current.positionsLeftInChapter
+                    }
+                    when {
+                        pagesLeft != null && title != null -> "${pagesLeft} pages left • ${title}"
+                        title != null -> title
+                        pagesLeft != null -> "${pagesLeft} pages left"
+                        else -> null
+                    }
+                }
+            }
+            topProgressText?.let { label ->
+                Text(
+                    text = label,
+                    color = readingTheme.foreground.copy(alpha = 0.72f),
+                    fontSize = prefs.progressFontSizeSp.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .then(behindViewer)
+                        .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                        .padding(start = 12.dp, end = 12.dp, top = 2.dp),
+                )
+            }
+        }
+
         if (!showingEnd && !chromeVisible && shownTranslation != null) {
             Row(
                 verticalAlignment = Alignment.Top,
