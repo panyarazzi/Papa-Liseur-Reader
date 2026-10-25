@@ -77,6 +77,7 @@ import com.chmouel.liseur.data.settings.ReaderPrefs
 import com.chmouel.liseur.data.settings.ReaderTextAlign
 import com.chmouel.liseur.data.settings.ReaderThemeChoice
 import com.chmouel.liseur.data.settings.TapZones
+import com.chmouel.liseur.data.settings.TopProgressMode
 import com.chmouel.liseur.data.settings.TypographyRange
 import com.chmouel.liseur.domain.EPSILON
 import com.chmouel.liseur.domain.SeriesExtras
@@ -2894,6 +2895,26 @@ class ReaderViewModel(
         shared = { prefsRepo.setPageMargins(value) },
         own = { it.copy(pageMargins = TypographyRange.PAGE_MARGINS.sanitize(value)) },
     )
+
+    fun setFullscreen(enabled: Boolean) = viewModelScope.launch {
+        prefsRepo.setFullscreen(enabled)
+    }
+
+    fun setTopProgressMode(mode: TopProgressMode) = viewModelScope.launch {
+        prefsRepo.setTopProgressMode(mode)
+    }
+
+    fun setProgressFontSizeSp(value: Float) = viewModelScope.launch {
+        prefsRepo.setProgressFontSizeSp(value)
+    }
+
+    fun setMarginTopDp(value: Float) = viewModelScope.launch {
+        prefsRepo.setMarginTopDp(value)
+    }
+
+    fun setMarginBottomDp(value: Float) = viewModelScope.launch {
+        prefsRepo.setMarginBottomDp(value)
+    }
 
     /**
      * The fine typography settings, which go to the shared store even
