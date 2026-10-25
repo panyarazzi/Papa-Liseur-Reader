@@ -4,20 +4,20 @@ object ProgressFormatter {
     fun formatProgress(
         mode: String,
         pagesLeftInChapter: Int,
-        chapterTitle: String?,
+        chapterTitle: String,
         currentChapterPage: Int,
         totalChapterPages: Int,
         totalProgressPercent: Float
     ): String {
         return when (mode) {
             "OFF" -> ""
-            "PERCENTAGE" -> "${(totalProgressPercent * 100).toInt()}%"
-            "PAGE_IN_CHAPTER" -> "$currentChapterPage / $totalChapterPages"
-            else -> {
-                val title = if (!chapterTitle.isNullOrBlank()) chapterTitle else "Current Chapter"
-                val pagesText = if (pagesLeftInChapter <= 1) "1 page left" else "$pagesLeftInChapter pages left"
-                "$pagesText • $title"
+            "CHAPTER_LEFT_WITH_TITLE" -> {
+                val titlePart = if (chapterTitle.isNotBlank()) chapterTitle else "บทปัจจุบัน"
+                "$pagesLeftInChapter หน้าที่เหลือ • $titlePart"
             }
+            "PERCENTAGE" -> "${String.format("%.1f", totalProgressPercent)}%"
+            "PAGES_CURRENT_TOTAL" -> "$currentChapterPage / $totalChapterPages หน้า"
+            else -> "$pagesLeftInChapter หน้าที่เหลือ"
         }
     }
 }
