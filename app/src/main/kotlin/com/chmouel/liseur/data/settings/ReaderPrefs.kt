@@ -185,6 +185,18 @@ enum class ReaderThemeChoice(val id: String, val palette: ReaderTheme?) {
  * and are always drawn; this enum only decides the slot between them,
  * and tapping the footer cycles it.
  */
+enum class TopProgressMode(val id: String) {
+    OFF("off"),
+    PERCENT("percent"),
+    PAGES_LEFT_CHAPTER_TITLE("pages_chapter_title"),
+    ;
+
+    companion object {
+        val Default = OFF
+        fun fromId(id: String?): TopProgressMode = entries.firstOrNull { it.id == id } ?: Default
+    }
+}
+
 enum class FooterMode(val id: String) {
     /**
      * Time left in the chapter once a reading pace has actually been
@@ -852,6 +864,11 @@ data class ReaderPrefs(
     val letterSpacing: Double? = null,
     val wordSpacing: Double? = null,
     val paragraphSpacing: Double? = null,
+    val isFullscreen: Boolean = false,
+    val topProgressMode: TopProgressMode = TopProgressMode.Default,
+    val progressFontSizeSp: Float = 12f,
+    val marginTopDp: Float = 12f,
+    val marginBottomDp: Float = 12f,
 ) {
     companion object {
         const val MIN_FONT_SIZE = 0.6
