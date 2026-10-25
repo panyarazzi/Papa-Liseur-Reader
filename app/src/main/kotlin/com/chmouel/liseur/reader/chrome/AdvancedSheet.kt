@@ -36,6 +36,7 @@ import com.chmouel.liseur.data.settings.FooterField
 import com.chmouel.liseur.data.settings.FooterSlot
 import com.chmouel.liseur.data.settings.PageTurnStyle
 import com.chmouel.liseur.data.settings.ReaderPrefs
+import com.chmouel.liseur.data.settings.TopProgressMode
 import com.chmouel.liseur.data.settings.ReadingCss
 import com.chmouel.liseur.reader.annotations.HighlightPalette
 import com.chmouel.liseur.reader.annotations.HighlightTint
@@ -97,6 +98,11 @@ fun AdvancedSheet(
     fineTypography: FineTypographyActions,
     onLineHeightChanged: (Double?) -> Unit,
     onPageMarginsChanged: (Double?) -> Unit,
+    onFullscreenChanged: (Boolean) -> Unit,
+    onTopProgressModeChanged: (TopProgressMode) -> Unit,
+    onProgressFontSizeChanged: (Float) -> Unit,
+    onMarginTopChanged: (Float) -> Unit,
+    onMarginBottomChanged: (Float) -> Unit,
     onColumnModeChanged: (ColumnMode) -> Unit,
     onFooterModeChanged: (FooterMode) -> Unit,
     onFooterFieldChanged: (FooterSlot, FooterField) -> Unit,
@@ -142,6 +148,14 @@ fun AdvancedSheet(
                 onLineHeightChanged = onLineHeightChanged,
                 onPageMarginsChanged = onPageMarginsChanged,
                 onColumnModeChanged = onColumnModeChanged,
+            )
+            ReaderChromePreferencesControls(
+                prefs = prefs,
+                onFullscreenChanged = onFullscreenChanged,
+                onTopProgressModeChanged = onTopProgressModeChanged,
+                onProgressFontSizeChanged = onProgressFontSizeChanged,
+                onMarginTopChanged = onMarginTopChanged,
+                onMarginBottomChanged = onMarginBottomChanged,
             )
             ReadingFineTypographyControls(
                 prefs = prefs,
@@ -357,3 +371,86 @@ private fun AutoScrollSpeedSlider(value: Float, onChanged: (Float) -> Unit) {
         }
     }
 }
+
+
+@Composable
+private fun ReaderChromePreferencesControls(
+    prefs: ReaderPrefs,
+    onFullscreenChanged: (Boolean) -> Unit,
+    onTopProgressModeChanged: (TopProgressMode) -> Unit,
+    onProgressFontSizeChanged: (Float) -> Unit,
+    onMarginTopChanged: (Float) -> Unit,
+    onMarginBottomChanged: (Float) -> Unit,
+) {
+    var progressSize by remember(prefs.progressFontSizeSp) {
+        mutableFloatStateOf(prefs.progressFontSizeSp)
+    }
+    var marginTop by remember(prefs.marginTopDp) { mutableFloatStateOf(prefs.marginTopDp) }
+    var marginBottom by remember(prefs.marginBottomDp) { mutableFloatStateOf(prefs.marginBottomDp) }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        ReadingSectionLabel("Reader display")
+        Row(
+            modifier = Modifier.fillMaxWidth().toggleable(
+                value = prefs.isFullscreen,
+                role = Role.Switch,
+                onValueChange = onFullscreenChanged,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Fullscreen", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            Switch(checked = prefs.isFullscreen, onCheckedChange = null)
+        }
+        Column {
+            Text("Top progress: ${prefs.topProgressMode.label}", style = MaterialTheme.typography.bodyLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TopProgressMode.entries.forEach { mode ->
+                    Text(
+                        text = mode.label,
+                        modifier = Modifier
+                            .clickable(role = Role.Button) { onTopProgressModeChanged(mode) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        color = if (mode == prefs.topProgressMode) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        Column {
+            Text("Progress text size: ${progressSize.toInt()} sp", style = MaterialTheme.typography.bodyLarge)
+            Slider(
+                value = progressSize,
+                onValueChange = { progressSize = it },
+                onValueChangeFinished = { onProgressFontSizeChanged(progressSize) },
+                valueRange = 9f..20f,
+                steps = 10,
+            )
+        }
+        Column {
+            Text("Top margin: ${marginTop.toInt()} dp", style = MaterialTheme.typography.bodyLarge)
+            Slider(
+                value = marginTop,
+                onValueChange = { marginTop = it },
+                onValueChangeFinished = { onMarginTopChanged(marginTop) },
+                valueRange = 0f..48f,
+                steps = 47,
+            )
+        }
+        Column {
+            Text("Bottom margin: ${marginBottom.toInt()} dp", style = MaterialTheme.typography.bodyLarge)
+            Slider(
+                value = marginBottom,
+                onValueChange = { marginBottom = it },
+                onValueChangeFinished = { onMarginBottomChanged(marginBottom) },
+                valueRange = 0f..48f,
+                steps = 47,
+            )
+        }
+    }
+}
+
+private val TopProgressMode.label: String
+    get() = when (this) {
+        TopProgressMode.OFF -> "Off"
+        TopProgressMode.PERCENT -> "Percent"
+        TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> "Pages left + chapter"
+    }
