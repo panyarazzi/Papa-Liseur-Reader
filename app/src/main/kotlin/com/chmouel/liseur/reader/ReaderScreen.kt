@@ -3831,9 +3831,17 @@ internal fun ReaderScreen(
                     .then(behindViewer)
                     .then(
                         if (pageContainerScrolls) {
-                            Modifier.windowInsetsPadding(
-                                WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal),
-                            )
+                            Modifier
+                                .windowInsetsPadding(
+                                    WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal),
+                                )
+                                .padding(
+                                    top = (prefs.marginTopDp +
+                                        if (prefs.topProgressMode != TopProgressMode.OFF) {
+                                            prefs.progressFontSizeSp * 1.5f + 8f
+                                        } else 0f).dp,
+                                    bottom = prefs.marginBottomDp.dp,
+                                )
                         } else {
                             Modifier
                                 .windowInsetsPadding(WindowInsets.displayCutout)
