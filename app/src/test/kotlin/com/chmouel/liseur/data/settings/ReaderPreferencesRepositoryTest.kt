@@ -61,9 +61,9 @@ class ReaderPreferencesRepositoryTest {
         val prefs = repo.prefs.first()
         assertTrue(prefs.isFullscreen)
         assertEquals(TopProgressMode.PAGES_LEFT_CHAPTER_TITLE, prefs.topProgressMode)
-        assertEquals(20f, prefs.progressFontSizeSp)
-        assertEquals(48f, prefs.marginTopDp)
-        assertEquals(0f, prefs.marginBottomDp)
+        assertEquals(20f, prefs.progressFontSizeSp, 0f)
+        assertEquals(48f, prefs.marginTopDp, 0f)
+        assertEquals(0f, prefs.marginBottomDp, 0f)
     }
 
     @Test
