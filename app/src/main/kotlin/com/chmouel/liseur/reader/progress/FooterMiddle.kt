@@ -15,6 +15,7 @@ sealed interface FooterMiddle {
      * business rather than this decision's.
      */
     data class PagesInChapter(val pages: Int) : FooterMiddle
+    data class PagesAndChapter(val pages: Int, val title: String) : FooterMiddle
 }
 
 /**
@@ -49,6 +50,12 @@ fun footerMiddle(
 
     FooterMode.PAGES_LEFT_CHAPTER ->
         pagesLeftInChapter(progress, reflowable, screens)?.let(FooterMiddle::PagesInChapter)
+
+    FooterMode.PAGES_LEFT_CHAPTER_TITLE -> {
+        val title = progress.chapterTitle?.takeIf { it.isNotBlank() }
+        val pages = pagesLeftInChapter(progress, reflowable, screens)
+        if (title != null && pages != null) FooterMiddle.PagesAndChapter(pages, title) else null
+    }
 
     FooterMode.TIME_LEFT_BOOK -> FooterMiddle.TimeInBook(progress.minutesLeftInBook)
 
