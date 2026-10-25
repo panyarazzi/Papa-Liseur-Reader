@@ -867,7 +867,7 @@ data class ReaderPrefs(
          *
          * @see FONT_SIZE_SLIDER_STEPS
          */
-        const val FONT_SIZE_POSITIONS = 19
+        const val FONT_SIZE_POSITIONS = 30
         const val FONT_SIZE_SLIDER_STEPS = FONT_SIZE_POSITIONS - 2
 
         /**
