@@ -22,11 +22,11 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Build FOSS Debug APK
-      run: ./gradlew assembleFossDebug
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-foss-debug-apk
-        path: app/build/outputs/apk/foss/debug/app-foss-debug-apk.apk
+        name: app-debug-apk
+        path: app/build/outputs/apk/**/*.apk
