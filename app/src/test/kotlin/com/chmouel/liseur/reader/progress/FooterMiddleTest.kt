@@ -74,6 +74,25 @@ class FooterMiddleTest {
     }
 
     @Test
+    fun `combined chapter mode shows pages left and the actual chapter title`() {
+        assertEquals(
+            FooterMiddle.PagesAndChapter(17, "The Sign of Four"),
+            footerMiddle(progress, FooterMode.PAGES_LEFT_CHAPTER_TITLE),
+        )
+    }
+
+    @Test
+    fun `combined chapter mode stays blank if the title or count is unknown`() {
+        assertNull(footerMiddle(progress.copy(chapterTitle = null), FooterMode.PAGES_LEFT_CHAPTER_TITLE))
+        assertNull(
+            footerMiddle(
+                progress.copy(positionsLeftInChapter = null),
+                FooterMode.PAGES_LEFT_CHAPTER_TITLE,
+            ),
+        )
+    }
+
+    @Test
     fun `the chapter's last page is kept as a count of zero`() {
         // Wording it is the footer's business; dropping it here would
         // blank the slot on the one page of the chapter that has
