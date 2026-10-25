@@ -178,6 +178,7 @@ import com.chmouel.liseur.reader.footnotes.SameDocumentLinks
 import com.chmouel.liseur.data.settings.FooterField
 import com.chmouel.liseur.data.settings.FooterMode
 import com.chmouel.liseur.data.settings.FooterSlot
+import com.chmouel.liseur.data.settings.TopProgressMode
 import com.chmouel.liseur.data.settings.footerHasAnythingToSay
 import com.chmouel.liseur.data.settings.ColumnMode
 import com.chmouel.liseur.data.settings.PageTurnStyle
@@ -5017,6 +5018,11 @@ internal fun ReaderScreen(
             fineTypography = onPrefsAction.fineTypography,
             onLineHeightChanged = onPrefsAction.setLineHeight,
             onPageMarginsChanged = onPrefsAction.setPageMargins,
+            onFullscreenChanged = onPrefsAction.setFullscreen,
+            onTopProgressModeChanged = onPrefsAction.setTopProgressMode,
+            onProgressFontSizeChanged = onPrefsAction.setProgressFontSizeSp,
+            onMarginTopChanged = onPrefsAction.setMarginTopDp,
+            onMarginBottomChanged = onPrefsAction.setMarginBottomDp,
             onColumnModeChanged = onPrefsAction.setColumnMode,
             onFooterModeChanged = onProgressAction.setFooterMode,
             onFooterFieldChanged = onProgressAction.setFooterField,
@@ -5421,6 +5427,11 @@ class ReaderPrefsActions(
     val setTheme: (ReaderThemeChoice) -> Unit,
     val setLineHeight: (Double?) -> Unit,
     val setPageMargins: (Double?) -> Unit,
+    val setFullscreen: (Boolean) -> Unit,
+    val setTopProgressMode: (TopProgressMode) -> Unit,
+    val setProgressFontSizeSp: (Float) -> Unit,
+    val setMarginTopDp: (Float) -> Unit,
+    val setMarginBottomDp: (Float) -> Unit,
     val setBrightness: (Float?) -> Unit,
     val setPageTurnStyle: (PageTurnStyle) -> Unit,
     val setColumnMode: (ColumnMode) -> Unit,
