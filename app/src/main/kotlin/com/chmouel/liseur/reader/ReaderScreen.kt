@@ -730,7 +730,7 @@ internal fun ReaderScreen(
     // failed to recognise, or not on one we wrongly did, gets the
     // gesture back by setting E-ink mode themselves. That is the only
     // reason the mode keeps a manual override (ADR 22).
-    val pinchToResizeNow by rememberUpdatedState(pinchToResize && !LocalEInk.current)
+    val pinchToResizeNow by rememberUpdatedState(pinchToResize)
     val fontSizeNow by rememberUpdatedState(prefs.fontSize)
     val setFontSizeNow by rememberUpdatedState(onPrefsAction.setFontSize)
     val touch = remember { TouchProbe() }
