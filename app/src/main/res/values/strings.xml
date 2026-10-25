@@ -740,6 +740,7 @@
     <string name="reader_auto_scroll_speed_value">Speed %1$d</string>
     <string name="footer_mode_smart">Time left, or the chapter</string>
     <string name="footer_mode_pages_chapter">Pages left in chapter</string>
+    <string name="footer_mode_pages_chapter_title">Pages left • chapter title</string>
     <string name="footer_mode_time_book">Time left in book</string>
     <string name="footer_mode_chapter">Chapter title</string>
     <string name="footer_mode_empty">Nothing in the middle</string>
