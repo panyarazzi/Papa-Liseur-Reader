@@ -3850,7 +3850,7 @@ internal fun ReaderScreen(
                                             prefs.progressFontSizeSp * 1.5f + 8f
                                         } else 0f).dp,
                                     bottom = (prefs.marginBottomDp +
-                                        if (footerShowing) footerReserve.value else 0f).dp,
+                                        if (footerShowing) footerReserve else 0f).dp,
                                 )
                         },
                     ),
