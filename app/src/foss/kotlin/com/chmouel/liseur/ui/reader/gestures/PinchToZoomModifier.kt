@@ -8,12 +8,14 @@ fun Modifier.pinchToZoomFont(
     enabled: Boolean,
     currentScale: Float,
     maxScale: Float,
-    minScale: Float = 0.6f,
     onScaleChanged: (Float) -> Unit
-): Modifier = if (!enabled) this else this.pointerInput(Unit) {
-    var accumulatedZoom = currentScale
-    detectTransformGestures { _, _, zoom, _ ->
-        accumulatedZoom = (accumulatedZoom * zoom).coerceIn(minScale, maxScale)
-        onScaleChanged(accumulatedZoom)
+): Modifier = if (enabled) {
+    this.pointerInput(Unit) {
+        detectTransformGestures { _, _, zoom, _ ->
+            val newScale = (currentScale * zoom).coerceIn(0.7f, maxScale)
+            onScaleChanged(newScale)
+        }
     }
+} else {
+    this
 }
