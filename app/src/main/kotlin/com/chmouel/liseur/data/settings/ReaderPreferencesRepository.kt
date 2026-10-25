@@ -30,6 +30,11 @@ internal val READER_BACKUP_TYPES = mapOf(
     "font_weight" to BackupValueType.STRING, "hyphens" to BackupValueType.BOOLEAN,
     "letter_spacing" to BackupValueType.DOUBLE, "word_spacing" to BackupValueType.DOUBLE,
     "paragraph_spacing" to BackupValueType.DOUBLE,
+    "is_fullscreen" to BackupValueType.BOOLEAN,
+    "top_progress_mode" to BackupValueType.STRING,
+    "progress_font_size_sp" to BackupValueType.FLOAT,
+    "margin_top_dp" to BackupValueType.FLOAT,
+    "margin_bottom_dp" to BackupValueType.FLOAT,
 )
 
 /**
@@ -92,6 +97,11 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
         val LETTER_SPACING = doublePreferencesKey("letter_spacing")
         val WORD_SPACING = doublePreferencesKey("word_spacing")
         val PARAGRAPH_SPACING = doublePreferencesKey("paragraph_spacing")
+        val IS_FULLSCREEN = booleanPreferencesKey("is_fullscreen")
+        val TOP_PROGRESS_MODE = stringPreferencesKey("top_progress_mode")
+        val PROGRESS_FONT_SIZE_SP = floatPreferencesKey("progress_font_size_sp")
+        val MARGIN_TOP_DP = floatPreferencesKey("margin_top_dp")
+        val MARGIN_BOTTOM_DP = floatPreferencesKey("margin_bottom_dp")
     }
 
     /**
@@ -122,6 +132,11 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
             letterSpacing = p[Keys.LETTER_SPACING],
             wordSpacing = p[Keys.WORD_SPACING],
             paragraphSpacing = p[Keys.PARAGRAPH_SPACING],
+            isFullscreen = p[Keys.IS_FULLSCREEN] ?: false,
+            topProgressMode = TopProgressMode.fromId(p[Keys.TOP_PROGRESS_MODE]),
+            progressFontSizeSp = (p[Keys.PROGRESS_FONT_SIZE_SP] ?: 12f).coerceIn(9f, 20f),
+            marginTopDp = (p[Keys.MARGIN_TOP_DP] ?: 12f).coerceIn(0f, 48f),
+            marginBottomDp = (p[Keys.MARGIN_BOTTOM_DP] ?: 12f).coerceIn(0f, 48f),
         ).sanitized()
     }
 
@@ -260,6 +275,26 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
 
     suspend fun setParagraphSpacing(value: Double?) {
         setNullableDouble(Keys.PARAGRAPH_SPACING, TypographyRange.PARAGRAPH_SPACING.sanitize(value))
+    }
+
+    suspend fun setFullscreen(enabled: Boolean) {
+        store.edit { it[Keys.IS_FULLSCREEN] = enabled }
+    }
+
+    suspend fun setTopProgressMode(mode: TopProgressMode) {
+        store.edit { it[Keys.TOP_PROGRESS_MODE] = mode.id }
+    }
+
+    suspend fun setProgressFontSizeSp(value: Float) {
+        store.edit { it[Keys.PROGRESS_FONT_SIZE_SP] = value.coerceIn(9f, 20f) }
+    }
+
+    suspend fun setMarginTopDp(value: Float) {
+        store.edit { it[Keys.MARGIN_TOP_DP] = value.coerceIn(0f, 48f) }
+    }
+
+    suspend fun setMarginBottomDp(value: Float) {
+        store.edit { it[Keys.MARGIN_BOTTOM_DP] = value.coerceIn(0f, 48f) }
     }
 
     /**
