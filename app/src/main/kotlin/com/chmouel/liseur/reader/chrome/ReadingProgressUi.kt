@@ -147,8 +147,8 @@ fun ReadingFooter(
 ) {
     if (!footerHasAnythingToSay(mode, left, right)) return
     val device = rememberFooterDevice(
-        wantsClock = left == FooterField.CLOCK || right == FooterField.CLOCK,
-        wantsBattery = left == FooterField.BATTERY || right == FooterField.BATTERY,
+        wantsClock = left.readsTheDevice && (left == FooterField.CLOCK || left == FooterField.TIME_AND_BATTERY) || right.readsTheDevice && (right == FooterField.CLOCK || right == FooterField.TIME_AND_BATTERY),
+        wantsBattery = left == FooterField.BATTERY || right == FooterField.BATTERY || left == FooterField.TIME_AND_BATTERY || right == FooterField.TIME_AND_BATTERY,
         turn = turn,
     )
     // The note names the figure the write settled on, which the tap
@@ -394,7 +394,7 @@ private fun FooterEdge(
                 FooterEdgeText(text, color, fontSizeSp)
             }
         } else {
-            FooterEdgeText(text, color)
+            FooterEdgeText(text, color, fontSizeSp)
         }
     }
 }
