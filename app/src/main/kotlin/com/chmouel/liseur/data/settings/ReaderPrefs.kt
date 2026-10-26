@@ -328,6 +328,9 @@ enum class FooterField(val id: String) {
     /** How much charge is left, drawn with a glyph. */
     BATTERY("battery"),
 
+    /** Time of day and battery percentage together in one footer corner. */
+    TIME_AND_BATTERY("time_battery"),
+
     /** Nothing at all, leaving the other slots more room. */
     EMPTY("empty"),
     ;
@@ -348,7 +351,7 @@ enum class FooterField(val id: String) {
      * book. The two that are keep their own schedule, and a footer
      * showing neither takes no readings and needs no nudging.
      */
-    val readsTheDevice: Boolean get() = this == CLOCK || this == BATTERY
+    val readsTheDevice: Boolean get() = this == CLOCK || this == BATTERY || this == TIME_AND_BATTERY
 
     companion object {
         /**
