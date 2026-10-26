@@ -114,6 +114,13 @@ private fun entryComparator(
         LibrarySort.TITLE ->
             if (reversed) byName.reversed() else byName
 
+        LibrarySort.FILE_NAME -> {
+            val byFileName = compareBy<ShelfEntry> {
+                sortKey((it as? ShelfEntry.Single)?.book?.sourcePath?.substringAfterLast('/') ?: it.nameKey())
+            }
+            if (reversed) byFileName.reversed().then(byName) else byFileName.then(byName)
+        }
+
         LibrarySort.AUTHOR -> {
             val named = compareBy<ShelfEntry> { sortKey(it.authorName()) }
             val ordered = if (reversed) named.reversed() else named
