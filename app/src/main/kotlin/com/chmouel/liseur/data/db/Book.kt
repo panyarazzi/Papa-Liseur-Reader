@@ -48,6 +48,8 @@ data class Book(
     val author: String?,
     @ColumnInfo(name = "cover_path") val coverPath: String?,
     val source: String?,
+    /** Relative path below the watched root, including the file name. Null for individually imported books. */
+    @ColumnInfo(name = "source_path") val sourcePath: String? = null,
     @ColumnInfo(name = "added_at") val addedAt: Long,
     @ColumnInfo(name = "last_opened_at") val lastOpenedAt: Long?,
     /**
@@ -734,6 +736,9 @@ interface BookDao {
      */
     @Query("UPDATE books SET source = :source WHERE url = :url")
     suspend fun setSource(url: String, source: String?)
+
+    @Query("UPDATE books SET source_path = :sourcePath WHERE url = :url")
+    suspend fun setSourcePath(url: String, sourcePath: String?)
 
     /**
      * Takes a book off the shelf, or puts it back.
