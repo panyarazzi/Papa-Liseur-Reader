@@ -110,8 +110,8 @@ fun footerDeviceFor(field: FooterField, context: Context): FooterDevice =
     deviceAt(
         nudge = 0,
         context = context,
-        wantsClock = field == FooterField.CLOCK,
-        wantsBattery = field == FooterField.BATTERY,
+        wantsClock = field == FooterField.CLOCK || field == FooterField.TIME_AND_BATTERY,
+        wantsBattery = field == FooterField.BATTERY || field == FooterField.TIME_AND_BATTERY,
     )
 
 /**
