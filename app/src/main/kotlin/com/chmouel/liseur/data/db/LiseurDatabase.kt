@@ -1986,8 +1986,8 @@ abstract class LiseurDatabase : RoomDatabase() {
             MIGRATION_66_67,
             MIGRATION_67_68,
             MIGRATION_68_69,
-            MIGRATION_70_71,
             MIGRATION_69_70,
+            MIGRATION_70_71,
         )
     }
 }
