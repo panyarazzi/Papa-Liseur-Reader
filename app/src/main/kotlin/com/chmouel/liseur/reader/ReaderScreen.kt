@@ -3241,7 +3241,7 @@ internal fun ReaderScreen(
             navigateLater(target.locator, NavigatorPositionEvent.LOCAL_JUMP)
         }
     }
-    ImmersiveMode(hideSystemBars = prefs.isFullscreen || !chromeVisible)
+    ImmersiveMode(hideSystemBars = prefs.isFullscreen)
     // While the way-back pill shows, Back takes it (#275). This must be
     // registered before the overlays' handlers: the last one registered
     // wins, so search, the contents, a footnote or an image still close
