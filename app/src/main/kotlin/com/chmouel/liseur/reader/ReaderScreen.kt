@@ -4273,6 +4273,7 @@ internal fun ReaderScreen(
                 right = prefs.footerRight,
                 footerLocked = lockFooterOn,
                 turn = footerTurn,
+                progressFontSizeSp = prefs.progressFontSizeSp,
                 theme = readingTheme,
                 onCycleMode = onProgressAction.cycleFooterMode,
                 onCycleField = onProgressAction.cycleFooterField,
@@ -5534,7 +5535,11 @@ class ReaderBookSyncActions(
     val registerCapture: (suspend () -> Boolean) -> Unit = {},
 )
 
-/** Hides the status and navigation bars while the chrome is hidden. */
+/**
+ * Keep the status bar hidden for the whole reading screen so it never
+ * takes a line away from the EPUB. Fullscreen additionally hides the
+ * navigation bar; with it off, navigation controls remain available.
+ */
 @Composable
 private fun ImmersiveMode(hideSystemBars: Boolean) {
     val view = LocalView.current
@@ -5543,10 +5548,11 @@ private fun ImmersiveMode(hideSystemBars: Boolean) {
         val controller = WindowCompat.getInsetsController(window, view)
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.statusBars())
         if (hideSystemBars) {
-            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.hide(WindowInsetsCompat.Type.navigationBars())
         } else {
-            controller.show(WindowInsetsCompat.Type.systemBars())
+            controller.show(WindowInsetsCompat.Type.navigationBars())
         }
     }
     DisposableEffect(Unit) {
