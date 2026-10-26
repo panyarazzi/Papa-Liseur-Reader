@@ -737,7 +737,7 @@ class LocalLibraryRepository(
                     // REMOTE and would only ever offer a download of the
                     // file already sitting here.
                     readopt(existing, treeUri)
-                    bookDao.setSourcePath(existing.url, file.relativePath)
+                    bookDao.setSourcePath(existing.url, file.relativePath, file.relativePath.substringAfterLast('/'))
                     // The path is the same but the file behind it is not, so the
                     // title and cover we cached are no longer the book's.
                     if (file.modifiedAt != null && existing.fileModifiedAt != file.modifiedAt) {
@@ -781,7 +781,7 @@ class LocalLibraryRepository(
                     // would leave an uploaded book offering a download
                     // of the file it is standing on.
                     readopt(alias, treeUri)
-                    bookDao.setSourcePath(alias.url, file.relativePath)
+                    bookDao.setSourcePath(alias.url, file.relativePath, file.relativePath.substringAfterLast('/'))
                     if (file.modifiedAt != null && alias.fileModifiedAt != file.modifiedAt) {
                         reindexBook(
                             openableUrl = url,
@@ -1034,6 +1034,7 @@ class LocalLibraryRepository(
                 coverPath = saveCover(publication, url.toString()),
                 source = source,
                 sourcePath = sourcePath,
+                sourceFileName = sourcePath?.substringAfterLast('/') ?: url.filename,
                 addedAt = System.currentTimeMillis(),
                 lastOpenedAt = null,
                 fileModifiedAt = modifiedAt,
