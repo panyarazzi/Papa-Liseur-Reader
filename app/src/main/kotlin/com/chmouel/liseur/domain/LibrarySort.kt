@@ -130,7 +130,7 @@ fun List<Book>.arrangedBy(
 
         LibrarySort.FILE_NAME -> {
             val byFileName = compareBy<Book> {
-                sortKey(it.sourcePath?.substringAfterLast('/') ?: it.localUri?.substringAfterLast('/') ?: it.url.substringAfterLast('/'))
+                sortKey(it.sourceFileName ?: it.sourcePath?.substringAfterLast('/') ?: it.url.substringAfterLast('/'))
             }
             (if (reversed) byFileName.reversed() else byFileName).then(byTitle)
         }
