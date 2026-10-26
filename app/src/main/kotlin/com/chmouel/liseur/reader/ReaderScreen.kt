@@ -3835,22 +3835,28 @@ internal fun ReaderScreen(
                                     WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal),
                                 )
                                 .padding(
-                                    top = (prefs.marginTopDp.toFloat() +
+                                    top = (
+                                        (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
                                         if (prefs.topProgressMode != TopProgressMode.OFF) {
-                                            prefs.progressFontSizeSp * 1.5f + 8f
-                                        } else 0f).dp,
-                                    bottom = prefs.marginBottomDp.dp,
+                                            (prefs.progressFontSizeSp * 1.5f + 8f).toInt()
+                                        } else 0
+                                    ).dp,
+                                    bottom = (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0).dp,
                                 )
                         } else {
                             Modifier
                                 .windowInsetsPadding(WindowInsets.displayCutout)
                                 .padding(
-                                    top = (prefs.marginTopDp.toFloat() +
+                                    top = (
+                                        (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
                                         if (prefs.topProgressMode != TopProgressMode.OFF) {
-                                            prefs.progressFontSizeSp * 1.5f + 8f
-                                        } else 0f).dp,
-                                    bottom = (prefs.marginBottomDp.toFloat() + if (footerShowing) footerReserve else 0f).dp,
-                                        if (footerShowing) footerReserve else 0f).dp,
+                                            (prefs.progressFontSizeSp * 1.5f + 8f).toInt()
+                                        } else 0
+                                    ).dp,
+                                    bottom = (
+                                        (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0) +
+                                        if (footerShowing) footerReserve.toInt() else 0
+                                    ).dp,
                                 )
                         },
                     ),
