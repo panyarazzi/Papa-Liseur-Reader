@@ -1,126 +1,28 @@
 package com.chmouel.liseur.ui.reader
 
 import android.app.Activity
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import com.chmouel.liseur.data.preferences.ReadingPreferences
 import com.chmouel.liseur.ui.reader.gestures.pinchToZoomFont
+import enum_types.ProgressDisplayMode
 
-@Composable
-internal fun ReaderScreen(
-    isFullscreen: Boolean,
-    isTopProgressEnabled: Boolean,
-    topProgressMode: String,
-    footerProgressMode: String,
-    progressFontSizeSp: Float,
-    currentFontScale: Float,
-    fontScaleMaxMultiplier: Float,
-    isPinchToZoomEnabledInEink: Boolean,
-    isEinkMode: Boolean,
-    marginTopDp: Int,
-    marginBottomDp: Int,
-    chapterTitle: String,
-    pagesLeftInChapter: Int,
-    currentChapterPage: Int,
-    totalChapterPages: Int,
-    totalProgressPercent: Float,
-    onFontScaleChanged: (Float) -> Unit
-) {
-    // ควบคุมการแสดง/ซ่อน Status Bar (แถบบอกเวลา/แบตเตอรี่) ตามค่า Fullscreen ที่ผู้ใช้ตั้งค่า
-    ImmersiveMode(hideSystemBars = isFullscreen)
-
-    // ข้อ 7: คำนวณ Margin Top เพิ่มเติมอัตโนมัติหากเปิด Top Progress เพื่อไม่ให้เนื้อหาบรรทัดแรกชนขอบ
-    val effectiveTopMargin = if (isTopProgressEnabled) {
-        marginTopDp + 22
-    } else {
-        marginTopDp
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pinchToZoomFont(
-                enabled = isPinchToZoomEnabledInEink || !isEinkMode,
-                currentScale = currentFontScale,
-                maxScale = fontScaleMaxMultiplier, // ข้อ 5: ขยายฟอนต์ได้สูงสุด (แก้ปัญหา TH Sarabun Newest เล็กเกินไป)
-                onScaleChanged = onFontScaleChanged
-            )
-    ) {
-        // ข้อ 4: แสดง Top Progress (ฝั่งซ้าย: Page left + Chapter title)
-        if (isTopProgressEnabled) {
-            val topText = ProgressFormatter.formatProgress(
-                mode = topProgressMode,
-                pagesLeftInChapter = pagesLeftInChapter,
-                chapterTitle = chapterTitle,
-                currentChapterPage = currentChapterPage,
-                totalChapterPages = totalChapterPages,
-                totalProgressPercent = totalProgressPercent
-            )
-            if (topText.isNotBlank()) {
-                Text(
-                    text = topText,
-                    fontSize = progressFontSizeSp.sp, // ข้อ 3: ปรับขนาดตัวอักษร Progress ได้
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 8.dp, end = 16.dp)
-                )
-            }
-        }
-
-        // พื้นที่แสดงเนื้อหานิยาย (พร้อมเว้น Margin Top และ Bottom ตามข้อ 7)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    top = effectiveTopMargin.dp,
-                    bottom = marginBottomDp.dp,
-                    start = 16.dp,
-                    end = 16.dp
-                )
-        ) {
-            // ส่วนแสดงเนื้อหา EPUB Navigator ภายในแอป
-        }
-
-        // ข้อ 2: แสดง Footer Progress (Page left + Chapter title)
-        if (footerProgressMode != "OFF") {
-            val footerText = ProgressFormatter.formatProgress(
-                mode = footerProgressMode,
-                pagesLeftInChapter = pagesLeftInChapter,
-                chapterTitle = chapterTitle,
-                currentChapterPage = currentChapterPage,
-                totalChapterPages = totalChapterPages,
-                totalProgressPercent = totalProgressPercent
-            )
-            if (footerText.isNotBlank()) {
-                Text(
-                    text = footerText,
-                    fontSize = progressFontSizeSp.sp, // ข้อ 3
-                    fontWeight = FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 8.dp, start = 16.dp, end = 16.dp)
-                )
-            }
-        }
-    }
-}
-
-/** ฟังก์ชันควบคุมการซ่อนหรือแสดง Status Bar และ Navigation Bar ตามโหมด Fullscreen */
+/**
+ * ฟังก์ชันควบคุมการซ่อนหรือแสดง Status Bar และ Navigation Bar ตามสวิตช์ Fullscreen
+ */
 @Composable
 private fun ImmersiveMode(hideSystemBars: Boolean) {
     val view = LocalView.current
@@ -135,11 +37,109 @@ private fun ImmersiveMode(hideSystemBars: Boolean) {
             controller.show(WindowInsetsCompat.Type.systemBars())
         }
     }
-    DisposableEffect(Unit) {
-        onDispose {
-            val window = (view.context as? Activity)?.window ?: return@onDispose
-            WindowCompat.getInsetsController(window, view)
-                .show(WindowInsetsCompat.Type.systemBars())
+}
+
+@Composable
+fun ReaderScreen(
+    preferences: ReadingPreferences,
+    chapterTitle: String,
+    pagesLeftInChapter: Int,
+    currentChapterPage: Int,
+    totalChapterPages: Int,
+    totalProgressPercent: Float,
+    onFontScaleChanged: (Float) -> Unit,
+    onToggleFullscreen: () -> Unit
+) {
+    // 1. ผูกสถานะ Fullscreen เข้ากับ ImmersiveMode ทันทีที่หน้าจอนี้ทำงาน
+    ImmersiveMode(hideSystemBars = preferences.isFullscreen)
+
+    // ข้อ 7: คำนวณ Margin Top เพิ่มเติมอัตโนมัติหากมีการเปิดแสดง Top Progress
+    val effectiveTopMargin = if (preferences.isTopProgressEnabled) {
+        preferences.marginTopDp + 20 
+    } else {
+        preferences.marginTopDp
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize()
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .pinchToZoomFont(
+                    enabled = preferences.isPinchToZoomEnabledInEink || !preferences.isEinkMode,
+                    currentScale = preferences.currentFontScale,
+                    maxScale = preferences.fontScaleMaxMultiplier,
+                    onScaleChanged = onFontScaleChanged
+                )
+        ) {
+            // ==================== TOP PROGRESS ====================
+            if (preferences.isTopProgressEnabled) {
+                val topText = ProgressFormatter.formatProgress(
+                    mode = preferences.topProgressMode,
+                    pagesLeftInChapter = pagesLeftInChapter,
+                    chapterTitle = chapterTitle,
+                    currentChapterPage = currentChapterPage,
+                    totalChapterPages = totalChapterPages,
+                    totalProgressPercent = totalProgressPercent
+                )
+                
+                Text(
+                    text = topText,
+                    fontSize = preferences.progressFontSizeSp.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 16.dp, top = 8.dp, end = 16.dp)
+                )
+            }
+
+            // ==================== READING CONTENT AREA ====================
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        top = effectiveTopMargin.dp,
+                        bottom = preferences.marginBottomDp.dp,
+                        start = 16.dp,
+                        end = 16.dp
+                    )
+            ) {
+                EpubNavigatorView(
+                    fontScale = preferences.currentFontScale
+                )
+            }
+
+            // ==================== FOOTER PROGRESS ====================
+            if (preferences.footerProgressMode != "OFF") {
+                val footerText = ProgressFormatter.formatProgress(
+                    mode = preferences.footerProgressMode,
+                    pagesLeftInChapter = pagesLeftInChapter,
+                    chapterTitle = chapterTitle,
+                    currentChapterPage = currentChapterPage,
+                    totalChapterPages = totalChapterPages,
+                    totalProgressPercent = totalProgressPercent
+                )
+
+                Text(
+                    text = footerText,
+                    fontSize = preferences.progressFontSizeSp.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp, start = 16.dp, end = 16.dp)
+                )
+            }
         }
     }
+}
+
+@Composable
+fun EpubNavigatorView(fontScale: Float) {
+    // Component สำหรับโหลดเนื้อหา EPUB
 }
