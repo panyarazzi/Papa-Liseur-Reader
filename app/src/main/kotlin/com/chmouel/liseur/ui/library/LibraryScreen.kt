@@ -1574,6 +1574,51 @@ private fun BookGrid(
                     )
                 }
             }
+        } else if (state.books.any { it.sourcePath != null }) {
+            // Keep the folder tree the reader already curated on disk.
+            // The selected sort applies to books within each folder; folder
+            // sections themselves follow a stable alphabetical order.
+            val folderGroups = state.books.groupBy { book ->
+                when {
+                    book.sourcePath == null -> "\\u0000Other"
+                    '/' !in book.sourcePath -> "\\u0001Root"
+                    else -> book.sourcePath.substringBeforeLast('/')
+                }
+            }.toSortedMap()
+            folderGroups.forEach { (folderKey, folderBooks) ->
+                val label = when {
+                    folderKey == "\\u0000Other" -> stringResource(R.string.library_folder_other)
+                    folderKey == "\\u0001Root" -> stringResource(R.string.library_folder_root)
+                    else -> folderKey
+                }
+                item(key = "folder-header:$folderKey", span = { GridItemSpan(maxLineSpan) }) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 0.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            text = folderBooks.size.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                items(folderBooks, key = { it.id }) { book ->
+                    BookCard(
+                        book = book,
+                        progress = state.downloads[book.url],
+                        inASeries = seriesKey(book.seriesName) in state.shownSeries,
+                        onClick = { onBookSelected(book) },
+                        onLongClick = { onBookLongPress(book) },
+                    )
+                }
+            }
         } else {
             items(state.books, key = { it.id }) { book ->
                 BookCard(
@@ -2172,6 +2217,7 @@ private fun LibrarySort.label(): String = stringResource(
         LibrarySort.RECENT -> R.string.sort_recent
         LibrarySort.TITLE -> R.string.sort_title
         LibrarySort.AUTHOR -> R.string.sort_author
+        LibrarySort.FILE_NAME -> R.string.sort_file_name
         LibrarySort.ADDED -> R.string.sort_added
         LibrarySort.SERIES -> R.string.sort_series
     },
