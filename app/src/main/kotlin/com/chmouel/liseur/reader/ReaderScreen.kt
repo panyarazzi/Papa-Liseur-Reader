@@ -5536,9 +5536,9 @@ class ReaderBookSyncActions(
 )
 
 /**
- * Keep the status bar hidden for the whole reading screen so it never
- * takes a line away from the EPUB. Fullscreen additionally hides the
- * navigation bar; with it off, navigation controls remain available.
+ * Fullscreen controls the status bar only: on hides it; off restores it
+ * so readers can see device time, Wi-Fi/Bluetooth and brightness controls.
+ * Navigation bar visibility is intentionally left independent.
  */
 @Composable
 private fun ImmersiveMode(hideSystemBars: Boolean) {
@@ -5548,12 +5548,12 @@ private fun ImmersiveMode(hideSystemBars: Boolean) {
         val controller = WindowCompat.getInsetsController(window, view)
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller.hide(WindowInsetsCompat.Type.statusBars())
         if (hideSystemBars) {
-            controller.hide(WindowInsetsCompat.Type.navigationBars())
+            controller.hide(WindowInsetsCompat.Type.statusBars())
         } else {
-            controller.show(WindowInsetsCompat.Type.navigationBars())
+            controller.show(WindowInsetsCompat.Type.statusBars())
         }
+        // Navigation bar visibility is intentionally not tied to the Fullscreen preference.
     }
     DisposableEffect(Unit) {
         onDispose {
