@@ -6,6 +6,9 @@
     <string name="sort_recent">Recent</string>
     <string name="sort_title">Title</string>
     <string name="sort_author">Author</string>
+    <string name="sort_file_name">File name</string>
+    <string name="library_folder_root">Books (root folder)</string>
+    <string name="library_folder_other">Other / individually added</string>
     <string name="sort_added">Recently added</string>
     <string name="sort_normal">Reverse the order</string>
     <string name="sort_reversed">Back to the usual order</string>
