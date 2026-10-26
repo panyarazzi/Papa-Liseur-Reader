@@ -737,6 +737,7 @@ class LocalLibraryRepository(
                     // REMOTE and would only ever offer a download of the
                     // file already sitting here.
                     readopt(existing, treeUri)
+                    bookDao.setSourcePath(existing.url, file.relativePath)
                     // The path is the same but the file behind it is not, so the
                     // title and cover we cached are no longer the book's.
                     if (file.modifiedAt != null && existing.fileModifiedAt != file.modifiedAt) {
@@ -780,6 +781,7 @@ class LocalLibraryRepository(
                     // would leave an uploaded book offering a download
                     // of the file it is standing on.
                     readopt(alias, treeUri)
+                    bookDao.setSourcePath(alias.url, file.relativePath)
                     if (file.modifiedAt != null && alias.fileModifiedAt != file.modifiedAt) {
                         reindexBook(
                             openableUrl = url,
@@ -791,7 +793,7 @@ class LocalLibraryRepository(
                         )
                     }
                 }
-                else -> indexBook(url, source = treeUri.toString(), file.modifiedAt)
+                else -> indexBook(url, source = treeUri.toString(), modifiedAt = file.modifiedAt, sourcePath = file.relativePath)
             }
         }
 
@@ -826,7 +828,7 @@ class LocalLibraryRepository(
         }
     }
 
-    private class ScannedEpub(val uri: Uri, val modifiedAt: Long?)
+    private class ScannedEpub(val uri: Uri, val modifiedAt: Long?, val relativePath: String)
 
     /**
      * A folder's EPUBs, and whether the walk reached all of it.
@@ -869,7 +871,7 @@ class LocalLibraryRepository(
         val found = mutableListOf<ScannedEpub>()
         var complete = true
 
-        fun walk(documentId: String) {
+        fun walk(documentId: String, parentPath: String = "") {
             val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
             val cursor = runCatching {
                 context.contentResolver.query(children, projection, null, null, null)
@@ -900,7 +902,10 @@ class LocalLibraryRepository(
                     val name = it.getString(1).orEmpty()
                     val mime = it.getString(2)
                     when {
-                        mime == DocumentsContract.Document.MIME_TYPE_DIR -> walk(id)
+                        mime == DocumentsContract.Document.MIME_TYPE_DIR -> walk(
+                            id,
+                            listOf(parentPath, name).filter { it.isNotBlank() }.joinToString("/"),
+                        )
                         mime == "application/epub+zip" ||
                             name.endsWith(".epub", ignoreCase = true) -> {
                             val modifiedAt = (if (it.isNull(3)) 0L else it.getLong(3))
@@ -908,6 +913,7 @@ class LocalLibraryRepository(
                             found += ScannedEpub(
                                 DocumentsContract.buildDocumentUriUsingTree(treeUri, id),
                                 modifiedAt,
+                                listOf(parentPath, name).filter { it.isNotBlank() }.joinToString("/"),
                             )
                         }
                     }
@@ -1006,6 +1012,7 @@ class LocalLibraryRepository(
         url: AbsoluteUrl,
         source: String?,
         modifiedAt: Long? = null,
+        sourcePath: String? = null,
     ): Book? {
         val asset = assetRetriever.retrieve(url).getOrElse { return null }
         val publication = publicationOpener.open(asset, allowUserInteraction = false)
@@ -1026,6 +1033,7 @@ class LocalLibraryRepository(
                 author = author,
                 coverPath = saveCover(publication, url.toString()),
                 source = source,
+                sourcePath = sourcePath,
                 addedAt = System.currentTimeMillis(),
                 lastOpenedAt = null,
                 fileModifiedAt = modifiedAt,
