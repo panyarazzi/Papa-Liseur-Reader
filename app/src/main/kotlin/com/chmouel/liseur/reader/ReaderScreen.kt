@@ -3835,7 +3835,7 @@ internal fun ReaderScreen(
                                     WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal),
                                 )
                                 .padding(
-                                    top = (prefs.marginTopDp +
+                                    top = (prefs.marginTopDp.toFloat() +
                                         if (prefs.topProgressMode != TopProgressMode.OFF) {
                                             prefs.progressFontSizeSp * 1.5f + 8f
                                         } else 0f).dp,
@@ -3845,11 +3845,11 @@ internal fun ReaderScreen(
                             Modifier
                                 .windowInsetsPadding(WindowInsets.displayCutout)
                                 .padding(
-                                    top = (prefs.marginTopDp +
+                                    top = (prefs.marginTopDp.toFloat() +
                                         if (prefs.topProgressMode != TopProgressMode.OFF) {
                                             prefs.progressFontSizeSp * 1.5f + 8f
                                         } else 0f).dp,
-                                    bottom = (prefs.marginBottomDp +
+                                    bottom = (prefs.marginBottomDp.toFloat() + if (footerShowing) footerReserve else 0f).dp,
                                         if (footerShowing) footerReserve else 0f).dp,
                                 )
                         },
