@@ -86,6 +86,7 @@ abstract class LiseurDatabase : RoomDatabase() {
         val MIGRATION_70_71 = object : Migration(70, 71) {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL("ALTER TABLE books ADD COLUMN source_path TEXT")
+                connection.execSQL("ALTER TABLE books ADD COLUMN source_file_name TEXT")
             }
         }
 
