@@ -72,6 +72,7 @@ class FooterFieldTest {
                 "time_chapter",
                 "clock",
                 "battery",
+                "time_battery",
                 "empty",
             ),
             FooterField.entries.map { it.id },
