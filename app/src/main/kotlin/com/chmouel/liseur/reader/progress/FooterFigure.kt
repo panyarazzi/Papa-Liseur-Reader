@@ -103,7 +103,7 @@ fun footerFigure(
         FooterField.BATTERY -> return device.batteryPercent
             ?.takeIf { it in 0..100 }
             ?.let { FooterFigure.Battery(it, device.charging) }
-        FooterField.TIME_AND_BATTERY -> return if (device.nowMillis != null && device.batteryPercent in 0..100) {
+        FooterField.TIME_AND_BATTERY -> return if (device.nowMillis != null && device.batteryPercent != null && device.batteryPercent in 0..100) {
             FooterFigure.TimeAndBattery(device.nowMillis, device.batteryPercent!!, device.charging)
         } else null
 
