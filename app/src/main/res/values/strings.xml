@@ -771,6 +771,7 @@
     <string name="footer_field_time_chapter">Time left in chapter</string>
     <string name="footer_field_clock">The time</string>
     <string name="footer_field_battery">Battery</string>
+    <string name="footer_field_time_battery">Time + battery %</string>
     <string name="footer_field_empty">Nothing here</string>
 
     <string name="settings_reading">Reading</string>
