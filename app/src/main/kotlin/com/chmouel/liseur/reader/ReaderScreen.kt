@@ -3855,7 +3855,7 @@ internal fun ReaderScreen(
                                     ).dp,
                                     bottom = (
                                         (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0) +
-                                        if (footerShowing) footerReserve.toInt() else 0
+                                        if (footerShowing) footerReserve.value.toInt() else 0
                                     ).dp,
                                 )
                         },
