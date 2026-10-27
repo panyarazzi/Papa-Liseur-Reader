@@ -295,6 +295,8 @@ class BookPositions(
                 if (first == null || last == null) return@forEachIndexed
                 val title = titles[resourceIndex]
                     ?: publication.readingOrder.getOrNull(resourceIndex)?.title
+                        ?.trim()
+                        ?.takeUnless(::isVolumeDividerTitle)
                 // Resources without a heading continue the previous
                 // chapter, as split chapters are common in EPUBs.
                 val previous = chapters.lastOrNull()
@@ -313,31 +315,43 @@ class BookPositions(
             )
         }
 
-        /** Titles from the table of contents, keyed by reading order index. */
+        /**
+         * Prefer nested chapter entries over their parent volume entries when
+         * several TOC links point to the same XHTML resource.
+         *
+         * This is resource-level metadata only. If a resource contains several
+         * chapter headings, a position-aware DOM tracker is needed to identify
+         * the heading at the current reading position.
+         */
         private fun Publication.chapterTitles(): Map<Int, String> {
-            // Contents entries often point inside a resource with a
-            // #fragment, so resources are matched on their path alone.
             val indexByHref = readingOrder
                 .mapIndexed { index, link -> link.resourcePath() to index }
                 .toMap()
-            return tableOfContents.flattenLinks()
-                .mapNotNull { link ->
+            return tableOfContents.flattenLinksWithDepth()
+                .mapNotNull { (link, depth) ->
                     val title = link.title?.trim()?.takeIf(String::isNotEmpty)
+                        ?.takeUnless(::isVolumeDividerTitle)
                         ?: return@mapNotNull null
                     val index = indexByHref[link.resourcePath()] ?: return@mapNotNull null
-                    index to title
+                    Triple(index, depth, title)
                 }
-                // Several entries may point at the same resource; the
-                // first one names the chapter.
-                .reversed()
+                .groupBy { it.first }
+                .mapNotNull { (index, entries) ->
+                    entries.maxByOrNull { it.second }?.let { index to it.third }
+                }
                 .toMap()
         }
 
         private fun Link.resourcePath(): String =
             url().toString().substringBefore('#').substringBefore('?')
 
-        private fun List<Link>.flattenLinks(): List<Link> =
-            flatMap { listOf(it) + it.children.flattenLinks() }
+        private fun List<Link>.flattenLinksWithDepth(depth: Int = 0): List<Pair<Link, Int>> =
+            flatMap { link ->
+                listOf(link to depth) + link.children.flattenLinksWithDepth(depth + 1)
+            }
+
+        private fun isVolumeDividerTitle(title: String): Boolean =
+            title.trim().matches(Regex("""^เล่มที่\s*[\[（(]?\d+[\]）)]?\s*$"""))
     }
 }
 

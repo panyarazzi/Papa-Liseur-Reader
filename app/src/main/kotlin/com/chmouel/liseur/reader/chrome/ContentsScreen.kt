@@ -30,6 +30,8 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -80,7 +82,7 @@ import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Publication
 
 /** One line of the contents, with how deeply it is nested. */
-data class ContentsEntry(val depth: Int, val link: Link)
+data class ContentsEntry(val depth: Int, val link: Link, val hasChildren: Boolean = false)
 
 /** The four ways of getting around a book. */
 private enum class ContentsTab(val labelRes: Int) {
@@ -310,7 +312,16 @@ private fun ContentsList(
     onEntrySelected: (Link) -> Unit,
     bottomInset: Dp,
 ) {
-    val entries = remember(publication) { publication.tableOfContents.flatten() }
+    val expandedTocHrefs = rememberSaveable(publication, saver = ExpandedTocHrefsSaver) {
+        publication.tableOfContents.expandableHrefs().toMutableStateList()
+    }
+    val toggleToc: (Link) -> Unit = { link ->
+        val href = link.href.toString()
+        if (!expandedTocHrefs.remove(href)) expandedTocHrefs.add(href)
+    }
+    val entries = remember(publication, expandedTocHrefs.toList()) {
+        publication.tableOfContents.flattenVisible(expandedTocHrefs.toSet())
+    }
     // Contents entries point at an anchor inside a chapter file, while the
     // reader usually only knows which file it is in. Match the anchor when we
     // have one, otherwise fall back to the first entry of that file so the
@@ -347,6 +358,8 @@ private fun ContentsList(
                 entry = entry,
                 theme = theme,
                 current = index == currentIndex,
+                expanded = entry.link.href.toString() in expandedTocHrefs,
+                onToggleExpanded = { toggleToc(entry.link) },
                 onClick = { onEntrySelected(entry.link) },
             )
             HorizontalDivider(color = theme.foreground.copy(alpha = 0.08f))
@@ -562,6 +575,8 @@ private fun ContentsRow(
     entry: ContentsEntry,
     theme: ReaderTheme,
     current: Boolean,
+    expanded: Boolean,
+    onToggleExpanded: () -> Unit,
     onClick: () -> Unit,
 ) {
     Row(
@@ -580,6 +595,23 @@ private fun ContentsRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (entry.hasChildren) {
+            IconButton(
+                onClick = onToggleExpanded,
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = stringResource(
+                        if (expanded) R.string.story_less
+                        else R.string.story_more,
+                    ),
+                    tint = theme.foreground,
+                )
+            }
+        } else {
+            Box(Modifier.width(32.dp).height(32.dp))
+        }
         // A bar rather than a tick: it reads as "you are here" without
         // stealing attention from the titles around it.
         Box(
@@ -608,10 +640,30 @@ private fun ContentsRow(
     }
 }
 
-private fun List<Link>.flatten(depth: Int = 0): List<ContentsEntry> =
+private fun List<Link>.expandableHrefs(): List<String> =
     flatMap { link ->
-        listOf(ContentsEntry(depth, link)) + link.children.flatten(depth + 1)
+        (if (link.children.isNotEmpty()) listOf(link.href.toString()) else emptyList()) +
+            link.children.expandableHrefs()
     }
+
+private fun List<Link>.flattenVisible(
+    expandedHrefs: Set<String>,
+    depth: Int = 0,
+): List<ContentsEntry> =
+    flatMap { link ->
+        val hasChildren = link.children.isNotEmpty()
+        listOf(ContentsEntry(depth, link, hasChildren)) +
+            if (hasChildren && link.href.toString() in expandedHrefs) {
+                link.children.flattenVisible(expandedHrefs, depth + 1)
+            } else {
+                emptyList()
+            }
+    }
+
+private val ExpandedTocHrefsSaver = listSaver<SnapshotStateList<String>, String>(
+    save = { it.toList() },
+    restore = { it.toMutableStateList() },
+)
 
 /**
  * Keeps the opened-out marks across a rotation.

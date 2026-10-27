@@ -314,7 +314,11 @@ class ReaderActivity : FragmentActivity() {
                                 // what the declarations depend on.
                                 val importedFonts by viewModel.importedFonts
                                     .collectAsStateWithLifecycle()
-                                val fontKey = importedFonts.joinToString(",") { it.id }
+                                val fontReplacements by viewModel.fontReplacements.collectAsStateWithLifecycle()
+                                val fontScales by viewModel.fontScales.collectAsStateWithLifecycle()
+                                val fontKey = importedFonts.joinToString(",") { it.id } +
+                                    "|" + fontReplacements.toSortedMap().entries.joinToString(";") { "${it.key}=${it.value}" } +
+                                    "|" + fontScales.toSortedMap().entries.joinToString(";") { "${it.key}=${it.value}" }
                                 // Read once, here, alongside the factory that is
                                 // built from it, and handed to the screen as the
                                 // point this navigator is being restored to.
@@ -512,6 +516,11 @@ class ReaderActivity : FragmentActivity() {
                                     displayAuthors = s.displayAuthors,
                                     restoreTarget = restoreTarget,
                                     fontKey = fontKey,
+                                    userFonts = importedFonts,
+                                    fontReplacementsFlow = viewModel.fontReplacements,
+                                    onFontReplacementChanged = viewModel::setFontReplacement,
+                                    fontScalesFlow = viewModel.fontScales,
+                                    onFontScaleChanged = viewModel::setFontScale,
                                     initialPreferences = initialPreferences,
                                     moves = moves,
                                     linkTaps = linkTaps,
@@ -580,6 +589,11 @@ class ReaderActivity : FragmentActivity() {
                                             setTheme = viewModel::setTheme,
                                             setLineHeight = viewModel::setLineHeight,
                                             setPageMargins = viewModel::setPageMargins,
+                                            setFullscreen = viewModel::setFullscreen,
+                                            setTopProgressMode = viewModel::setTopProgressMode,
+                                            setProgressFontSizeSp = viewModel::setProgressFontSizeSp,
+                                            setMarginTopDp = viewModel::setMarginTopDp,
+                                            setMarginBottomDp = viewModel::setMarginBottomDp,
                                             setBrightness = viewModel::setBrightness,
                                             setPageTurnStyle = viewModel::setPageTurnStyle,
                                             setColumnMode = viewModel::setColumnMode,
@@ -590,6 +604,7 @@ class ReaderActivity : FragmentActivity() {
                                                 onTextAlignChanged = viewModel::setTextAlign,
                                                 onHyphensChanged = viewModel::setHyphens,
                                                 onFontWeightChanged = viewModel::setFontWeight,
+                                                onGlyphWidthChanged = viewModel::setGlyphWidth,
                                                 onLetterSpacingChanged = viewModel::setLetterSpacing,
                                                 onWordSpacingChanged = viewModel::setWordSpacing,
                                                 onParagraphSpacingChanged =

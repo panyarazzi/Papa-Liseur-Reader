@@ -10,6 +10,9 @@ enum class LibrarySort(val id: String) {
     TITLE("title"),
     AUTHOR("author"),
 
+    /** The name of the EPUB file, not its metadata title. */
+    FILE_NAME("file_name"),
+
     /** When the book joined the library. */
     ADDED("added"),
 
@@ -124,6 +127,13 @@ fun List<Book>.arrangedBy(
 
         LibrarySort.TITLE ->
             (if (reversed) byTitle.reversed() else byTitle)
+
+        LibrarySort.FILE_NAME -> {
+            val byFileName = compareBy<Book> {
+                sortKey(it.sourceFileName ?: it.sourcePath?.substringAfterLast('/') ?: it.url.substringAfterLast('/'))
+            }
+            (if (reversed) byFileName.reversed() else byFileName).then(byTitle)
+        }
 
         LibrarySort.AUTHOR -> {
             val named = compareBy<Book> { sortKey(it.author) }

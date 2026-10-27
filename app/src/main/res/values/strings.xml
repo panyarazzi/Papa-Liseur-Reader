@@ -6,6 +6,9 @@
     <string name="sort_recent">Recent</string>
     <string name="sort_title">Title</string>
     <string name="sort_author">Author</string>
+    <string name="sort_file_name">File name</string>
+    <string name="library_folder_root">Books (root folder)</string>
+    <string name="library_folder_other">Other / individually added</string>
     <string name="sort_added">Recently added</string>
     <string name="sort_normal">Reverse the order</string>
     <string name="sort_reversed">Back to the usual order</string>
@@ -681,6 +684,8 @@
     <string name="reader_font_weight_light">Light</string>
     <string name="reader_font_weight_normal">Normal</string>
     <string name="reader_font_weight_bold">Bold</string>
+    <string name="reader_glyph_width">Glyph width</string>
+    <string name="reader_glyph_width_note">Uses font width support where available; fonts without it may keep their original width.</string>
     <string name="reader_letter_spacing">Letter spacing</string>
     <string name="reader_word_spacing">Word spacing</string>
     <string name="reader_paragraph_spacing">Paragraph spacing</string>
@@ -740,6 +745,7 @@
     <string name="reader_auto_scroll_speed_value">Speed %1$d</string>
     <string name="footer_mode_smart">Time left, or the chapter</string>
     <string name="footer_mode_pages_chapter">Pages left in chapter</string>
+    <string name="footer_mode_pages_chapter_title">Pages left • chapter title</string>
     <string name="footer_mode_time_book">Time left in book</string>
     <string name="footer_mode_chapter">Chapter title</string>
     <string name="footer_mode_empty">Nothing in the middle</string>
@@ -770,6 +776,7 @@
     <string name="footer_field_time_chapter">Time left in chapter</string>
     <string name="footer_field_clock">The time</string>
     <string name="footer_field_battery">Battery</string>
+    <string name="footer_field_time_battery">Time + battery %</string>
     <string name="footer_field_empty">Nothing here</string>
 
     <string name="settings_reading">Reading</string>

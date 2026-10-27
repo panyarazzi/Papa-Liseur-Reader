@@ -58,7 +58,12 @@ class BookRemoval(
             // and the deletion in one database transaction.
             val rehomed = rehomedSources.filterKeys { it in bookUrls }
                 .also { sources ->
-                    sources.forEach { (bookUrl, source) -> bookDao.setSource(bookUrl, source) }
+                    sources.forEach { (bookUrl, source) ->
+                        bookDao.setSource(bookUrl, source)
+                        // The new folder will repopulate its relative path on
+                        // the next scan; never keep a path from the removed root.
+                        bookDao.setSourcePath(bookUrl, null, null)
+                    }
                 }
             // A null source is a book nothing could be shown to hold while
             // some tree would not be read. It keeps its row and belongs to
@@ -73,6 +78,7 @@ class BookRemoval(
                     // it, but the released folder no longer makes
                     // the folder's file available.
                     bookDao.setSource(book.url, null)
+                    bookDao.setSourcePath(book.url, null, null)
                     // A copy the app can open on its own is not the
                     // folder's to take away: only a book that was readable
                     // *through* the folder loses its file along with it.

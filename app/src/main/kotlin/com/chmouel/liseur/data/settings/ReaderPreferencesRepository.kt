@@ -20,6 +20,8 @@ private val Context.readerPrefsStore: DataStore<Preferences> by preferencesDataS
 )
 
 internal val READER_BACKUP_TYPES = mapOf(
+    "font_replacements_by_book" to BackupValueType.STRING,
+    "font_scales_by_book" to BackupValueType.STRING,
     "font" to BackupValueType.STRING, "font_size" to BackupValueType.DOUBLE,
     "theme" to BackupValueType.STRING, "line_height" to BackupValueType.DOUBLE,
     "page_margins" to BackupValueType.DOUBLE, "brightness" to BackupValueType.FLOAT,
@@ -30,6 +32,11 @@ internal val READER_BACKUP_TYPES = mapOf(
     "font_weight" to BackupValueType.STRING, "hyphens" to BackupValueType.BOOLEAN,
     "letter_spacing" to BackupValueType.DOUBLE, "word_spacing" to BackupValueType.DOUBLE,
     "paragraph_spacing" to BackupValueType.DOUBLE,
+    "is_fullscreen" to BackupValueType.BOOLEAN,
+    "top_progress_mode" to BackupValueType.STRING,
+    "progress_font_size_sp" to BackupValueType.FLOAT,
+    "margin_top_dp" to BackupValueType.FLOAT,
+    "margin_bottom_dp" to BackupValueType.FLOAT,
 )
 
 /**
@@ -67,6 +74,9 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
     }
 
     private object Keys {
+        val FONT_REPLACEMENTS_BY_BOOK = stringPreferencesKey("font_replacements_by_book")
+        val FONT_SCALES_BY_BOOK = stringPreferencesKey("font_scales_by_book")
+
         val FONT = stringPreferencesKey("font")
         val FONT_SIZE = doublePreferencesKey("font_size")
         val THEME = stringPreferencesKey("theme")
@@ -89,9 +99,15 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
         val TEXT_ALIGN = stringPreferencesKey("text_align")
         val FONT_WEIGHT = stringPreferencesKey("font_weight")
         val HYPHENS = booleanPreferencesKey("hyphens")
+        val GLYPH_WIDTH = doublePreferencesKey("glyph_width")
         val LETTER_SPACING = doublePreferencesKey("letter_spacing")
         val WORD_SPACING = doublePreferencesKey("word_spacing")
         val PARAGRAPH_SPACING = doublePreferencesKey("paragraph_spacing")
+        val IS_FULLSCREEN = booleanPreferencesKey("is_fullscreen")
+        val TOP_PROGRESS_MODE = stringPreferencesKey("top_progress_mode")
+        val PROGRESS_FONT_SIZE_SP = floatPreferencesKey("progress_font_size_sp")
+        val MARGIN_TOP_DP = floatPreferencesKey("margin_top_dp")
+        val MARGIN_BOTTOM_DP = floatPreferencesKey("margin_bottom_dp")
     }
 
     /**
@@ -119,10 +135,86 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
             textAlign = ReaderTextAlign.fromId(p[Keys.TEXT_ALIGN]),
             fontWeight = ReaderFontWeight.fromId(p[Keys.FONT_WEIGHT]),
             hyphens = p[Keys.HYPHENS],
+            glyphWidth = p[Keys.GLYPH_WIDTH] ?: 1.0,
             letterSpacing = p[Keys.LETTER_SPACING],
             wordSpacing = p[Keys.WORD_SPACING],
             paragraphSpacing = p[Keys.PARAGRAPH_SPACING],
+            isFullscreen = p[Keys.IS_FULLSCREEN] ?: false,
+            topProgressMode = TopProgressMode.fromId(p[Keys.TOP_PROGRESS_MODE]),
+            progressFontSizeSp = (p[Keys.PROGRESS_FONT_SIZE_SP] ?: 12f).coerceIn(9f, 20f),
+            marginTopDp = (p[Keys.MARGIN_TOP_DP] ?: 12f).coerceIn(0f, 48f),
+            marginBottomDp = (p[Keys.MARGIN_BOTTOM_DP] ?: 12f).coerceIn(0f, 48f),
         ).sanitized()
+    }
+
+
+    /** Per-book mapping from an EPUB's original CSS family to an imported-font id. */
+    fun fontReplacements(bookId: String): Flow<Map<String, String>> =
+        store.data.map { preferences ->
+            runCatching {
+                val root = JSONObject(preferences[Keys.FONT_REPLACEMENTS_BY_BOOK] ?: "{}")
+                val book = root.optJSONObject(bookId) ?: JSONObject()
+                buildMap {
+                    val keys = book.keys()
+                    while (keys.hasNext()) {
+                        val family = keys.next()
+                        val fontId = book.optString(family).takeIf { it.startsWith("user:") }
+                        if (!family.isBlank() && fontId != null) put(family, fontId)
+                    }
+                }
+            }.getOrDefault(emptyMap())
+        }
+
+    suspend fun setFontReplacement(bookId: String, family: String, fontId: String?) {
+        val cleanFamily = family.trim()
+        if (cleanFamily.isEmpty()) return
+        store.edit { preferences ->
+            val root = runCatching {
+                JSONObject(preferences[Keys.FONT_REPLACEMENTS_BY_BOOK] ?: "{}")
+            }.getOrElse { JSONObject() }
+            val book = root.optJSONObject(bookId) ?: JSONObject()
+            if (fontId == null) book.remove(cleanFamily) else book.put(cleanFamily, fontId)
+            if (book.length() == 0) root.remove(bookId) else root.put(bookId, book)
+            preferences[Keys.FONT_REPLACEMENTS_BY_BOOK] = root.toString()
+        }
+    }
+
+    /** Per-book scale multiplier for each original EPUB CSS family (1.0 = unchanged). */
+    fun fontScales(bookId: String): Flow<Map<String, Double>> =
+        store.data.map { preferences ->
+            runCatching {
+                val root = JSONObject(preferences[Keys.FONT_SCALES_BY_BOOK] ?: "{}")
+                val book = root.optJSONObject(bookId) ?: JSONObject()
+                buildMap {
+                    val keys = book.keys()
+                    while (keys.hasNext()) {
+                        val family = keys.next()
+                        val scale = book.optDouble(family, Double.NaN)
+                        if (family.isNotBlank() && scale.isFinite() && scale in 0.5..2.0) {
+                            put(family, scale)
+                        }
+                    }
+                }
+            }.getOrDefault(emptyMap())
+        }
+
+    suspend fun setFontScale(bookId: String, family: String, scale: Double) {
+        val cleanFamily = family.trim()
+        if (cleanFamily.isEmpty()) return
+        val cleanScale = scale.coerceIn(0.5, 2.0)
+        store.edit { preferences ->
+            val root = runCatching {
+                JSONObject(preferences[Keys.FONT_SCALES_BY_BOOK] ?: "{}")
+            }.getOrElse { JSONObject() }
+            val book = root.optJSONObject(bookId) ?: JSONObject()
+            if (kotlin.math.abs(cleanScale - 1.0) < 0.001) {
+                book.remove(cleanFamily)
+            } else {
+                book.put(cleanFamily, cleanScale)
+            }
+            if (book.length() == 0) root.remove(bookId) else root.put(bookId, book)
+            preferences[Keys.FONT_SCALES_BY_BOOK] = root.toString()
+        }
     }
 
     suspend fun setFont(font: ReadingFont) {
@@ -250,6 +342,10 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
         }
     }
 
+    suspend fun setGlyphWidth(value: Double) {
+        store.edit { it[Keys.GLYPH_WIDTH] = TypographyRange.GLYPH_WIDTH.require(value) }
+    }
+
     suspend fun setLetterSpacing(value: Double?) {
         setNullableDouble(Keys.LETTER_SPACING, TypographyRange.LETTER_SPACING.sanitize(value))
     }
@@ -260,6 +356,26 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
 
     suspend fun setParagraphSpacing(value: Double?) {
         setNullableDouble(Keys.PARAGRAPH_SPACING, TypographyRange.PARAGRAPH_SPACING.sanitize(value))
+    }
+
+    suspend fun setFullscreen(enabled: Boolean) {
+        store.edit { it[Keys.IS_FULLSCREEN] = enabled }
+    }
+
+    suspend fun setTopProgressMode(mode: TopProgressMode) {
+        store.edit { it[Keys.TOP_PROGRESS_MODE] = mode.id }
+    }
+
+    suspend fun setProgressFontSizeSp(value: Float) {
+        store.edit { it[Keys.PROGRESS_FONT_SIZE_SP] = value.coerceIn(9f, 20f) }
+    }
+
+    suspend fun setMarginTopDp(value: Float) {
+        store.edit { it[Keys.MARGIN_TOP_DP] = value.coerceIn(0f, 48f) }
+    }
+
+    suspend fun setMarginBottomDp(value: Float) {
+        store.edit { it[Keys.MARGIN_BOTTOM_DP] = value.coerceIn(0f, 48f) }
     }
 
     /**

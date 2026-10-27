@@ -185,6 +185,18 @@ enum class ReaderThemeChoice(val id: String, val palette: ReaderTheme?) {
  * and are always drawn; this enum only decides the slot between them,
  * and tapping the footer cycles it.
  */
+enum class TopProgressMode(val id: String) {
+    OFF("off"),
+    PERCENT("percent"),
+    PAGES_LEFT_CHAPTER_TITLE("pages_chapter_title"),
+    ;
+
+    companion object {
+        val Default = OFF
+        fun fromId(id: String?): TopProgressMode = entries.firstOrNull { it.id == id } ?: Default
+    }
+}
+
 enum class FooterMode(val id: String) {
     /**
      * Time left in the chapter once a reading pace has actually been
@@ -205,6 +217,7 @@ enum class FooterMode(val id: String) {
      * the middle one would jump every time the font size did.
      */
     PAGES_LEFT_CHAPTER("pages_chapter"),
+    PAGES_LEFT_CHAPTER_TITLE("pages_chapter_title"),
     TIME_LEFT_BOOK("time_book"),
     CHAPTER_TITLE("chapter"),
     EMPTY("empty"),
@@ -315,6 +328,9 @@ enum class FooterField(val id: String) {
     /** How much charge is left, drawn with a glyph. */
     BATTERY("battery"),
 
+    /** Time of day and battery percentage together in one footer corner. */
+    TIME_AND_BATTERY("time_battery"),
+
     /** Nothing at all, leaving the other slots more room. */
     EMPTY("empty"),
     ;
@@ -335,7 +351,7 @@ enum class FooterField(val id: String) {
      * book. The two that are keep their own schedule, and a footer
      * showing neither takes no readings and needs no nudging.
      */
-    val readsTheDevice: Boolean get() = this == CLOCK || this == BATTERY
+    val readsTheDevice: Boolean get() = this == CLOCK || this == BATTERY || this == TIME_AND_BATTERY
 
     companion object {
         /**
@@ -681,6 +697,7 @@ sealed class TypographyRange(
         /** Readium's `pageMargins` range, whose minimum really is zero. */
         val PAGE_MARGINS = Segmented(min = 0.0, max = 4.0)
 
+        val GLYPH_WIDTH = Slider(min = 0.85, max = 1.15, increment = 0.01)
         val LETTER_SPACING = Slider(min = 0.0, max = 0.25, increment = 0.01)
         val WORD_SPACING = Slider(min = 0.0, max = 0.5, increment = 0.02)
         val PARAGRAPH_SPACING = Slider(min = 0.0, max = 2.0, increment = 0.1)
@@ -849,13 +866,19 @@ data class ReaderPrefs(
     val textAlign: ReaderTextAlign = ReaderTextAlign.Default,
     val fontWeight: ReaderFontWeight = ReaderFontWeight.Default,
     val hyphens: Boolean? = null,
+    val glyphWidth: Double = 1.0,
     val letterSpacing: Double? = null,
     val wordSpacing: Double? = null,
     val paragraphSpacing: Double? = null,
+    val isFullscreen: Boolean = false,
+    val topProgressMode: TopProgressMode = TopProgressMode.Default,
+    val progressFontSizeSp: Float = 12f,
+    val marginTopDp: Float = 12f,
+    val marginBottomDp: Float = 12f,
 ) {
     companion object {
         const val MIN_FONT_SIZE = 0.6
-        const val MAX_FONT_SIZE = 2.5
+        const val MAX_FONT_SIZE = 3.5
 
         /**
          * How many sizes the reader can actually choose between.
@@ -867,7 +890,7 @@ data class ReaderPrefs(
          *
          * @see FONT_SIZE_SLIDER_STEPS
          */
-        const val FONT_SIZE_POSITIONS = 19
+        const val FONT_SIZE_POSITIONS = 30
         const val FONT_SIZE_SLIDER_STEPS = FONT_SIZE_POSITIONS - 2
 
         /**
@@ -899,9 +922,13 @@ fun ReaderPrefs.sanitized(): ReaderPrefs = copy(
     fontSize = TypographyRange.FONT_SIZE.require(fontSize),
     lineHeight = TypographyRange.LINE_HEIGHT.sanitize(lineHeight),
     pageMargins = TypographyRange.PAGE_MARGINS.sanitize(pageMargins),
+    glyphWidth = TypographyRange.GLYPH_WIDTH.require(glyphWidth),
     letterSpacing = TypographyRange.LETTER_SPACING.sanitize(letterSpacing),
     wordSpacing = TypographyRange.WORD_SPACING.sanitize(wordSpacing),
     paragraphSpacing = TypographyRange.PARAGRAPH_SPACING.sanitize(paragraphSpacing),
+    progressFontSizeSp = progressFontSizeSp.takeIf { it.isFinite() }?.coerceIn(9f, 20f) ?: 12f,
+    marginTopDp = marginTopDp.takeIf { it.isFinite() }?.coerceIn(0f, 48f) ?: 12f,
+    marginBottomDp = marginBottomDp.takeIf { it.isFinite() }?.coerceIn(0f, 48f) ?: 12f,
     brightness = brightness?.takeIf { it.isFinite() }?.coerceIn(0f, 1f),
     autoScrollSpeed = AutoScrollPreference.sanitize(autoScrollSpeed),
 )

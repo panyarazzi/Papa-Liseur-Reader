@@ -74,6 +74,33 @@ class FooterMiddleTest {
     }
 
     @Test
+    fun `combined chapter mode shows the current screen and total screens with the chapter title`() {
+        assertEquals(
+            FooterMiddle.PagesAndChapter(4, 12, "The Sign of Four"),
+            footerMiddle(
+                progress,
+                FooterMode.PAGES_LEFT_CHAPTER_TITLE,
+                reflowable = true,
+                screens = SectionScreens(4, 12),
+            ),
+        )
+    }
+
+    @Test
+    fun `combined chapter mode falls back to title if screen count is unavailable`() {
+        assertEquals(
+            FooterMiddle.Chapter("The Sign of Four"),
+            footerMiddle(progress, FooterMode.PAGES_LEFT_CHAPTER_TITLE),
+        )
+        assertNull(
+            footerMiddle(
+                progress.copy(chapterTitle = null),
+                FooterMode.PAGES_LEFT_CHAPTER_TITLE,
+            ),
+        )
+    }
+
+    @Test
     fun `the chapter's last page is kept as a count of zero`() {
         // Wording it is the footer's business; dropping it here would
         // blank the slot on the one page of the chapter that has
@@ -95,7 +122,7 @@ class FooterMiddleTest {
     }
 
     @Test
-    fun `smart still falls back to the title, not to pages`() {
+    fun `smart still falls back to the title not to pages`() {
         // Pages left is a mode the reader asks for by name. Smart
         // promises time, and degrades to something that is not a
         // number at all rather than to a different number.
@@ -112,7 +139,7 @@ class FooterMiddleTest {
     }
 
     @Test
-    fun `a reflowable book counts the screens left, so a turn takes one off`() {
+    fun `a reflowable book counts the screens left so a turn takes one off`() {
         val mode = FooterMode.PAGES_LEFT_CHAPTER
         assertEquals(
             FooterMiddle.PagesInChapter(8),
@@ -125,7 +152,7 @@ class FooterMiddleTest {
     }
 
     @Test
-    fun `the last screen of the section counts zero, which the footer words`() {
+    fun `the last screen of the section counts zero which the footer words`() {
         assertEquals(
             FooterMiddle.PagesInChapter(0),
             footerMiddle(
@@ -150,7 +177,7 @@ class FooterMiddleTest {
     }
 
     @Test
-    fun `a fixed-layout book counts positions, which are its pages`() {
+    fun `a fixed layout book counts positions which are its pages`() {
         assertEquals(
             FooterMiddle.PagesInChapter(17),
             footerMiddle(progress, FooterMode.PAGES_LEFT_CHAPTER, reflowable = false),

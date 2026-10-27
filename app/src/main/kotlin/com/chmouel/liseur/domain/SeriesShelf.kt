@@ -282,7 +282,7 @@ fun List<SeriesShelf>.arrangedBy(
                 .then(byName)
         }
 
-        LibrarySort.TITLE, LibrarySort.SERIES ->
+        LibrarySort.TITLE, LibrarySort.FILE_NAME, LibrarySort.SERIES ->
             if (reversed) byName.reversed() else byName
     }
 

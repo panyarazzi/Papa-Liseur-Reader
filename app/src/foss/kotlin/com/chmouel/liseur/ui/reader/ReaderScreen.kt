@@ -1,18 +1,23 @@
 package com.chmouel.liseur.ui.reader
 
+import android.app.Activity
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.chmouel.liseur.ui.reader.gestures.pinchToZoomFont
 
 @Composable
-fun ReaderScreen(
+internal fun ReaderScreen(
     isFullscreen: Boolean,
     isTopProgressEnabled: Boolean,
     topProgressMode: String,
@@ -31,6 +36,9 @@ fun ReaderScreen(
     totalProgressPercent: Float,
     onFontScaleChanged: (Float) -> Unit
 ) {
+    // ควบคุมการแสดง/ซ่อน Status Bar (แถบบอกเวลา/แบตเตอรี่) ตามค่า Fullscreen ที่ผู้ใช้ตั้งค่า
+    ImmersiveMode(hideSystemBars = isFullscreen)
+
     // ข้อ 7: คำนวณ Margin Top เพิ่มเติมอัตโนมัติหากเปิด Top Progress เพื่อไม่ให้เนื้อหาบรรทัดแรกชนขอบ
     val effectiveTopMargin = if (isTopProgressEnabled) {
         marginTopDp + 22
@@ -108,6 +116,30 @@ fun ReaderScreen(
                         .padding(bottom = 8.dp, start = 16.dp, end = 16.dp)
                 )
             }
+        }
+    }
+}
+
+/** ฟังก์ชันควบคุมการซ่อนหรือแสดง Status Bar และ Navigation Bar ตามโหมด Fullscreen */
+@Composable
+private fun ImmersiveMode(hideSystemBars: Boolean) {
+    val view = LocalView.current
+    LaunchedEffect(hideSystemBars) {
+        val window = (view.context as? Activity)?.window ?: return@LaunchedEffect
+        val controller = WindowCompat.getInsetsController(window, view)
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (hideSystemBars) {
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            val window = (view.context as? Activity)?.window ?: return@onDispose
+            WindowCompat.getInsetsController(window, view)
+                .show(WindowInsetsCompat.Type.systemBars())
         }
     }
 }

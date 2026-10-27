@@ -7,6 +7,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// CI supplies a unique workflow run number; local builds are clearly marked.
+val papaBuildLabel = System.getenv("GITHUB_RUN_NUMBER")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { "papa apk#$it" }
+    ?: "papa local"
+
 // Release signing is optional and kept out of git: if keystore.properties
 // is absent (e.g. on a fresh clone or in CI), the release build type simply
 // stays unsigned rather than failing the build.
@@ -48,6 +54,8 @@ android {
         targetSdk = 37
         versionCode = 56
         versionName = "0.25.0"
+        // Identifies this project APK independently of the upstream Liseur version.
+        buildConfigField("String", "PAPA_BUILD_LABEL", "\"$papaBuildLabel\"")
     }
 
     signingConfigs {

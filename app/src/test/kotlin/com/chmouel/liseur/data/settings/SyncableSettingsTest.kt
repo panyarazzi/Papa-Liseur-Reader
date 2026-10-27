@@ -111,6 +111,7 @@ class SyncableSettingsTest {
                 "reader.text_align",
                 "reader.font_weight",
                 "reader.hyphens",
+                "reader.glyph_width",
                 "reader.letter_spacing",
                 "reader.word_spacing",
                 "reader.paragraph_spacing",

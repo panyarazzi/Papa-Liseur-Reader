@@ -43,7 +43,7 @@ import androidx.sqlite.execSQL
         GlossaryEntry::class,
         BookAiPreferences::class,
     ],
-    version = 70,
+    version = 71,
     exportSchema = true,
 )
 abstract class LiseurDatabase : RoomDatabase() {
@@ -83,6 +83,13 @@ abstract class LiseurDatabase : RoomDatabase() {
     abstract fun glossaryDao(): GlossaryDao
 
     companion object {
+        val MIGRATION_70_71 = object : Migration(70, 71) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN source_path TEXT")
+                connection.execSQL("ALTER TABLE books ADD COLUMN source_file_name TEXT")
+            }
+        }
+
         val MIGRATION_69_70 = object : Migration(69, 70) {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL("ALTER TABLE sync_peer_state ADD COLUMN pending_seq INTEGER")
@@ -1981,6 +1988,7 @@ abstract class LiseurDatabase : RoomDatabase() {
             MIGRATION_67_68,
             MIGRATION_68_69,
             MIGRATION_69_70,
+            MIGRATION_70_71,
         )
     }
 }

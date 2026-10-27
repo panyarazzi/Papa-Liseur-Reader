@@ -43,10 +43,28 @@ class ReaderPreferencesRepositoryTest {
         assertEquals(ReaderTextAlign.DEFAULT, prefs.textAlign)
         assertEquals(ReaderFontWeight.DEFAULT, prefs.fontWeight)
         assertNull(prefs.hyphens)
+        assertEquals(1.0, prefs.glyphWidth, 0.0)
         assertNull(prefs.letterSpacing)
         assertNull(prefs.wordSpacing)
         assertNull(prefs.paragraphSpacing)
         assertFalse(prefs.requiresAdvancedStyles(ReadingCss.Default))
+    }
+
+    @Test
+    fun `reader display preferences persist and are clamped`() = runTest {
+        val repo = ReaderPreferencesRepository(store())
+        repo.setFullscreen(true)
+        repo.setTopProgressMode(TopProgressMode.PAGES_LEFT_CHAPTER_TITLE)
+        repo.setProgressFontSizeSp(25f)
+        repo.setMarginTopDp(60f)
+        repo.setMarginBottomDp(-4f)
+
+        val prefs = repo.prefs.first()
+        assertTrue(prefs.isFullscreen)
+        assertEquals(TopProgressMode.PAGES_LEFT_CHAPTER_TITLE, prefs.topProgressMode)
+        assertEquals(20f, prefs.progressFontSizeSp, 0f)
+        assertEquals(48f, prefs.marginTopDp, 0f)
+        assertEquals(0f, prefs.marginBottomDp, 0f)
     }
 
     @Test
@@ -64,11 +82,13 @@ class ReaderPreferencesRepositoryTest {
         repo.setTextAlign(ReaderTextAlign.JUSTIFIED)
         repo.setFontWeight(ReaderFontWeight.LIGHT)
         repo.setHyphens(false)
+        repo.setGlyphWidth(1.08)
         repo.setLetterSpacing(0.05)
         repo.setWordSpacing(0.1)
         repo.setParagraphSpacing(0.4)
 
         val prefs = repo.prefs.first()
+        assertEquals(1.08, prefs.glyphWidth, 0.0)
         assertEquals(ReaderTextAlign.JUSTIFIED, prefs.textAlign)
         assertEquals(ReaderFontWeight.LIGHT, prefs.fontWeight)
         assertEquals(false, prefs.hyphens)

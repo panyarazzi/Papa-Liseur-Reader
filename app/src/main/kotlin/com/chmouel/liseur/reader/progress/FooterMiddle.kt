@@ -15,6 +15,7 @@ sealed interface FooterMiddle {
      * business rather than this decision's.
      */
     data class PagesInChapter(val pages: Int) : FooterMiddle
+    data class PagesAndChapter(val page: Int, val totalPages: Int, val title: String) : FooterMiddle
 }
 
 /**
@@ -49,6 +50,18 @@ fun footerMiddle(
 
     FooterMode.PAGES_LEFT_CHAPTER ->
         pagesLeftInChapter(progress, reflowable, screens)?.let(FooterMiddle::PagesInChapter)
+
+    FooterMode.PAGES_LEFT_CHAPTER_TITLE -> {
+        val title = progress.chapterTitle?.takeIf { it.isNotBlank() }
+        // Only the laid-out screen count can give an honest current/total
+        // chapter page number. Stable positions are not screen pages.
+        val pageCount = screens?.takeIf { reflowable }
+        if (title != null && pageCount != null) {
+            FooterMiddle.PagesAndChapter(pageCount.screen, pageCount.screens, title)
+        } else {
+            title?.let(FooterMiddle::Chapter)
+        }
+    }
 
     FooterMode.TIME_LEFT_BOOK -> FooterMiddle.TimeInBook(progress.minutesLeftInBook)
 

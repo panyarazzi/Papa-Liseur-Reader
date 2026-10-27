@@ -209,6 +209,10 @@ data class Book(
      * is the entry, and putting it back has to give all of it back.
      */
     @ColumnInfo(name = "hidden_at") val hiddenAt: Long? = null,
+    /** Relative path below the watched root, including the file name. Null for individually imported books. */
+    @ColumnInfo(name = "source_path") val sourcePath: String? = null,
+    /** Display name of the source file, independent of the EPUB metadata title. */
+    @ColumnInfo(name = "source_file_name") val sourceFileName: String? = null,
 ) {
     val finished: Boolean get() = finishedAt != null
 
@@ -734,6 +738,9 @@ interface BookDao {
      */
     @Query("UPDATE books SET source = :source WHERE url = :url")
     suspend fun setSource(url: String, source: String?)
+
+    @Query("UPDATE books SET source_path = :sourcePath, source_file_name = :fileName WHERE url = :url")
+    suspend fun setSourcePath(url: String, sourcePath: String?, fileName: String? = null)
 
     /**
      * Takes a book off the shelf, or puts it back.

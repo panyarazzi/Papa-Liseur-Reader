@@ -1461,6 +1461,9 @@ private fun BookGrid(
     modifier: Modifier = Modifier,
     bottomInset: Dp = 0.dp,
 ) {
+    var selectedFolder by rememberSaveable { mutableStateOf<String?>(null) }
+    var bookViewMode by rememberSaveable { mutableStateOf("grid") }
+
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = coverMinSize(windowWidth())),
         state = gridState,
@@ -1542,6 +1545,16 @@ private fun BookGrid(
                 // Pinned to the far end of the row and laid out last, so
                 // it is never squeezed: the filter summary gives way to
                 // it rather than the other way round.
+                if (selectedFolder != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { bookViewMode = "grid" }, enabled = bookViewMode != "grid") {
+                            Text("Grid")
+                        }
+                        TextButton(onClick = { bookViewMode = "list" }, enabled = bookViewMode != "list") {
+                            Text("List")
+                        }
+                    }
+                }
                 SortRow(
                     sort = state.sort,
                     reversed = state.sortReversed,
@@ -1551,23 +1564,69 @@ private fun BookGrid(
                 )
             }
         }
-        if (state.filters.groupBySeries) {
+        if (selectedFolder != null) {
+            val selectedBooks = state.books.filter { book ->
+                val source = book.sourcePath?.replace('\\', '/')
+                val parent = when {
+                    source == null -> "__OTHER__"
+                    '/' !in source -> "__ROOT__"
+                    else -> source.substringBeforeLast('/')
+                }
+                parent == selectedFolder
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = { selectedFolder = null }) {
+                        Text(text = "‹  All folders")
+                    }
+                    Text(
+                        text = selectedFolder?.substringAfterLast('/') ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = selectedBooks.size.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (bookViewMode == "list") {
+                items(selectedBooks, key = { it.id }, span = { GridItemSpan(maxLineSpan) }) { book ->
+                    BookListRow(
+                        book = book,
+                        progress = state.downloads[book.url],
+                        onClick = { onBookSelected(book) },
+                        onLongClick = { onBookLongPress(book) },
+                    )
+                }
+            } else {
+                items(selectedBooks, key = { it.id }) { book ->
+                    BookCard(
+                        book = book,
+                        progress = state.downloads[book.url],
+                        inASeries = seriesKey(book.seriesName) in state.shownSeries,
+                        onClick = { onBookSelected(book) },
+                        onLongClick = { onBookLongPress(book) },
+                    )
+                }
+            }
+        } else if (state.filters.groupBySeries) {
             items(state.shelfEntries, key = { it.gridKey }) { entry ->
                 when (entry) {
                     is ShelfEntry.Pile -> SeriesStackCard(
                         shelf = entry.shelf,
                         onClick = { onSeriesSelected(entry.shelf) },
-                        // A pile has no actions of its own on the shelf;
-                        // the long press opens it, which is where they
-                        // live.
                         onLongClick = { onSeriesSelected(entry.shelf) },
                     )
                     is ShelfEntry.Single -> BookCard(
                         book = entry.book,
                         progress = state.downloads[entry.book.url],
-                        // A single here is a book whose series is not on
-                        // the shelf; a pile it belonged to would have
-                        // swallowed it.
                         inASeries = false,
                         onClick = { onBookSelected(entry.book) },
                         onLongClick = { onBookLongPress(entry.book) },
@@ -1575,15 +1634,155 @@ private fun BookGrid(
                 }
             }
         } else {
-            items(state.books, key = { it.id }) { book ->
-                BookCard(
-                    book = book,
-                    progress = state.downloads[book.url],
-                    inASeries = seriesKey(book.seriesName) in state.shownSeries,
-                    onClick = { onBookSelected(book) },
-                    onLongClick = { onBookLongPress(book) },
+            // Folder-first shelf: one tile per source folder, with a preview
+            // of up to four books using the current library sort order.
+            // Books without path metadata remain accessible in an Other folder.
+            val folderGroups = state.books.groupBy { book ->
+                val source = book.sourcePath?.replace('\\', '/')
+                when {
+                    source == null -> "__OTHER__"
+                    '/' !in source -> "__ROOT__"
+                    else -> source.substringBeforeLast('/')
+                }
+            }.toSortedMap()
+            items(folderGroups.entries.toList(), key = { "folder-card:" + it.key }) { entry ->
+                val folderKey = entry.key
+                val folderBooks = entry.value
+                val label = when {
+                    folderKey == "__OTHER__" -> stringResource(R.string.library_folder_other)
+                    folderKey == "__ROOT__" -> stringResource(R.string.library_folder_root)
+                    else -> folderKey.substringAfterLast('/')
+                }
+                FolderPreviewCard(
+                    title = label,
+                    books = folderBooks.take(4),
+                    bookCount = folderBooks.size,
+                    onClick = { selectedFolder = folderKey },
                 )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BookListRow(
+    book: Book,
+    progress: DownloadProgress?,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            )
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        BookCover(
+            book = book,
+            modifier = Modifier.width(58.dp).aspectRatio(2f / 3f),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = book.displayTitle,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            book.displayAuthor?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                text = book.sourceFileName ?: book.url.substringAfterLast('/'),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            progress?.let {
+                LinearProgressIndicator(
+                    progress = { it.fraction ?: 0f },
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FolderPreviewCard(
+    title: String,
+    books: List<Book>,
+    bookCount: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                repeat(4) { index ->
+                    val book = books.getOrNull(index)
+                    if (book != null) {
+                        BookCover(
+                            book = book,
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(2f / 3f),
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(2f / 3f)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CreateNewFolder,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            Text(
+                text = bookCount.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -2172,6 +2371,7 @@ private fun LibrarySort.label(): String = stringResource(
         LibrarySort.RECENT -> R.string.sort_recent
         LibrarySort.TITLE -> R.string.sort_title
         LibrarySort.AUTHOR -> R.string.sort_author
+        LibrarySort.FILE_NAME -> R.string.sort_file_name
         LibrarySort.ADDED -> R.string.sort_added
         LibrarySort.SERIES -> R.string.sort_series
     },

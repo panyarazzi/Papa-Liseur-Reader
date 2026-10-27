@@ -66,6 +66,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -110,7 +111,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.ViewCompat
@@ -178,6 +178,7 @@ import com.chmouel.liseur.reader.footnotes.SameDocumentLinks
 import com.chmouel.liseur.data.settings.FooterField
 import com.chmouel.liseur.data.settings.FooterMode
 import com.chmouel.liseur.data.settings.FooterSlot
+import com.chmouel.liseur.data.settings.TopProgressMode
 import com.chmouel.liseur.data.settings.footerHasAnythingToSay
 import com.chmouel.liseur.data.settings.ColumnMode
 import com.chmouel.liseur.data.settings.PageTurnStyle
@@ -185,6 +186,7 @@ import com.chmouel.liseur.data.settings.pageTurnStyleOnScreen
 import com.chmouel.liseur.reader.progress.ResourceAnchor
 import com.chmouel.liseur.data.settings.ReadingFont
 import com.chmouel.liseur.data.settings.ReaderPrefs
+import com.chmouel.liseur.data.settings.fonts.UserFont
 import com.chmouel.liseur.data.settings.readingCssFor
 import com.chmouel.liseur.ui.reading.FineTypographyActions
 import com.chmouel.liseur.data.settings.ReaderTheme
@@ -426,6 +428,11 @@ internal fun ReaderScreen(
      * the fragment holding the old ones gets torn down.
      */
     fontKey: String,
+    userFonts: List<UserFont>,
+    fontReplacementsFlow: StateFlow<Map<String, String>>,
+    onFontReplacementChanged: (String, String?) -> Unit,
+    fontScalesFlow: StateFlow<Map<String, Double>>,
+    onFontScaleChanged: (String, Double) -> Unit,
     /**
      * The preferences the navigator in hand was actually built with.
      *
@@ -558,6 +565,8 @@ internal fun ReaderScreen(
     var footerNoteCount by remember { mutableLongStateOf(0L) }
     val chromeVisibleNow by rememberUpdatedState(chromeVisible)
     val prefs by prefsFlow.collectAsStateWithLifecycle()
+    val fontReplacements by fontReplacementsFlow.collectAsStateWithLifecycle()
+    val fontScales by fontScalesFlow.collectAsStateWithLifecycle()
     val keepScreenOn by keepScreenOnFlow.collectAsStateWithLifecycle()
     val scrollMode by scrollModeFlow.collectAsStateWithLifecycle()
     val tapZones by tapZonesFlow.collectAsStateWithLifecycle()
@@ -730,7 +739,7 @@ internal fun ReaderScreen(
     // failed to recognise, or not on one we wrongly did, gets the
     // gesture back by setting E-ink mode themselves. That is the only
     // reason the mode keeps a manual override (ADR 22).
-    val pinchToResizeNow by rememberUpdatedState(pinchToResize && !LocalEInk.current)
+    val pinchToResizeNow by rememberUpdatedState(pinchToResize)
     val fontSizeNow by rememberUpdatedState(prefs.fontSize)
     val setFontSizeNow by rememberUpdatedState(onPrefsAction.setFontSize)
     val touch = remember { TouchProbe() }
@@ -3240,7 +3249,7 @@ internal fun ReaderScreen(
             navigateLater(target.locator, NavigatorPositionEvent.LOCAL_JUMP)
         }
     }
-    ImmersiveMode(hideSystemBars = !chromeVisible)
+    ImmersiveMode(hideSystemBars = prefs.isFullscreen)
     // While the way-back pill shows, Back takes it (#275). This must be
     // registered before the overlays' handlers: the last one registered
     // wins, so search, the contents, a footnote or an image still close
@@ -3796,7 +3805,7 @@ internal fun ReaderScreen(
         // there. The two halves have to flip together, and a `scroll`
         // that differs between them invalidates Readium's view pager
         // even in a fixed-layout book, where nothing renders from it.
-        val footerLineHeight = MaterialTheme.typography.labelSmall.lineHeight
+        val footerLineHeight = (prefs.progressFontSizeSp * 1.3f).sp
         val footerShowing =
             footerHasAnythingToSay(prefs.footerMode, prefs.footerLeft, prefs.footerRight)
         val footerReserve = FooterMetrics.reservedHeightDp(
@@ -3829,15 +3838,33 @@ internal fun ReaderScreen(
                     .then(behindViewer)
                     .then(
                         if (pageContainerScrolls) {
-                            Modifier.windowInsetsPadding(
-                                WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal),
-                            )
+                            Modifier
+                                .windowInsetsPadding(
+                                    WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal),
+                                )
+                                .padding(
+                                    top = (
+                                        (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
+                                        if (prefs.topProgressMode != TopProgressMode.OFF) {
+                                            (prefs.progressFontSizeSp * 1.5f + 22f).toInt()
+                                        } else 0
+                                    ).dp,
+                                    bottom = (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0).dp,
+                                )
                         } else {
                             Modifier
                                 .windowInsetsPadding(WindowInsets.displayCutout)
                                 .padding(
-                                    top = 12.dp,
-                                    bottom = if (footerShowing) footerReserve else 12.dp,
+                                    top = (
+                                        (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
+                                        if (prefs.topProgressMode != TopProgressMode.OFF) {
+                                            (prefs.progressFontSizeSp * 1.5f + 22f).toInt()
+                                        } else 0
+                                    ).dp,
+                                    bottom = (
+                                        (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0) +
+                                        if (footerShowing) footerReserve.value.toInt() else 0
+                                    ).dp,
                                 )
                         },
                     ),
@@ -3933,6 +3960,41 @@ internal fun ReaderScreen(
                 placed.mapTo(mutableSetOf(), PageSwap::by)
             }.distinctUntilChanged()
         }.collectAsStateWithLifecycle(emptySet())
+        if (!showingEnd && !chromeVisible && prefs.topProgressMode != TopProgressMode.OFF) {
+            val topProgressText = when (prefs.topProgressMode) {
+                TopProgressMode.OFF -> null
+                TopProgressMode.PERCENT -> progress?.let { "${it.percent}%" }
+                TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> progress?.let { current ->
+                    val title = current.chapterTitle?.takeIf { it.isNotBlank() }
+                    val chapterPage = sectionScreens
+                        ?.takeIf { reflowableText }
+                        ?.let { it.screen to it.screens }
+                    when {
+                        chapterPage != null && title != null ->
+                            "${chapterPage.first.coerceAtLeast(1)}/${chapterPage.second.coerceAtLeast(1)} ${title}"
+                        title != null -> title
+                        chapterPage != null -> "${chapterPage.first}/${chapterPage.second}"
+                        else -> null
+                    }
+                }
+            }
+            topProgressText?.let { label ->
+                Text(
+                    text = label,
+                    color = readingTheme.foreground.copy(alpha = 0.72f),
+                    fontSize = prefs.progressFontSizeSp.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .then(behindViewer)
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                        .padding(start = 12.dp, end = 12.dp, top = 2.dp),
+                )
+            }
+        }
+
         if (!showingEnd && !chromeVisible && shownTranslation != null) {
             Row(
                 verticalAlignment = Alignment.Top,
@@ -4219,6 +4281,7 @@ internal fun ReaderScreen(
                 right = prefs.footerRight,
                 footerLocked = lockFooterOn,
                 turn = footerTurn,
+                progressFontSizeSp = prefs.progressFontSizeSp,
                 theme = readingTheme,
                 onCycleMode = onProgressAction.cycleFooterMode,
                 onCycleField = onProgressAction.cycleFooterField,
@@ -4995,6 +5058,12 @@ internal fun ReaderScreen(
             prefs = prefs,
             readingTheme = readingTheme,
             readingCss = readingCss,
+            publication = publication,
+            importedFonts = userFonts,
+            fontReplacements = fontReplacements,
+            onFontReplacementChanged = onFontReplacementChanged,
+            fontScales = fontScales,
+            onFontScaleChanged = onFontScaleChanged,
             onFontSelected = onPrefsAction.setFont,
             onFontSizeChanged = onPrefsAction.setFontSize,
             onThemeSelected = onPrefsAction.setTheme,
@@ -5017,6 +5086,11 @@ internal fun ReaderScreen(
             fineTypography = onPrefsAction.fineTypography,
             onLineHeightChanged = onPrefsAction.setLineHeight,
             onPageMarginsChanged = onPrefsAction.setPageMargins,
+            onFullscreenChanged = onPrefsAction.setFullscreen,
+            onTopProgressModeChanged = onPrefsAction.setTopProgressMode,
+            onProgressFontSizeChanged = onPrefsAction.setProgressFontSizeSp,
+            onMarginTopChanged = onPrefsAction.setMarginTopDp,
+            onMarginBottomChanged = onPrefsAction.setMarginBottomDp,
             onColumnModeChanged = onPrefsAction.setColumnMode,
             onFooterModeChanged = onProgressAction.setFooterMode,
             onFooterFieldChanged = onProgressAction.setFooterField,
@@ -5421,6 +5495,11 @@ class ReaderPrefsActions(
     val setTheme: (ReaderThemeChoice) -> Unit,
     val setLineHeight: (Double?) -> Unit,
     val setPageMargins: (Double?) -> Unit,
+    val setFullscreen: (Boolean) -> Unit,
+    val setTopProgressMode: (TopProgressMode) -> Unit,
+    val setProgressFontSizeSp: (Float) -> Unit,
+    val setMarginTopDp: (Float) -> Unit,
+    val setMarginBottomDp: (Float) -> Unit,
     val setBrightness: (Float?) -> Unit,
     val setPageTurnStyle: (PageTurnStyle) -> Unit,
     val setColumnMode: (ColumnMode) -> Unit,
@@ -5470,7 +5549,11 @@ class ReaderBookSyncActions(
     val registerCapture: (suspend () -> Boolean) -> Unit = {},
 )
 
-/** Hides the status and navigation bars while the chrome is hidden. */
+/**
+ * Fullscreen controls the status bar only: on hides it; off restores it
+ * so readers can see device time, Wi-Fi/Bluetooth and brightness controls.
+ * Navigation bar visibility is intentionally left independent.
+ */
 @Composable
 private fun ImmersiveMode(hideSystemBars: Boolean) {
     val view = LocalView.current
@@ -5480,10 +5563,11 @@ private fun ImmersiveMode(hideSystemBars: Boolean) {
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         if (hideSystemBars) {
-            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.hide(WindowInsetsCompat.Type.statusBars())
         } else {
-            controller.show(WindowInsetsCompat.Type.systemBars())
+            controller.show(WindowInsetsCompat.Type.statusBars())
         }
+        // Navigation bar visibility is intentionally not tied to the Fullscreen preference.
     }
     DisposableEffect(Unit) {
         onDispose {

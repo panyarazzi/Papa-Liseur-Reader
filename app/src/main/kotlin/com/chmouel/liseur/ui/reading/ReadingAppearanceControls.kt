@@ -770,6 +770,7 @@ val FooterMode.label: Int
     get() = when (this) {
         FooterMode.SMART -> R.string.footer_mode_smart
         FooterMode.PAGES_LEFT_CHAPTER -> R.string.footer_mode_pages_chapter
+        FooterMode.PAGES_LEFT_CHAPTER_TITLE -> R.string.footer_mode_pages_chapter_title
         FooterMode.TIME_LEFT_BOOK -> R.string.footer_mode_time_book
         FooterMode.CHAPTER_TITLE -> R.string.footer_mode_chapter
         FooterMode.EMPTY -> R.string.footer_mode_empty
@@ -791,5 +792,6 @@ val FooterField.label: Int
         FooterField.TIME_LEFT_CHAPTER -> R.string.footer_field_time_chapter
         FooterField.CLOCK -> R.string.footer_field_clock
         FooterField.BATTERY -> R.string.footer_field_battery
+        FooterField.TIME_AND_BATTERY -> R.string.footer_field_time_battery
         FooterField.EMPTY -> R.string.footer_field_empty
     }

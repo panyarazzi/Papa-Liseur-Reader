@@ -64,6 +64,7 @@ import com.chmouel.liseur.data.settings.ReadingFont
 import com.chmouel.liseur.data.settings.ReaderPreferencesRepository
 import com.chmouel.liseur.data.settings.ReadingPaceRepository
 import com.chmouel.liseur.data.settings.UserFontRepository
+import com.chmouel.liseur.reader.fonts.FontReplacementContainer
 import com.chmouel.liseur.data.settings.fonts.UserFont
 import com.chmouel.liseur.sync.PositionSyncCoordinator
 import com.chmouel.liseur.sync.SyncScope
@@ -77,6 +78,7 @@ import com.chmouel.liseur.data.settings.ReaderPrefs
 import com.chmouel.liseur.data.settings.ReaderTextAlign
 import com.chmouel.liseur.data.settings.ReaderThemeChoice
 import com.chmouel.liseur.data.settings.TapZones
+import com.chmouel.liseur.data.settings.TopProgressMode
 import com.chmouel.liseur.data.settings.TypographyRange
 import com.chmouel.liseur.domain.EPSILON
 import com.chmouel.liseur.domain.SeriesExtras
@@ -192,6 +194,24 @@ class ReaderViewModel(
      * actually uses.
      */
     val importedFonts: StateFlow<List<UserFont>> = userFonts.fonts
+
+    /** Per-book font replacement rules, keyed by the publisher's CSS family name. */
+    val fontReplacements: StateFlow<Map<String, String>> = prefsRepo
+        .fontReplacements(bookId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    fun setFontReplacement(family: String, fontId: String?) {
+        viewModelScope.launch { prefsRepo.setFontReplacement(bookId, family, fontId) }
+    }
+
+    /** Per-book scale multipliers for the EPUB's original CSS font families. */
+    val fontScales: StateFlow<Map<String, Double>> = prefsRepo
+        .fontScales(bookId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    fun setFontScale(family: String, scale: Double) {
+        viewModelScope.launch { prefsRepo.setFontScale(bookId, family, scale) }
+    }
 
     private val sessions = sessionManager.recorder(bookId)
     private val timeSpent = sessionManager.observeTotal(bookId)
@@ -1384,6 +1404,9 @@ class ReaderViewModel(
             // and rebuild its navigator the moment the scan landed — a
             // reflow nobody asked for, on the page they were reading.
             userFonts.awaitReady()
+            // Load persisted replacement rules before Readium builds the publication container.
+            prefsRepo.fontReplacements(bookId).first()
+            prefsRepo.fontScales(bookId).first()
             // A book still being read aloud is already open; reading it
             // again shares that publication rather than opening a second.
             val opened = openBookHandles.open(bookId, keep = ::holdOpened) {
@@ -1403,6 +1426,12 @@ class ReaderViewModel(
                         // shadow anything the book carries, whereas the book
                         // could otherwise shadow a font.
                         container = CompositeContainer(
+                            FontReplacementContainer(
+                                delegate = container,
+                                replacements = { fontReplacements.value },
+                                scales = { fontScales.value },
+                                fonts = { userFonts.fonts.value },
+                            ),
                             UserFontsContainer { userFonts.fonts.value },
                             container,
                         )
@@ -1867,7 +1896,15 @@ class ReaderViewModel(
                 }
             }
         } else if (accepted) {
+            // Queue acceptance is optimistic; invalidate this baseline if the
+            // asynchronous write fails so the same place can be retried.
             positionSaveBaseline = prepared
+            viewModelScope.launch {
+                val saved = positionPublisher.flush(bookId)
+                if (!saved && saveGeneration == positionSaveGeneration) {
+                    updatePositionSaveBaseline(null)
+                }
+            }
         }
         if (effectiveEvent == NavigatorPositionEvent.READER_MOVEMENT) approximateCatchUp = null
         // Reading on accepts the opening, so the way back to the old place
@@ -2895,6 +2932,26 @@ class ReaderViewModel(
         own = { it.copy(pageMargins = TypographyRange.PAGE_MARGINS.sanitize(value)) },
     )
 
+    fun setFullscreen(enabled: Boolean) = viewModelScope.launch {
+        prefsRepo.setFullscreen(enabled)
+    }
+
+    fun setTopProgressMode(mode: TopProgressMode) = viewModelScope.launch {
+        prefsRepo.setTopProgressMode(mode)
+    }
+
+    fun setProgressFontSizeSp(value: Float) = viewModelScope.launch {
+        prefsRepo.setProgressFontSizeSp(value)
+    }
+
+    fun setMarginTopDp(value: Float) = viewModelScope.launch {
+        prefsRepo.setMarginTopDp(value)
+    }
+
+    fun setMarginBottomDp(value: Float) = viewModelScope.launch {
+        prefsRepo.setMarginBottomDp(value)
+    }
+
     /**
      * The fine typography settings, which go to the shared store even
      * for a book that has been set apart.
@@ -2912,6 +2969,9 @@ class ReaderViewModel(
         viewModelScope.launch { prefsRepo.setFontWeight(weight) }
 
     fun setHyphens(value: Boolean?) = viewModelScope.launch { prefsRepo.setHyphens(value) }
+
+    fun setGlyphWidth(value: Double) =
+        viewModelScope.launch { prefsRepo.setGlyphWidth(value) }
 
     fun setLetterSpacing(value: Double?) =
         viewModelScope.launch { prefsRepo.setLetterSpacing(value) }

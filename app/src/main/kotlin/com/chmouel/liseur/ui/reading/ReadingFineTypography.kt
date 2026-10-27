@@ -57,6 +57,7 @@ data class FineTypographyActions(
     val onTextAlignChanged: (ReaderTextAlign) -> Unit,
     val onHyphensChanged: (Boolean?) -> Unit,
     val onFontWeightChanged: (ReaderFontWeight) -> Unit,
+    val onGlyphWidthChanged: (Double) -> Unit,
     val onLetterSpacingChanged: (Double?) -> Unit,
     val onWordSpacingChanged: (Double?) -> Unit,
     val onParagraphSpacingChanged: (Double?) -> Unit,
@@ -129,6 +130,15 @@ fun ReadingFineTypographyControls(
             note = stringResource(R.string.reader_hyphens_justified_note)
                 .takeIf { latinOnly && justificationHyphenates(prefs.textAlign, prefs.hyphens) },
             onChanged = actions.onHyphensChanged,
+        )
+
+        DefaultableSpacingSlider(
+            label = stringResource(R.string.reader_glyph_width),
+            value = prefs.glyphWidth,
+            range = TypographyRange.GLYPH_WIDTH,
+            enabled = enabled,
+            note = stringResource(R.string.reader_glyph_width_note),
+            onChanged = { actions.onGlyphWidthChanged(it ?: 1.0) },
         )
 
         DefaultableSpacingSlider(

@@ -223,7 +223,7 @@ fun AboutScreen(
                             R.string.about_version,
                             BuildConfig.VERSION_NAME,
                             BuildConfig.VERSION_CODE,
-                        ),
+                        ) + " (${BuildConfig.PAPA_BUILD_LABEL})",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,

@@ -77,6 +77,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.chmouel.liseur.R
 import com.chmouel.liseur.data.remote.ResumeConfidence
 import com.chmouel.liseur.data.settings.FooterField
@@ -135,6 +136,7 @@ fun ReadingFooter(
     left: FooterField,
     right: FooterField,
     turn: Int,
+    progressFontSizeSp: Float,
     theme: ReaderTheme,
     onCycleMode: (onChosen: (FooterMode) -> Unit) -> Unit,
     onCycleField: (FooterSlot, onChosen: (FooterField) -> Unit) -> Unit,
@@ -145,8 +147,8 @@ fun ReadingFooter(
 ) {
     if (!footerHasAnythingToSay(mode, left, right)) return
     val device = rememberFooterDevice(
-        wantsClock = left == FooterField.CLOCK || right == FooterField.CLOCK,
-        wantsBattery = left == FooterField.BATTERY || right == FooterField.BATTERY,
+        wantsClock = left.readsTheDevice && (left == FooterField.CLOCK || left == FooterField.TIME_AND_BATTERY) || right.readsTheDevice && (right == FooterField.CLOCK || right == FooterField.TIME_AND_BATTERY),
+        wantsBattery = left == FooterField.BATTERY || right == FooterField.BATTERY || left == FooterField.TIME_AND_BATTERY || right == FooterField.TIME_AND_BATTERY,
         turn = turn,
     )
     // The note names the figure the write settled on, which the tap
@@ -225,6 +227,7 @@ fun ReadingFooter(
             field = startField,
             figure = footerFigure(startField, progress, reflowable, screens, bookScreens, device),
             color = color,
+            fontSizeSp = progressFontSizeSp,
             clickLabel = stringResource(startSlot.cycleLabel),
             locked = footerLocked,
             onClick = { onCycleField(startSlot, noteForField) },
@@ -261,6 +264,7 @@ fun ReadingFooter(
             Text(
                 text = middle.orEmpty(),
                 style = MaterialTheme.typography.labelSmall,
+                fontSize = progressFontSizeSp.sp,
                 color = color,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -271,6 +275,7 @@ fun ReadingFooter(
             field = endField,
             figure = footerFigure(endField, progress, reflowable, screens, bookScreens, device),
             color = color,
+            fontSizeSp = progressFontSizeSp,
             clickLabel = stringResource(endSlot.cycleLabel),
             locked = footerLocked,
             onClick = { onCycleField(endSlot, noteForField) },
@@ -345,6 +350,7 @@ private fun FooterEdge(
     field: FooterField,
     figure: FooterFigure?,
     color: Color,
+    fontSizeSp: Float,
     clickLabel: String,
     locked: Boolean,
     onClick: () -> Unit,
@@ -385,10 +391,10 @@ private fun FooterEdge(
                     tint = color,
                     modifier = Modifier.size(BATTERY_GLYPH),
                 )
-                FooterEdgeText(text, color)
+                FooterEdgeText(text, color, fontSizeSp)
             }
         } else {
-            FooterEdgeText(text, color)
+            FooterEdgeText(text, color, fontSizeSp)
         }
     }
 }
@@ -405,10 +411,11 @@ private fun FooterEdge(
 private val BATTERY_GLYPH = 12.dp
 
 @Composable
-private fun FooterEdgeText(text: FooterText, color: Color) {
+private fun FooterEdgeText(text: FooterText, color: Color, fontSizeSp: Float) {
     Text(
         text = text.text,
         style = MaterialTheme.typography.labelSmall,
+        fontSize = fontSizeSp.sp,
         color = color,
         maxLines = 1,
         modifier = if (text.description == null) {
@@ -619,6 +626,12 @@ private fun figureText(figure: FooterFigure?): FooterText? = when (figure) {
         FooterText(it, stringResource(R.string.footer_clock_a11y, it))
     }
 
+    is FooterFigure.TimeAndBattery -> {
+        val time = clockText(figure.atMillis)
+        val battery = stringResource(R.string.footer_percent, figure.percent)
+        FooterText("$time • $battery", "$time, battery $battery")
+    }
+
     is FooterFigure.Battery -> FooterText(
         text = stringResource(R.string.footer_percent, figure.percent),
         description = pluralStringResource(
@@ -658,6 +671,9 @@ private fun middleText(
             stringResource(R.string.footer_left_in_book, durationText(middle.minutes))
 
         is FooterMiddle.Chapter -> middle.title
+
+        is FooterMiddle.PagesAndChapter ->
+            "${middle.page}/${middle.totalPages} ${middle.title}"
 
         is FooterMiddle.PagesInChapter ->
             if (middle.pages == 0) {

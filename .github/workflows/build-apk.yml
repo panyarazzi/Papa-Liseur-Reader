@@ -3,6 +3,8 @@ name: Build Android APK
 on:
   push:
     branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -21,6 +23,9 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+
+    - name: Run unit tests before packaging
+      run: ./gradlew testFossDebugUnitTest testPlayDebugUnitTest
 
     - name: Build Debug APK
       run: ./gradlew assembleDebug

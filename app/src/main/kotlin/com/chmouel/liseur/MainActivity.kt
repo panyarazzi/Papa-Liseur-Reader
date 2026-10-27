@@ -627,6 +627,9 @@ private fun LiseurApp(
                                 onTextAlignChanged = { scope.launch { readerPreferences.setTextAlign(it) } },
                                 onHyphensChanged = { scope.launch { readerPreferences.setHyphens(it) } },
                                 onFontWeightChanged = { scope.launch { readerPreferences.setFontWeight(it) } },
+                                onGlyphWidthChanged = {
+                                    scope.launch { readerPreferences.setGlyphWidth(it) }
+                                },
                                 onLetterSpacingChanged = {
                                     scope.launch { readerPreferences.setLetterSpacing(it) }
                                 },

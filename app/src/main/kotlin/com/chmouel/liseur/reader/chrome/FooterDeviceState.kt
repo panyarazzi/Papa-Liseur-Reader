@@ -3,6 +3,7 @@ package com.chmouel.liseur.reader.chrome
 import android.content.Context
 import android.os.BatteryManager
 import android.text.format.DateFormat
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -13,11 +14,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.chmouel.liseur.BuildConfig
 import com.chmouel.liseur.data.settings.FooterField
 import com.chmouel.liseur.reader.progress.FooterDevice
 import com.chmouel.liseur.ui.LocalEInk
 import kotlinx.coroutines.delay
 import java.util.Date
+
+private const val FOOTER_DEVICE_TAG = "FooterDeviceState"
 
 /**
  * What the device has to say to the reading footer, for the two fields
@@ -59,18 +63,26 @@ fun rememberFooterDevice(
     val eInk = LocalEInk.current
     var tick by remember { mutableIntStateOf(0) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    if (!eInk) {
-        // Only while the reader is in front of someone. A minute
-        // ticker left running behind another app would wake to write
-        // a clock nobody is reading, and the first turn of it on the
-        // way back is what makes the figure current again after a
-        // spell away.
-        LaunchedEffect(lifecycle) {
-            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+    // Include the resolved E-Ink mode in the effect keys so changing
+    // the mode restarts the refresh policy deterministically.
+    LaunchedEffect(lifecycle, eInk) {
+        if (eInk) {
+            if (BuildConfig.DEBUG) {
+                Log.d(FOOTER_DEVICE_TAG, "Minute ticker disabled: E-Ink mode is active")
+            }
+            return@LaunchedEffect
+        }
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (BuildConfig.DEBUG) {
+                Log.d(FOOTER_DEVICE_TAG, "Minute ticker active; lifecycle=" + lifecycle.currentState)
+            }
+            tick++
+            while (true) {
+                val waitMs = millisToNextMinute()
+                delay(waitMs)
                 tick++
-                while (true) {
-                    delay(millisToNextMinute())
-                    tick++
+                if (BuildConfig.DEBUG) {
+                    Log.d(FOOTER_DEVICE_TAG, "Minute ticker advanced; tick=" + tick + " lifecycle=" + lifecycle.currentState)
                 }
             }
         }
@@ -110,8 +122,8 @@ fun footerDeviceFor(field: FooterField, context: Context): FooterDevice =
     deviceAt(
         nudge = 0,
         context = context,
-        wantsClock = field == FooterField.CLOCK,
-        wantsBattery = field == FooterField.BATTERY,
+        wantsClock = field == FooterField.CLOCK || field == FooterField.TIME_AND_BATTERY,
+        wantsBattery = field == FooterField.BATTERY || field == FooterField.TIME_AND_BATTERY,
     )
 
 /**
