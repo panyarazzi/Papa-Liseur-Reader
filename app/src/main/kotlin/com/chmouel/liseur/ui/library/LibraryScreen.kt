@@ -1718,7 +1718,7 @@ private fun BookListRow(
             )
             progress?.let {
                 LinearProgressIndicator(
-                    progress = { it.fraction },
+                    progress = { it.fraction ?: 0f },
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                 )
             }
