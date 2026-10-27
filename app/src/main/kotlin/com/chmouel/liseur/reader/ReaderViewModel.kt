@@ -194,6 +194,15 @@ class ReaderViewModel(
      */
     val importedFonts: StateFlow<List<UserFont>> = userFonts.fonts
 
+    /** Per-book font replacement rules, keyed by the publisher's CSS family name. */
+    val fontReplacements: StateFlow<Map<String, String>> = prefsRepo
+        .fontReplacements(bookId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    fun setFontReplacement(family: String, fontId: String?) {
+        viewModelScope.launch { prefsRepo.setFontReplacement(bookId, family, fontId) }
+    }
+
     private val sessions = sessionManager.recorder(bookId)
     private val timeSpent = sessionManager.observeTotal(bookId)
 
