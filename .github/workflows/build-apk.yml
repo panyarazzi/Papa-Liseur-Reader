@@ -1,8 +1,5 @@
 name: Build Android APK
 
-permissions:
-  contents: write
-
 on:
   push:
     branches: [ main, master ]
@@ -26,32 +23,6 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-
-    - name: Export Room schemas before tests
-      run: ./gradlew kspFossDebugKotlin
-
-    - name: Commit Room-exported schema 71
-      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        git fetch origin "${GITHUB_HEAD_REF}"
-        git checkout -B "${GITHUB_HEAD_REF}" "origin/${GITHUB_HEAD_REF}"
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add app/schemas/com.chmouel.liseur.data.db.LiseurDatabase/71.json
-        if ! git diff --cached --quiet; then
-          git commit -m "db: export Room schema 71"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
-        fi
-
-    - name: Upload generated Room schema 71 for inspection
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: room-schema-71
-        path: app/schemas/com.chmouel.liseur.data.db.LiseurDatabase/71.json
-        if-no-files-found: warn
 
     - name: Run unit tests before packaging
       run: ./gradlew testFossDebugUnitTest testPlayDebugUnitTest
