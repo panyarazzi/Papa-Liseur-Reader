@@ -595,6 +595,7 @@ class ReaderActivity : FragmentActivity() {
                                                 onTextAlignChanged = viewModel::setTextAlign,
                                                 onHyphensChanged = viewModel::setHyphens,
                                                 onFontWeightChanged = viewModel::setFontWeight,
+                                                onGlyphWidthChanged = viewModel::setGlyphWidth,
                                                 onLetterSpacingChanged = viewModel::setLetterSpacing,
                                                 onWordSpacingChanged = viewModel::setWordSpacing,
                                                 onParagraphSpacingChanged =
