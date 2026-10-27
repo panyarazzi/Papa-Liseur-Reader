@@ -1,17 +1,17 @@
 import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-// CI supplies a unique workflow run number; local builds are clearly marked.
-val papaBuildLabel = System.getenv("GITHUB_RUN_NUMBER")
-    ?.takeIf { it.isNotBlank() }
-    ?.let { "papa apk#$it" }
-    ?: "papa local"
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
+
+// CI supplies a unique workflow run number; local builds are clearly marked.
+val papaBuildLabel = System.getenv("GITHUB_RUN_NUMBER")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { "papa apk#$it" }
+    ?: "papa local"
 
 // Release signing is optional and kept out of git: if keystore.properties
 // is absent (e.g. on a fresh clone or in CI), the release build type simply
