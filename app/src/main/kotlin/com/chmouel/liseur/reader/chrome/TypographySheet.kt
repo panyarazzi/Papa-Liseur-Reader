@@ -17,6 +17,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,6 +80,8 @@ fun TypographySheet(
     importedFonts: List<UserFont>,
     fontReplacements: Map<String, String>,
     onFontReplacementChanged: (String, String?) -> Unit,
+    fontScales: Map<String, Double>,
+    onFontScaleChanged: (String, Double) -> Unit,
     readingTheme: ReaderTheme,
     readingCss: ReadingCss,
     onFontSelected: (ReadingFont) -> Unit,
@@ -124,8 +127,10 @@ fun TypographySheet(
                 publication = publication,
                 importedFonts = importedFonts,
                 replacements = fontReplacements,
+                scales = fontScales,
                 enabled = reshapeable,
                 onReplacementChanged = onFontReplacementChanged,
+                onScaleChanged = onFontScaleChanged,
             )
             // Last, and always. The sheet behind it has rows for any
             // book, read either way, so it can no longer open empty.
@@ -141,8 +146,10 @@ private fun FontReplacementControls(
     publication: Publication,
     importedFonts: List<UserFont>,
     replacements: Map<String, String>,
+    scales: Map<String, Double>,
     enabled: Boolean,
     onReplacementChanged: (String, String?) -> Unit,
+    onScaleChanged: (String, Double) -> Unit,
 ) {
     var expanded by remember(publication) { mutableStateOf(false) }
     var loading by remember(publication) { mutableStateOf(false) }
@@ -169,13 +176,13 @@ private fun FontReplacementControls(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("Replace fonts in this book", style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    "Choose a different imported font for each original EPUB font",
+                    "Choose a font and tune its size independently for each EPUB family",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Icon(
-                if (expanded) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -185,14 +192,15 @@ private fun FontReplacementControls(
                 loading -> Text("Scanning this EPUB for font families…", style = MaterialTheme.typography.bodyMedium)
                 failed -> Text("Could not inspect this EPUB's stylesheets.", color = MaterialTheme.colorScheme.error)
                 families.isEmpty() -> Text("No explicit font families were found in the EPUB CSS.", style = MaterialTheme.typography.bodyMedium)
-                importedFonts.isEmpty() -> Text("Import one or more .ttf or .otf fonts first using the font picker above.", style = MaterialTheme.typography.bodyMedium)
-                else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                else -> Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     families.filter { it.referencedByStyles }.forEach { family ->
                         FontReplacementItem(
                             family = family,
                             importedFonts = importedFonts,
                             selectedId = replacements[family.name],
+                            selectedScale = scales[family.name] ?: 1.0,
                             onSelected = { onReplacementChanged(family.name, it) },
+                            onScaleChanged = { onScaleChanged(family.name, it) },
                         )
                     }
                 }
@@ -206,36 +214,53 @@ private fun FontReplacementItem(
     family: EpubFontFamily,
     importedFonts: List<UserFont>,
     selectedId: String?,
+    selectedScale: Double,
     onSelected: (String?) -> Unit,
+    onScaleChanged: (Double) -> Unit,
 ) {
     var menuExpanded by remember(family.name) { mutableStateOf(false) }
+    val scale = remember(family.name, selectedScale) { mutableStateOf(selectedScale.toFloat()) }
     val selectedName = importedFonts.firstOrNull { it.id == selectedId }?.displayName ?: "Original font"
-    Box {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(role = Role.Button) { menuExpanded = true }
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(family.name, style = MaterialTheme.typography.bodyMedium)
-                Text(selectedName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(role = Role.Button) { menuExpanded = true }
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(family.name, style = MaterialTheme.typography.bodyMedium)
+                    Text(selectedName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
-        }
-        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-            DropdownMenuItem(
-                text = { Text("Original font") },
-                onClick = { onSelected(null); menuExpanded = false },
-            )
-            importedFonts.forEach { font ->
+            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 DropdownMenuItem(
-                    text = { Text(font.displayName) },
-                    onClick = { onSelected(font.id); menuExpanded = false },
+                    text = { Text("Original font") },
+                    onClick = { onSelected(null); menuExpanded = false },
                 )
+                importedFonts.forEach { font ->
+                    DropdownMenuItem(
+                        text = { Text(font.displayName) },
+                        onClick = { onSelected(font.id); menuExpanded = false },
+                    )
+                }
             }
         }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Font scale", style = MaterialTheme.typography.bodySmall)
+            androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+            Text("${(scale.value * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+        }
+        Slider(
+            value = scale.value,
+            onValueChange = { scale.value = it },
+            valueRange = 0.5f..2.0f,
+            steps = 29,
+            onValueChangeFinished = { onScaleChanged(scale.value.toDouble()) },
+        )
     }
 }
 
