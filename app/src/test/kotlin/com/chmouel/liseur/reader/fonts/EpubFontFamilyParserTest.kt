@@ -46,7 +46,7 @@ class EpubFontFamilyParserTest {
                 .chapter { font-family: 'PSL162', sans-serif; }
               </style></head>
               <body>
-                <p style="font-family: \"THSarabunNewest\", serif">Text</p>
+                <p style='font-family: "THSarabunNewest", serif'>Text</p>
                 <p style='font-family: PSL161'>Emphasis</p>
               </body>
             </html>
