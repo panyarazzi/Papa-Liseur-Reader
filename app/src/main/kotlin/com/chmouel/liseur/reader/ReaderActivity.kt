@@ -315,8 +315,10 @@ class ReaderActivity : FragmentActivity() {
                                 val importedFonts by viewModel.importedFonts
                                     .collectAsStateWithLifecycle()
                                 val fontReplacements by viewModel.fontReplacements.collectAsStateWithLifecycle()
+                                val fontScales by viewModel.fontScales.collectAsStateWithLifecycle()
                                 val fontKey = importedFonts.joinToString(",") { it.id } +
-                                    "|" + fontReplacements.toSortedMap().entries.joinToString(";") { "${it.key}=${it.value}" }
+                                    "|" + fontReplacements.toSortedMap().entries.joinToString(";") { "${it.key}=${it.value}" } +
+                                    "|" + fontScales.toSortedMap().entries.joinToString(";") { "${it.key}=${it.value}" }
                                 // Read once, here, alongside the factory that is
                                 // built from it, and handed to the screen as the
                                 // point this navigator is being restored to.
@@ -517,6 +519,8 @@ class ReaderActivity : FragmentActivity() {
                                     userFonts = importedFonts,
                                     fontReplacementsFlow = viewModel.fontReplacements,
                                     onFontReplacementChanged = viewModel::setFontReplacement,
+                                    fontScalesFlow = viewModel.fontScales,
+                                    onFontScaleChanged = viewModel::setFontScale,
                                     initialPreferences = initialPreferences,
                                     moves = moves,
                                     linkTaps = linkTaps,
