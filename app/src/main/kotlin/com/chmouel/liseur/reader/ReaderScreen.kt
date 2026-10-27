@@ -431,6 +431,8 @@ internal fun ReaderScreen(
     userFonts: List<UserFont>,
     fontReplacementsFlow: StateFlow<Map<String, String>>,
     onFontReplacementChanged: (String, String?) -> Unit,
+    fontScalesFlow: StateFlow<Map<String, Double>>,
+    onFontScaleChanged: (String, Double) -> Unit,
     /**
      * The preferences the navigator in hand was actually built with.
      *
@@ -564,6 +566,7 @@ internal fun ReaderScreen(
     val chromeVisibleNow by rememberUpdatedState(chromeVisible)
     val prefs by prefsFlow.collectAsStateWithLifecycle()
     val fontReplacements by fontReplacementsFlow.collectAsStateWithLifecycle()
+    val fontScales by fontScalesFlow.collectAsStateWithLifecycle()
     val keepScreenOn by keepScreenOnFlow.collectAsStateWithLifecycle()
     val scrollMode by scrollModeFlow.collectAsStateWithLifecycle()
     val tapZones by tapZonesFlow.collectAsStateWithLifecycle()
@@ -5059,6 +5062,8 @@ internal fun ReaderScreen(
             importedFonts = userFonts,
             fontReplacements = fontReplacements,
             onFontReplacementChanged = onFontReplacementChanged,
+            fontScales = fontScales,
+            onFontScaleChanged = onFontScaleChanged,
             onFontSelected = onPrefsAction.setFont,
             onFontSizeChanged = onPrefsAction.setFontSize,
             onThemeSelected = onPrefsAction.setTheme,
