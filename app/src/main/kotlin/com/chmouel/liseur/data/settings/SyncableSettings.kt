@@ -162,6 +162,11 @@ fun syncableSettings(
         write = { raw -> writeNullableBoolean(raw) { reader.setHyphens(it) } },
     ),
     SyncableSetting(
+        key = "reader.glyph_width",
+        read = { reader.prefs.first().glyphWidth.toString() },
+        write = { raw -> writeNumber(raw, TypographyRange.GLYPH_WIDTH, nullable = false) { reader.setGlyphWidth(it ?: 1.0) } },
+    ),
+    SyncableSetting(
         key = "reader.letter_spacing",
         read = { reader.prefs.first().letterSpacing.orUnset() },
         write = { raw ->
