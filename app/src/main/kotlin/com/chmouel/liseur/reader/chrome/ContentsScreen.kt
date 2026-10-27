@@ -312,7 +312,7 @@ private fun ContentsList(
     onEntrySelected: (Link) -> Unit,
     bottomInset: Dp,
 ) {
-    val expandedTocHrefs = rememberSaveable(saver = ExpandedTocHrefsSaver) {
+    val expandedTocHrefs = rememberSaveable(publication, saver = ExpandedTocHrefsSaver) {
         publication.tableOfContents.expandableHrefs().toMutableStateList()
     }
     val toggleToc: (Link) -> Unit = { link ->
@@ -603,8 +603,8 @@ private fun ContentsRow(
                 Icon(
                     imageVector = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                     contentDescription = stringResource(
-                        if (expanded) R.string.settings_section_expanded
-                        else R.string.settings_section_collapsed,
+                        if (expanded) R.string.story_less
+                        else R.string.story_more,
                     ),
                     tint = theme.foreground,
                 )
