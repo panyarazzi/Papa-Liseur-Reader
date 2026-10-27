@@ -1,6 +1,12 @@
 import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+// CI supplies a unique workflow run number; local builds are clearly marked.
+val papaBuildLabel = System.getenv("GITHUB_RUN_NUMBER")
+    ?.takeIf { it.isNotBlank() }
+    ?.let { "papa apk#$it" }
+    ?: "papa local"
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -49,7 +55,7 @@ android {
         versionCode = 56
         versionName = "0.25.0"
         // Identifies this project APK independently of the upstream Liseur version.
-        buildConfigField("String", "PAPA_BUILD_LABEL", "\"papa apk#55\"")
+        buildConfigField("String", "PAPA_BUILD_LABEL", "\"$papaBuildLabel\"")
     }
 
     signingConfigs {
