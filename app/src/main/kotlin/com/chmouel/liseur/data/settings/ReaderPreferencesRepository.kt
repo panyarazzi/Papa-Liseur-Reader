@@ -20,6 +20,8 @@ private val Context.readerPrefsStore: DataStore<Preferences> by preferencesDataS
 )
 
 internal val READER_BACKUP_TYPES = mapOf(
+    "font_replacements_by_book" to BackupValueType.STRING,
+    "font_scales_by_book" to BackupValueType.STRING,
     "font" to BackupValueType.STRING, "font_size" to BackupValueType.DOUBLE,
     "theme" to BackupValueType.STRING, "line_height" to BackupValueType.DOUBLE,
     "page_margins" to BackupValueType.DOUBLE, "brightness" to BackupValueType.FLOAT,
