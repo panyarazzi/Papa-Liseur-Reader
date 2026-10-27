@@ -3958,17 +3958,9 @@ internal fun ReaderScreen(
                 TopProgressMode.PERCENT -> progress?.let { "${it.percent}%" }
                 TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> progress?.let { current ->
                     val title = current.chapterTitle?.takeIf { it.isNotBlank() }
-                    val chapterPage = if (reflowableText) {
-                        sectionScreens?.let { it.screen to it.screens }
-                    } else {
-                        current.positionsLeftInChapter?.let { left ->
-                            // Stable Readium positions count pages in the chapter from
-                            // the current position. Add one to both sides because the
-                            // current position is included in the chapter total.
-                            (current.position - (current.totalPositions - left - 1)) to
-                                (left + (current.position - (current.totalPositions - left - 1)))
-                        }
-                    }
+                    val chapterPage = sectionScreens
+                        ?.takeIf { reflowableText }
+                        ?.let { it.screen to it.screens }
                     when {
                         chapterPage != null && title != null ->
                             "${chapterPage.first.coerceAtLeast(1)}/${chapterPage.second.coerceAtLeast(1)} ${title}"
