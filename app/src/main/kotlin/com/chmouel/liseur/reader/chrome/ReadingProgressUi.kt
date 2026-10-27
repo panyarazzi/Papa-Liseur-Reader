@@ -673,7 +673,7 @@ private fun middleText(
         is FooterMiddle.Chapter -> middle.title
 
         is FooterMiddle.PagesAndChapter ->
-            "${middle.pages} pages left • ${middle.title}"
+            "${middle.page}/${middle.totalPages} ${middle.title}"
 
         is FooterMiddle.PagesInChapter ->
             if (middle.pages == 0) {
