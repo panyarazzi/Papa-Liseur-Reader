@@ -2934,6 +2934,9 @@ class ReaderViewModel(
 
     fun setHyphens(value: Boolean?) = viewModelScope.launch { prefsRepo.setHyphens(value) }
 
+    fun setGlyphWidth(value: Double) =
+        viewModelScope.launch { prefsRepo.setGlyphWidth(value) }
+
     fun setLetterSpacing(value: Double?) =
         viewModelScope.launch { prefsRepo.setLetterSpacing(value) }
 
