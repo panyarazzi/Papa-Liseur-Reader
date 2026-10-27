@@ -351,7 +351,7 @@ class BookPositions(
             }
 
         private fun isVolumeDividerTitle(title: String): Boolean =
-            title.trim().matches(Regex("""^เล่มที่\\s*[\\[（(]?\\d+[\\]）)]?\\s*$"""))
+            title.trim().matches(Regex("""^เล่มที่\s*[\[（(]?\d+[\]）)]?\s*$"""))
     }
 }
 
