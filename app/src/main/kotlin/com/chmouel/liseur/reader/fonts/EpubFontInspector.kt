@@ -78,8 +78,8 @@ internal object EpubFontInspector {
         return collected
     }
 
-    private suspend fun Publication.readText(link: Link): String? =
-        try {
+    private suspend fun Publication.readText(link: Link): String? {
+        return try {
             val resource = get(link) ?: return null
             resource.read().getOrNull()?.decodeToString()
         } catch (cancelled: CancellationException) {
@@ -87,7 +87,11 @@ internal object EpubFontInspector {
         } catch (error: Exception) {
             Log.d(TAG, "Skipping unreadable EPUB resource ${link.href}: ${error.javaClass.simpleName}")
             null
+        } catch (error: LinkageError) {
+            Log.w(TAG, "Skipping EPUB resource after initialization failure ${link.href}", error)
+            null
         }
+    }
 
     private fun looksLikeStylesheet(link: Link): Boolean {
         val address = link.url().toString().substringBefore('#').substringBefore('?')
