@@ -64,6 +64,7 @@ import com.chmouel.liseur.data.settings.ReadingFont
 import com.chmouel.liseur.data.settings.ReaderPreferencesRepository
 import com.chmouel.liseur.data.settings.ReadingPaceRepository
 import com.chmouel.liseur.data.settings.UserFontRepository
+import com.chmouel.liseur.reader.fonts.FontReplacementContainer
 import com.chmouel.liseur.data.settings.fonts.UserFont
 import com.chmouel.liseur.sync.PositionSyncCoordinator
 import com.chmouel.liseur.sync.SyncScope
@@ -1394,6 +1395,8 @@ class ReaderViewModel(
             // and rebuild its navigator the moment the scan landed — a
             // reflow nobody asked for, on the page they were reading.
             userFonts.awaitReady()
+            // Load persisted replacement rules before Readium builds the publication container.
+            prefsRepo.fontReplacements(bookId).first()
             // A book still being read aloud is already open; reading it
             // again shares that publication rather than opening a second.
             val opened = openBookHandles.open(bookId, keep = ::holdOpened) {
@@ -1413,6 +1416,11 @@ class ReaderViewModel(
                         // shadow anything the book carries, whereas the book
                         // could otherwise shadow a font.
                         container = CompositeContainer(
+                            FontReplacementContainer(
+                                delegate = container,
+                                replacements = { fontReplacements.value },
+                                fonts = { userFonts.fonts.value },
+                            ),
                             UserFontsContainer { userFonts.fonts.value },
                             container,
                         )
