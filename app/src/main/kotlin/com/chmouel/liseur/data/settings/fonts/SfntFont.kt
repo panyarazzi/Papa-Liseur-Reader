@@ -17,6 +17,8 @@ data class SfntMetadata(
     val italic: Boolean,
     val weight: Int,
     val weightRange: IntRange?,
+    /** The OpenType `wdth` axis, only when the font's `fvar` table declares it. */
+    val widthRange: IntRange?,
 )
 
 enum class SfntFormat(val extension: String) {
@@ -63,7 +65,8 @@ object SfntFont {
 
         val head = tables["head"]?.let { readHead(bytes, it) }
         val os2 = tables["OS/2"]?.let { readOs2(bytes, it) }
-        val fvar = tables["fvar"]?.let { readWeightAxis(bytes, it) }
+        val fvar = tables["fvar"]?.let { readAxisRange(bytes, it, "wght", CSS_WEIGHTS) }
+        val wdth = tables["fvar"]?.let { readAxisRange(bytes, it, "wdth", CSS_WIDTHS) }
 
         // A font with no readable name table is still a usable font; it
         // just has to borrow the name of the file it came in.
@@ -80,6 +83,7 @@ object SfntFont {
             italic = italic,
             weight = weight,
             weightRange = fvar,
+            widthRange = wdth,
         )
     }
 
@@ -202,7 +206,12 @@ object SfntFont {
      * book, not the font. Clamping here means the assertion can never be
      * reached from a file a reader picked.
      */
-    private fun readWeightAxis(bytes: ByteArray, table: IntRange): IntRange? {
+    private fun readAxisRange(
+        bytes: ByteArray,
+        table: IntRange,
+        wantedTag: String,
+        allowed: IntRange,
+    ): IntRange? {
         val base = table.first
         val axesOffset = bytes.u16(base + 4) ?: return null
         val axisCount = bytes.u16(base + 8) ?: return null
@@ -212,12 +221,12 @@ object SfntFont {
         for (i in 0 until axisCount) {
             val axis = base + axesOffset + i * axisSize
             if (!bytes.holds(axis, FVAR_AXIS)) return null
-            if (bytes.ascii(axis, 4) != "wght") continue
+            if (bytes.ascii(axis, 4) != wantedTag) continue
 
             val min = bytes.fixed(axis + 4) ?: return null
             val max = bytes.fixed(axis + 12) ?: return null
-            val low = min.coerceIn(CSS_WEIGHTS)
-            val high = max.coerceIn(CSS_WEIGHTS)
+            val low = min.coerceIn(allowed)
+            val high = max.coerceIn(allowed)
             // A font claiming a maximum below its minimum has told us
             // nothing usable. Better a static weight than a range Readium
             // will refuse.
@@ -300,4 +309,7 @@ object SfntFont {
     private const val NORMAL_WEIGHT = 400
     private const val BOLD_WEIGHT = 700
     private val CSS_WEIGHTS = 1..1000
+    // OpenType `wdth` values conventionally express percentage of normal width.
+    // Keep only values CSS font-stretch can represent; never infer an axis.
+    private val CSS_WIDTHS = 50..200
 }
