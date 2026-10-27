@@ -1586,12 +1586,12 @@ private fun BookGrid(
                 }
             }.toSortedMap()
             folderGroups.forEach { (folderKey, folderBooks) ->
-                val label = when {
-                    folderKey == "\\u0000Other" -> stringResource(R.string.library_folder_other)
-                    folderKey == "\\u0001Root" -> stringResource(R.string.library_folder_root)
-                    else -> folderKey
-                }
                 item(key = "folder-header:$folderKey", span = { GridItemSpan(maxLineSpan) }) {
+                    val label = when {
+                        folderKey == "\\u0000Other" -> stringResource(R.string.library_folder_other)
+                        folderKey == "\\u0001Root" -> stringResource(R.string.library_folder_root)
+                        else -> folderKey
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 0.dp),
                         verticalAlignment = Alignment.CenterVertically,
