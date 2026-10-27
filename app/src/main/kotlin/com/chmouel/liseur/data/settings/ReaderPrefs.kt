@@ -697,6 +697,7 @@ sealed class TypographyRange(
         /** Readium's `pageMargins` range, whose minimum really is zero. */
         val PAGE_MARGINS = Segmented(min = 0.0, max = 4.0)
 
+        val GLYPH_WIDTH = Slider(min = 0.85, max = 1.15, increment = 0.01)
         val LETTER_SPACING = Slider(min = 0.0, max = 0.25, increment = 0.01)
         val WORD_SPACING = Slider(min = 0.0, max = 0.5, increment = 0.02)
         val PARAGRAPH_SPACING = Slider(min = 0.0, max = 2.0, increment = 0.1)
@@ -865,6 +866,7 @@ data class ReaderPrefs(
     val textAlign: ReaderTextAlign = ReaderTextAlign.Default,
     val fontWeight: ReaderFontWeight = ReaderFontWeight.Default,
     val hyphens: Boolean? = null,
+    val glyphWidth: Double = 1.0,
     val letterSpacing: Double? = null,
     val wordSpacing: Double? = null,
     val paragraphSpacing: Double? = null,
@@ -920,6 +922,7 @@ fun ReaderPrefs.sanitized(): ReaderPrefs = copy(
     fontSize = TypographyRange.FONT_SIZE.require(fontSize),
     lineHeight = TypographyRange.LINE_HEIGHT.sanitize(lineHeight),
     pageMargins = TypographyRange.PAGE_MARGINS.sanitize(pageMargins),
+    glyphWidth = TypographyRange.GLYPH_WIDTH.require(glyphWidth),
     letterSpacing = TypographyRange.LETTER_SPACING.sanitize(letterSpacing),
     wordSpacing = TypographyRange.WORD_SPACING.sanitize(wordSpacing),
     paragraphSpacing = TypographyRange.PARAGRAPH_SPACING.sanitize(paragraphSpacing),
