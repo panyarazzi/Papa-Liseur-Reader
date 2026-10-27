@@ -1896,7 +1896,15 @@ class ReaderViewModel(
                 }
             }
         } else if (accepted) {
+            // Queue acceptance is optimistic; invalidate this baseline if the
+            // asynchronous write fails so the same place can be retried.
             positionSaveBaseline = prepared
+            viewModelScope.launch {
+                val saved = positionPublisher.flush(bookId)
+                if (!saved && saveGeneration == positionSaveGeneration) {
+                    updatePositionSaveBaseline(null)
+                }
+            }
         }
         if (effectiveEvent == NavigatorPositionEvent.READER_MOVEMENT) approximateCatchUp = null
         // Reading on accepts the opening, so the way back to the old place
