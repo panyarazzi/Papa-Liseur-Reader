@@ -1,5 +1,8 @@
 name: Build Android APK
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ main, master ]
@@ -26,6 +29,19 @@ jobs:
 
     - name: Export Room schemas before tests
       run: ./gradlew kspFossDebugKotlin
+
+    - name: Commit Room-exported schema 71
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add app/schemas/com.chmouel.liseur.data.db.LiseurDatabase/71.json
+        if ! git diff --cached --quiet; then
+          git commit -m "db: export Room schema 71"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
+        fi
 
     - name: Upload generated Room schema 71 for inspection
       if: always()
