@@ -27,9 +27,6 @@ jobs:
     - name: Export Room schemas before tests
       run: ./gradlew kspFossDebugKotlin
 
-    - name: Run unit tests before packaging
-      run: ./gradlew testFossDebugUnitTest testPlayDebugUnitTest
-
     - name: Upload generated Room schema 71 for inspection
       if: always()
       uses: actions/upload-artifact@v4
@@ -37,6 +34,9 @@ jobs:
         name: room-schema-71
         path: app/schemas/com.chmouel.liseur.data.db.LiseurDatabase/71.json
         if-no-files-found: warn
+
+    - name: Run unit tests before packaging
+      run: ./gradlew testFossDebugUnitTest testPlayDebugUnitTest
 
     - name: Build Debug APK
       run: ./gradlew assembleDebug
