@@ -24,12 +24,12 @@ internal data class EpubFontFamily(
  */
 internal object EpubFontFamilyParser {
 
-    private val comments = Regex("""(?s)/\\*.*?\\*/""")
+    private val comments = Regex("""(?s)/\*.*?\*/""")
     private val htmlComments = Regex("""(?s)<!--.*?-->""")
-    private val fontFaceBlocks = Regex("""(?is)@font-face\\s*\\{([^}]*)}""")
-    private val fontFamilyDeclarations = Regex("""(?is)font-family\\s*:\\s*([^;{}]+)""")
-    private val styleBlocks = Regex("""(?is)<style\\b[^>]*>(.*?)</style\\s*>""")
-    private val styleAttributes = Regex("""(?is)\\bstyle\\s*=\\s*(?:"([^"]*)"|'([^']*)')""")
+    private val fontFaceBlocks = Regex("""(?is)@font-face\s*\{([^}]*)}""")
+    private val fontFamilyDeclarations = Regex("""(?is)font-family\s*:\s*([^;{}]+)""")
+    private val styleBlocks = Regex("""(?is)<style\b[^>]*>(.*?)</style\s*>""")
+    private val styleAttributes = Regex("""(?is)\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)')""")
 
     private val genericFamilies = setOf(
         "serif", "sans-serif", "monospace", "cursive", "fantasy",
@@ -54,8 +54,7 @@ internal object EpubFontFamilyParser {
         fun scanCss(source: String) {
             val css = source.replace(comments, "")
             fontFaceBlocks.findAll(css).forEach { match ->
-                val faceCss = match.groupValues[1]
-                fontFamilyDeclarations.findAll(faceCss).forEach { declaration ->
+                fontFamilyDeclarations.findAll(match.groupValues[1]).forEach { declaration ->
                     splitFamilies(declaration.groupValues[1]).forEach { name ->
                         if (!name.isGeneric()) record(name, face = true, referenced = false)
                     }
@@ -63,8 +62,7 @@ internal object EpubFontFamilyParser {
             }
 
             // A family inside @font-face is a declaration, not evidence
-            // that the family is used by an element. Scan the remaining
-            // rules separately so those two facts remain distinguishable.
+            // that an element uses it. Keep those two facts distinct.
             val authorRules = fontFaceBlocks.replace(css, "")
             fontFamilyDeclarations.findAll(authorRules).forEach { declaration ->
                 splitFamilies(declaration.groupValues[1]).forEach { name ->
@@ -88,11 +86,7 @@ internal object EpubFontFamilyParser {
         }
 
         return families.values.map {
-            EpubFontFamily(
-                name = it.name,
-                declaredByFontFace = it.declaredByFontFace,
-                referencedByStyles = it.referencedByStyles,
-            )
+            EpubFontFamily(it.name, it.declaredByFontFace, it.referencedByStyles)
         }
     }
 
