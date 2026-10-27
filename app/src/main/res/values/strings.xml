@@ -684,6 +684,8 @@
     <string name="reader_font_weight_light">Light</string>
     <string name="reader_font_weight_normal">Normal</string>
     <string name="reader_font_weight_bold">Bold</string>
+    <string name="reader_glyph_width">Glyph width</string>
+    <string name="reader_glyph_width_note">Uses font width support where available; fonts without it may keep their original width.</string>
     <string name="reader_letter_spacing">Letter spacing</string>
     <string name="reader_word_spacing">Word spacing</string>
     <string name="reader_paragraph_spacing">Paragraph spacing</string>
