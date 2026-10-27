@@ -3981,6 +3981,7 @@ internal fun ReaderScreen(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .then(behindViewer)
+                        .windowInsetsPadding(WindowInsets.statusBars)
                         .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                         .padding(start = 12.dp, end = 12.dp, top = 2.dp),
                 )
