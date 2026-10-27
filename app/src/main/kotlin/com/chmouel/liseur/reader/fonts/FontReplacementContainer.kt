@@ -60,7 +60,7 @@ internal class FontReplacementContainer(
             val style = if (font.italic) "italic" else "normal"
             """@font-face { font-family: "LiseurReplacement-${font.digest}"; src: url("${UserFontResources.url(font)}"); font-weight: $weight; font-style: $style; }"""
         }
-        return "/* Liseur per-book font replacements */\n$declarations\n$rewritten"
+        return "$rewritten\n/* Liseur per-book font replacements */\n$declarations"
     }
 
     private fun splitFamilyList(value: String): List<String> {
