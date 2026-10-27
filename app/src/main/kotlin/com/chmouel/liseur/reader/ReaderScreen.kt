@@ -186,6 +186,7 @@ import com.chmouel.liseur.data.settings.pageTurnStyleOnScreen
 import com.chmouel.liseur.reader.progress.ResourceAnchor
 import com.chmouel.liseur.data.settings.ReadingFont
 import com.chmouel.liseur.data.settings.ReaderPrefs
+import com.chmouel.liseur.data.settings.fonts.UserFont
 import com.chmouel.liseur.data.settings.readingCssFor
 import com.chmouel.liseur.ui.reading.FineTypographyActions
 import com.chmouel.liseur.data.settings.ReaderTheme
@@ -427,6 +428,9 @@ internal fun ReaderScreen(
      * the fragment holding the old ones gets torn down.
      */
     fontKey: String,
+    userFonts: List<UserFont>,
+    fontReplacementsFlow: StateFlow<Map<String, String>>,
+    onFontReplacementChanged: (String, String?) -> Unit,
     /**
      * The preferences the navigator in hand was actually built with.
      *
@@ -559,6 +563,7 @@ internal fun ReaderScreen(
     var footerNoteCount by remember { mutableLongStateOf(0L) }
     val chromeVisibleNow by rememberUpdatedState(chromeVisible)
     val prefs by prefsFlow.collectAsStateWithLifecycle()
+    val fontReplacements by fontReplacementsFlow.collectAsStateWithLifecycle()
     val keepScreenOn by keepScreenOnFlow.collectAsStateWithLifecycle()
     val scrollMode by scrollModeFlow.collectAsStateWithLifecycle()
     val tapZones by tapZonesFlow.collectAsStateWithLifecycle()
@@ -5050,6 +5055,10 @@ internal fun ReaderScreen(
             prefs = prefs,
             readingTheme = readingTheme,
             readingCss = readingCss,
+            publication = publication,
+            importedFonts = userFonts,
+            fontReplacements = fontReplacements,
+            onFontReplacementChanged = onFontReplacementChanged,
             onFontSelected = onPrefsAction.setFont,
             onFontSizeChanged = onPrefsAction.setFontSize,
             onThemeSelected = onPrefsAction.setTheme,
