@@ -3838,7 +3838,7 @@ internal fun ReaderScreen(
                                     top = (
                                         (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
                                         if (prefs.topProgressMode != TopProgressMode.OFF) {
-                                            (prefs.progressFontSizeSp * 1.5f + 8f).toInt()
+                                            (prefs.progressFontSizeSp * 1.5f + 22f).toInt()
                                         } else 0
                                     ).dp,
                                     bottom = (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0).dp,
@@ -3850,7 +3850,7 @@ internal fun ReaderScreen(
                                     top = (
                                         (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
                                         if (prefs.topProgressMode != TopProgressMode.OFF) {
-                                            (prefs.progressFontSizeSp * 1.5f + 8f).toInt()
+                                            (prefs.progressFontSizeSp * 1.5f + 22f).toInt()
                                         } else 0
                                     ).dp,
                                     bottom = (
@@ -3958,15 +3958,22 @@ internal fun ReaderScreen(
                 TopProgressMode.PERCENT -> progress?.let { "${it.percent}%" }
                 TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> progress?.let { current ->
                     val title = current.chapterTitle?.takeIf { it.isNotBlank() }
-                    val pagesLeft = if (reflowableText) {
-                        sectionScreens?.let { (it.screens - it.screen).coerceAtLeast(0) }
+                    val chapterPage = if (reflowableText) {
+                        sectionScreens?.let { it.screen to it.screens }
                     } else {
-                        current.positionsLeftInChapter
+                        current.positionsLeftInChapter?.let { left ->
+                            // Stable Readium positions count pages in the chapter from
+                            // the current position. Add one to both sides because the
+                            // current position is included in the chapter total.
+                            (current.position - (current.totalPositions - left - 1)) to
+                                (left + (current.position - (current.totalPositions - left - 1)))
+                        }
                     }
                     when {
-                        pagesLeft != null && title != null -> "${pagesLeft} pages left • ${title}"
+                        chapterPage != null && title != null ->
+                            "${chapterPage.first.coerceAtLeast(1)}/${chapterPage.second.coerceAtLeast(1)} ${title}"
                         title != null -> title
-                        pagesLeft != null -> "${pagesLeft} pages left"
+                        chapterPage != null -> "${chapterPage.first}/${chapterPage.second}"
                         else -> null
                     }
                 }
