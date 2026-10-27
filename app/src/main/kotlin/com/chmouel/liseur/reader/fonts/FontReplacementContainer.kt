@@ -74,7 +74,7 @@ internal class FontReplacementContainer(
         val styleAttribute = Regex("""(?is)(\bstyle\s*=\s*)(["'])(.*?)\2""")
         html = styleAttribute.replace(html) { match ->
             val original = match.groupValues[3]
-            val scaled = scaleDeclarationBlock(original, scales)
+            val scaled = FontScaleCssRewriter.scaleInlineStyle(original, scales)
             val rewritten = rewriteFamilyDeclarations(scaled, active)
             match.groupValues[1] + match.groupValues[2] + rewritten + match.groupValues[2]
         }
@@ -93,41 +93,7 @@ internal class FontReplacementContainer(
         source: String,
         active: List<Pair<String, UserFont>>,
         scales: List<Pair<String, Double>>,
-    ): String {
-        val rule = Regex("""(?s)([^{}]+)\{([^{}]*)\}""")
-        val scaled = rule.replace(source) { match ->
-            val prelude = match.groupValues[1]
-            val body = match.groupValues[2]
-            if (prelude.trimStart().startsWith("@")) match.value
-            else prelude + "{" + scaleDeclarationBlock(body, scales) + "}"
-        }
-        return rewriteFamilyDeclarations(scaled, active)
-    }
-
-    private fun scaleDeclarationBlock(
-        declarations: String,
-        scales: List<Pair<String, Double>>,
-    ): String {
-        if (scales.isEmpty()) return declarations
-        val familyValue = Regex("""(?is)font-family\s*:\s*([^;{}]+)""")
-            .find(declarations)?.groupValues?.get(1) ?: return declarations
-        val candidates = splitFamilyList(familyValue).map { it.trim().unquoteFamily() }
-        val scale = candidates.firstNotNullOfOrNull { candidate ->
-            scales.firstOrNull { it.first.equals(candidate, ignoreCase = true) }?.second
-        } ?: return declarations
-
-        val sizePattern = Regex("""(?is)(font-size\s*:\s*)([^;]+)""")
-        if (sizePattern.containsMatchIn(declarations)) {
-            return sizePattern.replace(declarations) { match ->
-                val raw = match.groupValues[2].trim()
-                val important = Regex("""(?i)\s*!important\s*$""").find(raw)?.value.orEmpty()
-                val value = raw.removeSuffix(important).trim()
-                "${match.groupValues[1]}calc((${value}) * ${scale})${important}"
-            }
-        }
-        // A family-specific rule without a size still needs a local multiplier.
-        return declarations.trimEnd() + "\nfont-size: calc(1em * ${scale});\n"
-    }
+    ): String = rewriteFamilyDeclarations(FontScaleCssRewriter.rewrite(source, scales), active)
 
     private fun rewriteFamilyDeclarations(
         source: String,
