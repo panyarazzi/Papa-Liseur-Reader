@@ -46,7 +46,7 @@ internal class FontReplacementContainer(
     ): String {
         // Rewrite only declarations; class names, content strings, and
         // unrelated CSS properties must not be touched.
-        val familyDeclaration = Regex("""(?is)(font-family\\s*:\\s*)([^;{}]+)""")
+        val familyDeclaration = Regex("""(?is)(font-family\s*:\s*)([^;{}]+)""")
         val rewritten = familyDeclaration.replace(source) { match ->
             val list = splitFamilyList(match.groupValues[2])
             val mapped = list.map { candidate ->
@@ -58,11 +58,11 @@ internal class FontReplacementContainer(
             match.groupValues[1] + mapped.joinToString(", ")
         }
 
-        val declarations = active.joinToString("\\n") { (family, font) ->
+        val declarations = active.joinToString("\n") { (_, font) ->
             val safeFamily = family.replace("\\\\", "\\\\\\\\").replace("\"", "\\\\\"")
             """@font-face { font-family: "LiseurReplacement-${font.digest}"; src: url("${UserFontResources.url(font)}"); font-weight: normal; font-style: normal; }"""
         }
-        return "/* Liseur per-family font replacements */\\n$declarations\\n$rewritten"
+        return "/* Liseur per-family font replacements */\n$declarations\n$rewritten"
     }
 
     private fun splitFamilyList(value: String): List<String> {
