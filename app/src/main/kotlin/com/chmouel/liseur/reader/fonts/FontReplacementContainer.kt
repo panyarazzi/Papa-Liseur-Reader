@@ -7,13 +7,11 @@ import org.readium.r2.shared.util.data.Container
 import org.readium.r2.shared.util.resource.Resource
 
 /**
- * Applies per-publication family replacements at the resource boundary.
+ * Applies per-book font replacements while Readium reads author CSS.
  *
- * The EPUB remains untouched on disk. CSS resources are transformed as
- * Readium reads them, and each selected replacement is served from the
- * already-existing user-font container. The replacement map is read on
- * every request so a settings change is picked up when the navigator
- * reloads its document.
+ * Only CSS is transformed; the original EPUB on disk is never modified.
+ * Replaced @font-face declarations are removed so the embedded original
+ * face cannot win over the user's selected face at the same family name.
  */
 internal class FontReplacementContainer(
     private val delegate: Container<Resource>,
@@ -27,42 +25,42 @@ internal class FontReplacementContainer(
         val href = url.toString().substringBefore('#').substringBefore('?')
         if (!href.endsWith(".css", ignoreCase = true)) return null
         val resource = delegate.get(url) ?: return null
-        val active = replacements()
-            .mapNotNull { (family, id) ->
-                val font = fonts().firstOrNull { it.id == id } ?: return@mapNotNull null
-                family.trim().takeIf(String::isNotEmpty)?.let { it to font }
-            }
-        if (active.isEmpty()) return resource
-        return RewrittenCssResource(resource) { original ->
-            rewrite(original, active)
+        val active = replacements().mapNotNull { (family, id) ->
+            val font = fonts().firstOrNull { it.id == id } ?: return@mapNotNull null
+            family.trim().takeIf(String::isNotEmpty)?.let { it to font }
         }
+        if (active.isEmpty()) return resource
+        return RewrittenCssResource(resource) { source -> rewrite(source, active) }
     }
 
     override fun close() = Unit
 
-    private fun rewrite(
-        source: String,
-        active: List<Pair<String, UserFont>>,
-    ): String {
-        // Rewrite only declarations; class names, content strings, and
-        // unrelated CSS properties must not be touched.
-        val familyDeclaration = Regex("""(?is)(font-family\s*:\s*)([^;{}]+)""")
-        val rewritten = familyDeclaration.replace(source) { match ->
-            val list = splitFamilyList(match.groupValues[2])
-            val mapped = list.map { candidate ->
+    private fun rewrite(source: String, active: List<Pair<String, UserFont>>): String {
+        val familyDeclaration = Regex("""(?is)font-family\s*:\s*([^;{}]+)""")
+        val faceBlock = Regex("""(?is)@font-face\s*\{[^}]*}""")
+        val remainingFaces = faceBlock.replace(source) { block ->
+            val declaration = familyDeclaration.find(block.value)?.groupValues?.get(1)
+            val faceFamily = declaration?.trim()?.unquoteFamily()
+            if (active.any { it.first.equals(faceFamily, ignoreCase = true) }) "" else block.value
+        }
+
+        val rewritten = familyDeclaration.replace(remainingFaces) { match ->
+            val candidates = splitFamilyList(match.groupValues[1])
+            val mapped = candidates.map { candidate ->
                 val replacement = active.firstOrNull {
                     it.first.equals(candidate.trim().unquoteFamily(), ignoreCase = true)
                 }
-                replacement?.let { "LiseurReplacement-${it.second.digest}" } ?: candidate
+                replacement?.let { "\"LiseurReplacement-\${it.second.digest}\"" } ?: candidate
             }
-            match.groupValues[1] + mapped.joinToString(", ")
+            "font-family: " + mapped.joinToString(", ")
         }
 
         val declarations = active.joinToString("\n") { (_, font) ->
-            val safeFamily = family.replace("\\\\", "\\\\\\\\").replace("\"", "\\\\\"")
-            """@font-face { font-family: "LiseurReplacement-${font.digest}"; src: url("${UserFontResources.url(font)}"); font-weight: normal; font-style: normal; }"""
+            val weight = font.staticWeight.coerceIn(100, 900)
+            val style = if (font.italic) "italic" else "normal"
+            """@font-face { font-family: "LiseurReplacement-\${font.digest}"; src: url("\${UserFontResources.url(font)}"); font-weight: $weight; font-style: $style; }"""
         }
-        return "/* Liseur per-family font replacements */\n$declarations\n$rewritten"
+        return "/* Liseur per-book font replacements */\n$declarations\n$rewritten"
     }
 
     private fun splitFamilyList(value: String): List<String> {
@@ -72,7 +70,7 @@ internal class FontReplacementContainer(
         value.forEach { c ->
             when {
                 quote != null && c == quote -> { current.append(c); quote = null }
-                quote == null && (c == '\\"' || c == '\\'') -> { current.append(c); quote = c }
+                quote == null && (c == '"' || c == '\'') -> { current.append(c); quote = c }
                 quote == null && c == ',' -> { values += current.toString(); current.clear() }
                 else -> current.append(c)
             }
@@ -85,7 +83,6 @@ internal class FontReplacementContainer(
         trim().removeSurrounding("\"").removeSurrounding("'").trim()
 }
 
-/** Delegates metadata and close semantics, changing only full CSS reads. */
 private class RewrittenCssResource(
     private val delegate: Resource,
     private val rewrite: (String) -> String,
