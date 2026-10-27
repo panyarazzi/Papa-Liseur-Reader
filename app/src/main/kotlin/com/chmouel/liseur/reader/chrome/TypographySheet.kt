@@ -155,6 +155,7 @@ private fun FontReplacementControls(
     var loading by remember(publication) { mutableStateOf(false) }
     var families by remember(publication) { mutableStateOf<List<EpubFontFamily>>(emptyList()) }
     var failed by remember(publication) { mutableStateOf(false) }
+    var failureReason by remember(publication) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(publication, expanded) {
         if (expanded && families.isEmpty() && !loading) {
@@ -162,6 +163,9 @@ private fun FontReplacementControls(
             val result = runCatching { EpubFontInspector.inspect(publication) }
             families = result.getOrDefault(emptyList())
             failed = result.isFailure
+            failureReason = result.exceptionOrNull()?.let { error ->
+                error::class.simpleName + ": " + (error.message ?: "no details")
+            }
             loading = false
         }
     }
@@ -190,7 +194,12 @@ private fun FontReplacementControls(
         if (expanded) {
             when {
                 loading -> Text("Scanning this EPUB for font families…", style = MaterialTheme.typography.bodyMedium)
-                failed -> Text("Could not inspect this EPUB's stylesheets.", color = MaterialTheme.colorScheme.error)
+                failed -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Could not inspect this EPUB's stylesheets.", color = MaterialTheme.colorScheme.error)
+                    failureReason?.let { reason ->
+                        Text(reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 families.isEmpty() -> Text("No explicit font families were found in the EPUB CSS.", style = MaterialTheme.typography.bodyMedium)
                 else -> Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     families.filter { it.referencedByStyles }.forEach { family ->
