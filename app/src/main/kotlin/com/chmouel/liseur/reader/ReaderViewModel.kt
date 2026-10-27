@@ -204,6 +204,15 @@ class ReaderViewModel(
         viewModelScope.launch { prefsRepo.setFontReplacement(bookId, family, fontId) }
     }
 
+    /** Per-book scale multipliers for the EPUB's original CSS font families. */
+    val fontScales: StateFlow<Map<String, Double>> = prefsRepo
+        .fontScales(bookId)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    fun setFontScale(family: String, scale: Double) {
+        viewModelScope.launch { prefsRepo.setFontScale(bookId, family, scale) }
+    }
+
     private val sessions = sessionManager.recorder(bookId)
     private val timeSpent = sessionManager.observeTotal(bookId)
 
@@ -1397,6 +1406,7 @@ class ReaderViewModel(
             userFonts.awaitReady()
             // Load persisted replacement rules before Readium builds the publication container.
             prefsRepo.fontReplacements(bookId).first()
+            prefsRepo.fontScales(bookId).first()
             // A book still being read aloud is already open; reading it
             // again shares that publication rather than opening a second.
             val opened = openBookHandles.open(bookId, keep = ::holdOpened) {
@@ -1419,6 +1429,7 @@ class ReaderViewModel(
                             FontReplacementContainer(
                                 delegate = container,
                                 replacements = { fontReplacements.value },
+                                scales = { fontScales.value },
                                 fonts = { userFonts.fonts.value },
                             ),
                             UserFontsContainer { userFonts.fonts.value },
