@@ -49,7 +49,7 @@ android {
         versionCode = 56
         versionName = "0.25.0"
         // Identifies this project APK independently of the upstream Liseur version.
-        buildConfigField("String", "PAPA_BUILD_LABEL", "\"papa apk#55\"")
+        buildConfigField("String", "PAPA_BUILD_LABEL", "\"Papa_release#1.0\"")
     }
 
     signingConfigs {
