@@ -30,9 +30,8 @@ internal object EpubFontInspector {
 
     private suspend fun Publication.readText(link: Link): String? =
         runCatching {
-            get(link)?.use { resource ->
-                resource.read().getOrNull()?.decodeToString()
-            }
+            val resource = get(link).getOrNull() ?: return@runCatching null
+            resource.read().getOrNull()?.decodeToString()
         }.getOrNull()
 
     private fun looksLikeStylesheet(link: Link): Boolean {
