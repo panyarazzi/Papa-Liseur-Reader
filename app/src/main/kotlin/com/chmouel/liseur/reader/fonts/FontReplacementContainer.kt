@@ -6,10 +6,17 @@ import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.data.Container
 import org.readium.r2.shared.util.resource.Resource
 
-/** Applies per-book font replacements while Readium reads author styles. */
+/**
+ * Applies per-book font replacement and family-scale rules while Readium reads author styles.
+ *
+ * Scaling is applied to the CSS rule which declares a family, rather than globally to the
+ * document. This preserves unrelated families and lets the reader compensate for differences
+ * between Thai font metrics. EPUB styles are varied, so this remains a best-effort CSS rewrite.
+ */
 internal class FontReplacementContainer(
     private val delegate: Container<Resource>,
     private val replacements: () -> Map<String, String>,
+    private val scales: () -> Map<String, Double>,
     private val fonts: () -> List<UserFont>,
 ) : Container<Resource> {
 
@@ -28,31 +35,51 @@ internal class FontReplacementContainer(
             val font = fonts().firstOrNull { it.id == id } ?: return@mapNotNull null
             family.trim().takeIf(String::isNotEmpty)?.let { it to font }
         }
-        if (active.isEmpty()) return resource
+        val activeScales = scales().mapNotNull { (family, scale) ->
+            family.trim().takeIf(String::isNotEmpty)?.let {
+                it to scale.takeIf { value -> value.isFinite() }?.coerceIn(0.5, 2.0)
+            }
+        }.mapNotNull { (family, scale) -> scale?.let { family to it } }
+
+        if (active.isEmpty() && activeScales.isEmpty()) return resource
 
         return RewrittenTextResource(resource) { source ->
-            if (css) rewriteCss(source, active) else rewriteHtml(source, active)
+            if (css) rewriteCss(source, active, activeScales)
+            else rewriteHtml(source, active, activeScales)
         }
     }
 
     override fun close() = Unit
 
-    private fun rewriteCss(source: String, active: List<Pair<String, UserFont>>): String =
-        rewriteRules(source, active) + "\n" + fontFaceDeclarations(active)
+    private fun rewriteCss(
+        source: String,
+        active: List<Pair<String, UserFont>>,
+        scales: List<Pair<String, Double>>,
+    ): String {
+        val rewritten = rewriteRules(source, active, scales)
+        return if (active.isEmpty()) rewritten else rewritten + "\n" + fontFaceDeclarations(active)
+    }
 
-    private fun rewriteHtml(source: String, active: List<Pair<String, UserFont>>): String {
+    private fun rewriteHtml(
+        source: String,
+        active: List<Pair<String, UserFont>>,
+        scales: List<Pair<String, Double>>,
+    ): String {
         val styleBlock = Regex("""(?is)(<style\b[^>]*>)(.*?)(</style\s*>)""")
         var html = styleBlock.replace(source) { match ->
-            match.groupValues[1] + rewriteRules(match.groupValues[2], active) + match.groupValues[3]
+            match.groupValues[1] + rewriteRules(match.groupValues[2], active, scales) + match.groupValues[3]
         }
 
-        // Rewrite inline CSS without touching prose or unrelated markup.
+        // Inline style has no selector block, so scale its declarations directly.
         val styleAttribute = Regex("""(?is)(\bstyle\s*=\s*)(["'])(.*?)\2""")
         html = styleAttribute.replace(html) { match ->
-            match.groupValues[1] + match.groupValues[2] +
-                rewriteRules(match.groupValues[3], active) + match.groupValues[2]
+            val original = match.groupValues[3]
+            val scaled = scaleDeclarationBlock(original, scales)
+            val rewritten = rewriteFamilyDeclarations(scaled, active)
+            match.groupValues[1] + match.groupValues[2] + rewritten + match.groupValues[2]
         }
 
+        if (active.isEmpty()) return html
         val injected = "<style data-liseur-font-replacements>\n${fontFaceDeclarations(active)}\n</style>"
         val headClose = Regex("""(?is)</head\s*>""")
         return if (headClose.containsMatchIn(html)) {
@@ -62,7 +89,51 @@ internal class FontReplacementContainer(
         }
     }
 
-    private fun rewriteRules(source: String, active: List<Pair<String, UserFont>>): String {
+    private fun rewriteRules(
+        source: String,
+        active: List<Pair<String, UserFont>>,
+        scales: List<Pair<String, Double>>,
+    ): String {
+        val rule = Regex("""(?s)([^{}]+)\{([^{}]*)\}""")
+        val scaled = rule.replace(source) { match ->
+            val prelude = match.groupValues[1]
+            val body = match.groupValues[2]
+            if (prelude.trimStart().startsWith("@")) match.value
+            else prelude + "{" + scaleDeclarationBlock(body, scales) + "}"
+        }
+        return rewriteFamilyDeclarations(scaled, active)
+    }
+
+    private fun scaleDeclarationBlock(
+        declarations: String,
+        scales: List<Pair<String, Double>>,
+    ): String {
+        if (scales.isEmpty()) return declarations
+        val familyValue = Regex("""(?is)font-family\s*:\s*([^;{}]+)""")
+            .find(declarations)?.groupValues?.get(1) ?: return declarations
+        val candidates = splitFamilyList(familyValue).map { it.trim().unquoteFamily() }
+        val scale = candidates.firstNotNullOfOrNull { candidate ->
+            scales.firstOrNull { it.first.equals(candidate, ignoreCase = true) }?.second
+        } ?: return declarations
+
+        val sizePattern = Regex("""(?is)(font-size\s*:\s*)([^;]+)""")
+        if (sizePattern.containsMatchIn(declarations)) {
+            return sizePattern.replace(declarations) { match ->
+                val raw = match.groupValues[2].trim()
+                val important = Regex("""(?i)\s*!important\s*$""").find(raw)?.value.orEmpty()
+                val value = raw.removeSuffix(important).trim()
+                "${match.groupValues[1]}calc((${value}) * ${scale})${important}"
+            }
+        }
+        // A family-specific rule without a size still needs a local multiplier.
+        return declarations.trimEnd() + "\nfont-size: calc(1em * ${scale});\n"
+    }
+
+    private fun rewriteFamilyDeclarations(
+        source: String,
+        active: List<Pair<String, UserFont>>,
+    ): String {
+        if (active.isEmpty()) return source
         val familyDeclaration = Regex("""(?is)font-family\s*:\s*([^;{}]+)""")
         val faceBlock = Regex("""(?is)@font-face\s*\{[^}]*}""")
         val remainingFaces = faceBlock.replace(source) { block ->
