@@ -2,6 +2,7 @@ package com.chmouel.liseur.reader.chrome
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,17 +12,25 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.chmouel.liseur.R
+import com.chmouel.liseur.data.settings.fonts.UserFont
 import com.chmouel.liseur.data.settings.ReadingFont
 import com.chmouel.liseur.data.settings.ReaderPrefs
 import com.chmouel.liseur.data.settings.ReaderTheme
@@ -36,6 +45,9 @@ import com.chmouel.liseur.ui.reading.rememberFontLibrary
 import com.chmouel.liseur.ui.reading.ReadingFontSizeSlider
 import com.chmouel.liseur.ui.reading.ReadingThemeRow
 import com.chmouel.liseur.ui.windowWidth
+import com.chmouel.liseur.reader.fonts.EpubFontFamily
+import com.chmouel.liseur.reader.fonts.EpubFontInspector
+import org.readium.r2.shared.publication.Publication
 
 /**
  * Kindle-style "Aa" sheet: reading theme, font, size and brightness,
@@ -63,6 +75,10 @@ import com.chmouel.liseur.ui.windowWidth
 @Composable
 fun TypographySheet(
     prefs: ReaderPrefs,
+    publication: Publication,
+    importedFonts: List<UserFont>,
+    fontReplacements: Map<String, String>,
+    onFontReplacementChanged: (String, String?) -> Unit,
     readingTheme: ReaderTheme,
     readingCss: ReadingCss,
     onFontSelected: (ReadingFont) -> Unit,
@@ -104,9 +120,121 @@ fun TypographySheet(
                 onImport = fontLibrary.pick,
                 onRemove = fontLibrary.remove,
             )
+            FontReplacementControls(
+                publication = publication,
+                importedFonts = importedFonts,
+                replacements = fontReplacements,
+                enabled = reshapeable,
+                onReplacementChanged = onFontReplacementChanged,
+            )
             // Last, and always. The sheet behind it has rows for any
             // book, read either way, so it can no longer open empty.
             AdvancedRow(onClick = onOpenAdvanced)
+        }
+    }
+}
+
+
+/** Per-EPUB family-to-font mapping, kept separate from the whole-book font picker. */
+@Composable
+private fun FontReplacementControls(
+    publication: Publication,
+    importedFonts: List<UserFont>,
+    replacements: Map<String, String>,
+    enabled: Boolean,
+    onReplacementChanged: (String, String?) -> Unit,
+) {
+    var expanded by remember(publication) { mutableStateOf(false) }
+    var loading by remember(publication) { mutableStateOf(false) }
+    var families by remember(publication) { mutableStateOf<List<EpubFontFamily>>(emptyList()) }
+    var failed by remember(publication) { mutableStateOf(false) }
+
+    LaunchedEffect(publication, expanded) {
+        if (expanded && families.isEmpty() && !loading) {
+            loading = true
+            val result = runCatching { EpubFontInspector.inspect(publication) }
+            families = result.getOrDefault(emptyList())
+            failed = result.isFailure
+            loading = false
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled, role = Role.Button) { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Replace fonts in this book", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Choose a different imported font for each original EPUB font",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                if (expanded) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (expanded) {
+            when {
+                loading -> Text("Scanning this EPUB for font families…", style = MaterialTheme.typography.bodyMedium)
+                failed -> Text("Could not inspect this EPUB's stylesheets.", color = MaterialTheme.colorScheme.error)
+                families.isEmpty() -> Text("No explicit font families were found in the EPUB CSS.", style = MaterialTheme.typography.bodyMedium)
+                importedFonts.isEmpty() -> Text("Import one or more .ttf or .otf fonts first using the font picker above.", style = MaterialTheme.typography.bodyMedium)
+                else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    families.filter { it.referencedByStyles }.forEach { family ->
+                        FontReplacementItem(
+                            family = family,
+                            importedFonts = importedFonts,
+                            selectedId = replacements[family.name],
+                            onSelected = { onReplacementChanged(family.name, it) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FontReplacementItem(
+    family: EpubFontFamily,
+    importedFonts: List<UserFont>,
+    selectedId: String?,
+    onSelected: (String?) -> Unit,
+) {
+    var menuExpanded by remember(family.name) { mutableStateOf(false) }
+    val selectedName = importedFonts.firstOrNull { it.id == selectedId }?.displayName ?: "Original font"
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(role = Role.Button) { menuExpanded = true }
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(family.name, style = MaterialTheme.typography.bodyMedium)
+                Text(selectedName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+        }
+        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Original font") },
+                onClick = { onSelected(null); menuExpanded = false },
+            )
+            importedFonts.forEach { font ->
+                DropdownMenuItem(
+                    text = { Text(font.displayName) },
+                    onClick = { onSelected(font.id); menuExpanded = false },
+                )
+            }
         }
     }
 }
