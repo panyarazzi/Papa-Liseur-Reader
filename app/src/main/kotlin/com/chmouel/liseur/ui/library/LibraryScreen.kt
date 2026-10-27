@@ -1566,8 +1566,12 @@ private fun BookGrid(
         }
         if (selectedFolder != null) {
             val selectedBooks = state.books.filter { book ->
-                val source = book.sourcePath?.replace('\\\\', '/') ?: return@filter false
-                val parent = if ('/' in source) source.substringBeforeLast('/') else "\\u0001Root"
+                val source = book.sourcePath?.replace('\\', '/')
+                val parent = when {
+                    source == null -> "__OTHER__"
+                    '/' !in source -> "__ROOT__"
+                    else -> source.substringBeforeLast('/')
+                }
                 parent == selectedFolder
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -1629,23 +1633,24 @@ private fun BookGrid(
                     )
                 }
             }
-        } else if (state.books.any { it.sourcePath != null }) {
+        } else {
             // Folder-first shelf: one tile per source folder, with a preview
             // of up to four books using the current library sort order.
+            // Books without path metadata remain accessible in an Other folder.
             val folderGroups = state.books.groupBy { book ->
-                val source = book.sourcePath?.replace('\\\\', '/')
+                val source = book.sourcePath?.replace('\\', '/')
                 when {
-                    source == null -> "\\u0000Other"
-                    '/' !in source -> "\\u0001Root"
+                    source == null -> "__OTHER__"
+                    '/' !in source -> "__ROOT__"
                     else -> source.substringBeforeLast('/')
                 }
             }.toSortedMap()
-            items(folderGroups.entries.toList(), key = { "folder-card:${it.key}" }) { entry ->
+            items(folderGroups.entries.toList(), key = { "folder-card:" + it.key }) { entry ->
                 val folderKey = entry.key
                 val folderBooks = entry.value
                 val label = when {
-                    folderKey == "\\u0000Other" -> stringResource(R.string.library_folder_other)
-                    folderKey == "\\u0001Root" -> stringResource(R.string.library_folder_root)
+                    folderKey == "__OTHER__" -> stringResource(R.string.library_folder_other)
+                    folderKey == "__ROOT__" -> stringResource(R.string.library_folder_root)
                     else -> folderKey.substringAfterLast('/')
                 }
                 FolderPreviewCard(
@@ -1653,17 +1658,6 @@ private fun BookGrid(
                     books = folderBooks.take(4),
                     bookCount = folderBooks.size,
                     onClick = { selectedFolder = folderKey },
-                )
-            }
-        } else {
-            // Fallback for libraries whose source folder metadata is unavailable.
-            items(state.books, key = { it.id }) { book ->
-                BookCard(
-                    book = book,
-                    progress = state.downloads[book.url],
-                    inASeries = seriesKey(book.seriesName) in state.shownSeries,
-                    onClick = { onBookSelected(book) },
-                    onLongClick = { onBookLongPress(book) },
                 )
             }
         }
