@@ -27,6 +27,14 @@ jobs:
     - name: Run unit tests before packaging
       run: ./gradlew testFossDebugUnitTest testPlayDebugUnitTest
 
+    - name: Upload generated Room schema 71 for inspection
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: room-schema-71
+        path: app/schemas/com.chmouel.liseur.data.db.LiseurDatabase/71.json
+        if-no-files-found: warn
+
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
