@@ -137,6 +137,17 @@ class SfntFontTest {
     }
 
     @Test
+    fun `detects a width axis only when fvar declares wdth`() {
+        assertEquals(75..125, SfntFont.parse(sfnt(weightAxis = 75 to 125, axisTag = "wdth"))!!.widthRange)
+        assertNull(SfntFont.parse(sfnt(weightAxis = 200 to 900))!!.widthRange)
+    }
+
+    @Test
+    fun `does not report width support when width axis range is invalid`() {
+        assertNull(SfntFont.parse(sfnt(weightAxis = 150 to 80, axisTag = "wdth"))!!.widthRange)
+    }
+
+    @Test
     fun `refuses a font collection`() {
         assertNull(SfntFont.parse(sfnt(magic = 0x74746366)))
     }
