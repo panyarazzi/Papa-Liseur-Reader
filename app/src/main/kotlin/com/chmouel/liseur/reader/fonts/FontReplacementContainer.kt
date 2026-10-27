@@ -50,7 +50,7 @@ internal class FontReplacementContainer(
                 val replacement = active.firstOrNull {
                     it.first.equals(candidate.trim().unquoteFamily(), ignoreCase = true)
                 }
-                replacement?.let { "\"LiseurReplacement-\${it.second.digest}\"" } ?: candidate
+                replacement?.let { "\"LiseurReplacement-${it.second.digest}\"" } ?: candidate
             }
             "font-family: " + mapped.joinToString(", ")
         }
@@ -58,7 +58,7 @@ internal class FontReplacementContainer(
         val declarations = active.joinToString("\n") { (_, font) ->
             val weight = font.staticWeight.coerceIn(100, 900)
             val style = if (font.italic) "italic" else "normal"
-            """@font-face { font-family: "LiseurReplacement-\${font.digest}"; src: url("\${UserFontResources.url(font)}"); font-weight: $weight; font-style: $style; }"""
+            """@font-face { font-family: "LiseurReplacement-${font.digest}"; src: url("${UserFontResources.url(font)}"); font-weight: $weight; font-style: $style; }"""
         }
         return "/* Liseur per-book font replacements */\n$declarations\n$rewritten"
     }
