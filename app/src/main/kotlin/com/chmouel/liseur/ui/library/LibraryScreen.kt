@@ -1462,6 +1462,7 @@ private fun BookGrid(
     bottomInset: Dp = 0.dp,
 ) {
     var selectedFolder by rememberSaveable { mutableStateOf<String?>(null) }
+    var bookViewMode by rememberSaveable { mutableStateOf("grid") }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = coverMinSize(windowWidth())),
@@ -1544,6 +1545,16 @@ private fun BookGrid(
                 // Pinned to the far end of the row and laid out last, so
                 // it is never squeezed: the filter summary gives way to
                 // it rather than the other way round.
+                if (selectedFolder != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { bookViewMode = "grid" }, enabled = bookViewMode != "grid") {
+                            Text("Grid")
+                        }
+                        TextButton(onClick = { bookViewMode = "list" }, enabled = bookViewMode != "list") {
+                            Text("List")
+                        }
+                    }
+                }
                 SortRow(
                     sort = state.sort,
                     reversed = state.sortReversed,
@@ -1581,14 +1592,25 @@ private fun BookGrid(
                     )
                 }
             }
-            items(selectedBooks, key = { it.id }) { book ->
-                BookCard(
-                    book = book,
-                    progress = state.downloads[book.url],
-                    inASeries = seriesKey(book.seriesName) in state.shownSeries,
-                    onClick = { onBookSelected(book) },
-                    onLongClick = { onBookLongPress(book) },
-                )
+            if (bookViewMode == "list") {
+                items(selectedBooks, key = { it.id }, span = { GridItemSpan(maxLineSpan) }) { book ->
+                    BookListRow(
+                        book = book,
+                        progress = state.downloads[book.url],
+                        onClick = { onBookSelected(book) },
+                        onLongClick = { onBookLongPress(book) },
+                    )
+                }
+            } else {
+                items(selectedBooks, key = { it.id }) { book ->
+                    BookCard(
+                        book = book,
+                        progress = state.downloads[book.url],
+                        inASeries = seriesKey(book.seriesName) in state.shownSeries,
+                        onClick = { onBookSelected(book) },
+                        onLongClick = { onBookLongPress(book) },
+                    )
+                }
             }
         } else if (state.filters.groupBySeries) {
             items(state.shelfEntries, key = { it.gridKey }) { entry ->
@@ -1642,6 +1664,68 @@ private fun BookGrid(
                     inASeries = seriesKey(book.seriesName) in state.shownSeries,
                     onClick = { onBookSelected(book) },
                     onLongClick = { onBookLongPress(book) },
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BookListRow(
+    book: Book,
+    progress: DownloadProgress?,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val haptics = LocalHapticFeedback.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            )
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        BookCover(
+            book = book,
+            modifier = Modifier.width(58.dp).aspectRatio(2f / 3f),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = book.displayTitle,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            book.displayAuthor?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                text = book.sourceFileName ?: book.url.substringAfterLast('/'),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            progress?.let {
+                LinearProgressIndicator(
+                    progress = { it.fraction },
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                 )
             }
         }
