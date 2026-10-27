@@ -73,6 +73,7 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
 
     private object Keys {
         val FONT_REPLACEMENTS_BY_BOOK = stringPreferencesKey("font_replacements_by_book")
+        val FONT_SCALES_BY_BOOK = stringPreferencesKey("font_scales_by_book")
 
         val FONT = stringPreferencesKey("font")
         val FONT_SIZE = doublePreferencesKey("font_size")
@@ -173,6 +174,44 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
             if (fontId == null) book.remove(cleanFamily) else book.put(cleanFamily, fontId)
             if (book.length() == 0) root.remove(bookId) else root.put(bookId, book)
             preferences[Keys.FONT_REPLACEMENTS_BY_BOOK] = root.toString()
+        }
+    }
+
+    /** Per-book scale multiplier for each original EPUB CSS family (1.0 = unchanged). */
+    fun fontScales(bookId: String): Flow<Map<String, Double>> =
+        store.data.map { preferences ->
+            runCatching {
+                val root = JSONObject(preferences[Keys.FONT_SCALES_BY_BOOK] ?: "{}")
+                val book = root.optJSONObject(bookId) ?: JSONObject()
+                buildMap {
+                    val keys = book.keys()
+                    while (keys.hasNext()) {
+                        val family = keys.next()
+                        val scale = book.optDouble(family, Double.NaN)
+                        if (family.isNotBlank() && scale.isFinite() && scale in 0.5..2.0) {
+                            put(family, scale)
+                        }
+                    }
+                }
+            }.getOrDefault(emptyMap())
+        }
+
+    suspend fun setFontScale(bookId: String, family: String, scale: Double) {
+        val cleanFamily = family.trim()
+        if (cleanFamily.isEmpty()) return
+        val cleanScale = scale.coerceIn(0.5, 2.0)
+        store.edit { preferences ->
+            val root = runCatching {
+                JSONObject(preferences[Keys.FONT_SCALES_BY_BOOK] ?: "{}")
+            }.getOrElse { JSONObject() }
+            val book = root.optJSONObject(bookId) ?: JSONObject()
+            if (kotlin.math.abs(cleanScale - 1.0) < 0.001) {
+                book.remove(cleanFamily)
+            } else {
+                book.put(cleanFamily, cleanScale)
+            }
+            if (book.length() == 0) root.remove(bookId) else root.put(bookId, book)
+            preferences[Keys.FONT_SCALES_BY_BOOK] = root.toString()
         }
     }
 
