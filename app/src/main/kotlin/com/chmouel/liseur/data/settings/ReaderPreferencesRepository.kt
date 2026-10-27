@@ -72,6 +72,8 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
     }
 
     private object Keys {
+        val FONT_REPLACEMENTS_BY_BOOK = stringPreferencesKey("font_replacements_by_book")
+
         val FONT = stringPreferencesKey("font")
         val FONT_SIZE = doublePreferencesKey("font_size")
         val THEME = stringPreferencesKey("theme")
@@ -140,6 +142,38 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
             marginTopDp = (p[Keys.MARGIN_TOP_DP] ?: 12f).coerceIn(0f, 48f),
             marginBottomDp = (p[Keys.MARGIN_BOTTOM_DP] ?: 12f).coerceIn(0f, 48f),
         ).sanitized()
+    }
+
+
+    /** Per-book mapping from an EPUB's original CSS family to an imported-font id. */
+    fun fontReplacements(bookId: String): Flow<Map<String, String>> =
+        store.data.map { preferences ->
+            runCatching {
+                val root = JSONObject(preferences[Keys.FONT_REPLACEMENTS_BY_BOOK] ?: "{}")
+                val book = root.optJSONObject(bookId) ?: JSONObject()
+                buildMap {
+                    val keys = book.keys()
+                    while (keys.hasNext()) {
+                        val family = keys.next()
+                        val fontId = book.optString(family).takeIf { it.startsWith("user:") }
+                        if (!family.isBlank() && fontId != null) put(family, fontId)
+                    }
+                }
+            }.getOrDefault(emptyMap())
+        }
+
+    suspend fun setFontReplacement(bookId: String, family: String, fontId: String?) {
+        val cleanFamily = family.trim()
+        if (cleanFamily.isEmpty()) return
+        store.edit { preferences ->
+            val root = runCatching {
+                JSONObject(preferences[Keys.FONT_REPLACEMENTS_BY_BOOK] ?: "{}")
+            }.getOrElse { JSONObject() }
+            val book = root.optJSONObject(bookId) ?: JSONObject()
+            if (fontId == null) book.remove(cleanFamily) else book.put(cleanFamily, fontId)
+            if (book.length() == 0) root.remove(bookId) else root.put(bookId, book)
+            preferences[Keys.FONT_REPLACEMENTS_BY_BOOK] = root.toString()
+        }
     }
 
     suspend fun setFont(font: ReadingFont) {
