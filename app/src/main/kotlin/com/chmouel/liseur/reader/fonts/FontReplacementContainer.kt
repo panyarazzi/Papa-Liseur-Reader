@@ -53,10 +53,10 @@ internal class FontReplacementContainer(
                 rewriteRules(match.groupValues[3], active) + match.groupValues[2]
         }
 
-        val injected = "<style data-liseur-font-replacements>\n\${fontFaceDeclarations(active)}\n</style>"
+        val injected = "<style data-liseur-font-replacements>\n${fontFaceDeclarations(active)}\n</style>"
         val headClose = Regex("""(?is)</head\s*>""")
         return if (headClose.containsMatchIn(html)) {
-            headClose.replaceFirst(html, "\${injected}</head>")
+            headClose.replaceFirst(html, "${injected}</head>")
         } else {
             injected + html
         }
@@ -77,7 +77,7 @@ internal class FontReplacementContainer(
                 val replacement = active.firstOrNull {
                     it.first.equals(candidate.trim().unquoteFamily(), ignoreCase = true)
                 }
-                replacement?.let { "\"LiseurReplacement-\${it.second.digest}\"" } ?: candidate
+                replacement?.let { "\"LiseurReplacement-${it.second.digest}\"" } ?: candidate
             }
             "font-family: " + mapped.joinToString(", ")
         }
@@ -87,7 +87,7 @@ internal class FontReplacementContainer(
         active.joinToString("\n") { (_, font) ->
             val weight = font.staticWeight.coerceIn(100, 900)
             val style = if (font.italic) "italic" else "normal"
-            """@font-face { font-family: "LiseurReplacement-\${font.digest}"; src: url("\${UserFontResources.url(font)}"); font-weight: $weight; font-style: $style; }"""
+            """@font-face { font-family: "LiseurReplacement-${font.digest}"; src: url("${UserFontResources.url(font)}"); font-weight: $weight; font-style: $style; }"""
         }
 
     private fun splitFamilyList(value: String): List<String> {
