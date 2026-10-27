@@ -94,6 +94,7 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
         val TEXT_ALIGN = stringPreferencesKey("text_align")
         val FONT_WEIGHT = stringPreferencesKey("font_weight")
         val HYPHENS = booleanPreferencesKey("hyphens")
+        val GLYPH_WIDTH = doublePreferencesKey("glyph_width")
         val LETTER_SPACING = doublePreferencesKey("letter_spacing")
         val WORD_SPACING = doublePreferencesKey("word_spacing")
         val PARAGRAPH_SPACING = doublePreferencesKey("paragraph_spacing")
@@ -129,6 +130,7 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
             textAlign = ReaderTextAlign.fromId(p[Keys.TEXT_ALIGN]),
             fontWeight = ReaderFontWeight.fromId(p[Keys.FONT_WEIGHT]),
             hyphens = p[Keys.HYPHENS],
+            glyphWidth = p[Keys.GLYPH_WIDTH] ?: 1.0,
             letterSpacing = p[Keys.LETTER_SPACING],
             wordSpacing = p[Keys.WORD_SPACING],
             paragraphSpacing = p[Keys.PARAGRAPH_SPACING],
@@ -263,6 +265,10 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
         store.edit {
             if (value == null) it.remove(Keys.HYPHENS) else it[Keys.HYPHENS] = value
         }
+    }
+
+    suspend fun setGlyphWidth(value: Double) {
+        store.edit { it[Keys.GLYPH_WIDTH] = TypographyRange.GLYPH_WIDTH.require(value) }
     }
 
     suspend fun setLetterSpacing(value: Double?) {
