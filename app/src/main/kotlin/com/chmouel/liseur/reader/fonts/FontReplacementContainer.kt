@@ -1,12 +1,10 @@
 package com.chmouel.liseur.reader.fonts
 
-import android.util.Log
 import com.chmouel.liseur.data.settings.fonts.UserFont
 import com.chmouel.liseur.reader.UserFontResources
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.data.Container
 import org.readium.r2.shared.util.resource.Resource
-import java.util.Locale
 
 /**
  * Applies per-publication family replacements at the resource boundary.
