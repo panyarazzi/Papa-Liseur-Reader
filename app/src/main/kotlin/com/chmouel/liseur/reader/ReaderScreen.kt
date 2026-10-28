@@ -3246,7 +3246,10 @@ internal fun ReaderScreen(
     val wayBack = jumpBack?.takeIf { !showingEnd }
     val goBack: (ReaderViewModel.JumpBack) -> Unit = { target ->
         if (onProgressAction.takeJumpBack(target)) {
-            navigateLater(target.locator, NavigatorPositionEvent.LOCAL_JUMP)
+            // A way-back offer may carry an exact DOM anchor. Verify that
+            // Readium actually lands on it instead of trusting the first
+            // locator emitted while the previous resource is still leaving.
+            navigateLater(target.locator, NavigatorPositionEvent.LOCAL_JUMP, verify = true)
         }
     }
     ImmersiveMode(hideSystemBars = prefs.isFullscreen)
@@ -5304,11 +5307,24 @@ internal fun ReaderScreen(
             onClose = { showToc = false },
             onSyncBook = if (syncable) onBookSyncAction.start else null,
             onEntrySelected = { link ->
-                showToc = false
-                chromeVisible = false
-                publication.locatorFromLink(link)?.let {
-                    onProgressAction.onJump()
-                    navigateLater(it, NavigatorPositionEvent.LOCAL_JUMP)
+                val destination = publication.locatorFromLink(link) ?: return@ContentsScreen
+                val nav = navigatorNow ?: return@ContentsScreen
+                effectScope.launch {
+                    // Capture before dismissing the TOC/chrome: either can
+                    // trigger layout work, and the return point must describe
+                    // the page the reader saw when they made the choice.
+                    // The ViewModel's last published locator can lag behind
+                    // that viewport around resource/page transitions.
+                    val returnFrom = if (effectiveScrollingNow) {
+                        scrolledPlace(nav) ?: capture(nav, nav.currentLocator.value)
+                    } else {
+                        capture(nav, nav.currentLocator.value)
+                    }
+                    if (navigatorNow !== nav) return@launch
+                    showToc = false
+                    chromeVisible = false
+                    onProgressAction.jumpFrom(returnFrom, true)
+                    navigate(nav, destination, NavigatorPositionEvent.LOCAL_JUMP)
                 }
             },
         )
