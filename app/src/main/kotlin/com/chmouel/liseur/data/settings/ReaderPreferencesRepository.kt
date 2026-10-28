@@ -142,8 +142,8 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
             isFullscreen = p[Keys.IS_FULLSCREEN] ?: false,
             topProgressMode = TopProgressMode.fromId(p[Keys.TOP_PROGRESS_MODE]),
             progressFontSizeSp = (p[Keys.PROGRESS_FONT_SIZE_SP] ?: 12f).coerceIn(9f, 20f),
-            marginTopDp = (p[Keys.MARGIN_TOP_DP] ?: 12f).coerceIn(0f, 48f),
-            marginBottomDp = (p[Keys.MARGIN_BOTTOM_DP] ?: 12f).coerceIn(0f, 48f),
+            marginTopDp = (p[Keys.MARGIN_TOP_DP] ?: 12f).coerceIn(0f, 80f),
+            marginBottomDp = (p[Keys.MARGIN_BOTTOM_DP] ?: 12f).coerceIn(0f, 80f),
         ).sanitized()
     }
 
@@ -371,11 +371,11 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
     }
 
     suspend fun setMarginTopDp(value: Float) {
-        store.edit { it[Keys.MARGIN_TOP_DP] = value.coerceIn(0f, 48f) }
+        store.edit { it[Keys.MARGIN_TOP_DP] = value.coerceIn(0f, 80f) }
     }
 
     suspend fun setMarginBottomDp(value: Float) {
-        store.edit { it[Keys.MARGIN_BOTTOM_DP] = value.coerceIn(0f, 48f) }
+        store.edit { it[Keys.MARGIN_BOTTOM_DP] = value.coerceIn(0f, 80f) }
     }
 
     /**
