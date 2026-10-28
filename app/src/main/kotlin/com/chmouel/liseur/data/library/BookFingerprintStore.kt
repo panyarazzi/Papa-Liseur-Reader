@@ -72,6 +72,38 @@ class BookFingerprintStore(
      */
     suspend fun compute(url: String): BookFingerprint? = read(url)
 
+    /**
+     * Reads the current bytes even when the provider reports the same (or no)
+     * modification timestamp. SAF providers are not consistent about updating
+     * COLUMN_LAST_MODIFIED when a document is overwritten.
+     *
+     * The Boolean is true when no baseline exists or the bytes differ. The
+     * caller commits the new fingerprint only after the EPUB was re-indexed,
+     * so a temporarily unreadable/invalid replacement is retried on the next scan.
+     */
+    suspend fun inspectCurrent(book: Book, sourceUrl: String): Pair<BookFingerprint, Boolean>? {
+        val fresh = read(sourceUrl) ?: return null
+        val cached = dao.fingerprint(book.url)
+        val changed = cached == null ||
+            cached.sha256 != fresh.sha256 ||
+            cached.fileSize != fresh.size
+        return fresh to changed
+    }
+
+    /** Stores a fingerprint only after the source has been read successfully. */
+    suspend fun remember(bookUrl: String, fileModifiedAt: Long?, fingerprint: BookFingerprint) {
+        dao.upsert(
+            BookFingerprintRow(
+                bookUrl = bookUrl,
+                sha256 = fingerprint.sha256,
+                partialMd5 = fingerprint.partialMd5,
+                fileSize = fingerprint.size,
+                fileModifiedAt = fileModifiedAt,
+                computedAt = now(),
+            ),
+        )
+    }
+
     private suspend fun read(url: String): BookFingerprint? = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(Uri.parse(url))?.use(BookFingerprints::of)
