@@ -88,6 +88,17 @@ class BookPositions(
             ?: chapterAt(position)
     }
 
+    /**
+     * The chapter for a live reading position. Readium's interpolated
+     * integer position can round the final viewport of a resource onto
+     * the first position of the next chapter. When the navigator has
+     * identified the resource, its chapter is the stronger signal for
+     * the page currently on screen; use the rounded position only when
+     * the resource has no chapter mapping.
+     */
+    fun chapterForCurrentResource(resourceIndex: Int?, position: Int): BookChapter? =
+        resourceIndex?.let(::chapterOfResource) ?: chapterAt(position)
+
     /** The locator to jump to for [position], numbered from 1. */
     fun locatorAt(position: Int): Locator? =
         locators.getOrNull(position.coerceIn(1, totalPositions) - 1)

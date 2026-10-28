@@ -927,8 +927,8 @@ fun ReaderPrefs.sanitized(): ReaderPrefs = copy(
     wordSpacing = TypographyRange.WORD_SPACING.sanitize(wordSpacing),
     paragraphSpacing = TypographyRange.PARAGRAPH_SPACING.sanitize(paragraphSpacing),
     progressFontSizeSp = progressFontSizeSp.takeIf { it.isFinite() }?.coerceIn(9f, 20f) ?: 12f,
-    marginTopDp = marginTopDp.takeIf { it.isFinite() }?.coerceIn(0f, 48f) ?: 12f,
-    marginBottomDp = marginBottomDp.takeIf { it.isFinite() }?.coerceIn(0f, 48f) ?: 12f,
+    marginTopDp = marginTopDp.takeIf { it.isFinite() }?.coerceIn(0f, 80f) ?: 12f,
+    marginBottomDp = marginBottomDp.takeIf { it.isFinite() }?.coerceIn(0f, 80f) ?: 12f,
     brightness = brightness?.takeIf { it.isFinite() }?.coerceIn(0f, 1f),
     autoScrollSpeed = AutoScrollPreference.sanitize(autoScrollSpeed),
 )

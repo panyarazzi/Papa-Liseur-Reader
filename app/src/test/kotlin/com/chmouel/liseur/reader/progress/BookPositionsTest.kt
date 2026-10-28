@@ -269,6 +269,26 @@ class BookPositionsTest {
     }
 
     @Test
+    fun `current resource chapter wins when the final page rounds into the next chapter`() {
+        val first = BookChapter("Thirty-four", firstPosition = 1, lastPosition = 22)
+        val second = BookChapter("Thirty-five", firstPosition = 23, lastPosition = 30)
+        val book = positions(
+            resources = listOf(
+                listOf(locator("chapter-34.xhtml", 0.0, 1), locator("chapter-34.xhtml", 1.0, 22)),
+                listOf(locator("chapter-35.xhtml", 0.0, 23), locator("chapter-35.xhtml", 1.0, 30)),
+            ),
+            chapters = listOf(first, second),
+            chapterIndexByResource = mapOf(0 to 0, 1 to 1),
+        )
+
+        // The displayed page is still in chapter 34, although the
+        // rounded synthetic position has reached chapter 35's first page.
+        assertEquals(first, book.chapterForCurrentResource(resourceIndex = 0, position = 23))
+        assertEquals(second, book.chapterForCurrentResource(resourceIndex = 1, position = 23))
+        assertEquals(second, book.chapterForCurrentResource(resourceIndex = null, position = 23))
+    }
+
+    @Test
     fun `chapter lookup falls back when the resource chapter range disagrees`() {
         val first = BookChapter("One", firstPosition = 1, lastPosition = 2)
         val second = BookChapter("Two", firstPosition = 3, lastPosition = 4)
