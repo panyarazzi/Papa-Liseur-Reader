@@ -63,7 +63,7 @@ class ReaderPreferencesRepositoryTest {
         assertTrue(prefs.isFullscreen)
         assertEquals(TopProgressMode.PAGES_LEFT_CHAPTER_TITLE, prefs.topProgressMode)
         assertEquals(20f, prefs.progressFontSizeSp, 0f)
-        assertEquals(48f, prefs.marginTopDp, 0f)
+        assertEquals(60f, prefs.marginTopDp, 0f)
         assertEquals(0f, prefs.marginBottomDp, 0f)
     }
 
