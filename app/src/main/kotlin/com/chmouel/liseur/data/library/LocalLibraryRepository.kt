@@ -738,17 +738,30 @@ class LocalLibraryRepository(
                     // file already sitting here.
                     readopt(existing, treeUri)
                     bookDao.setSourcePath(existing.url, file.relativePath, file.relativePath.substringAfterLast('/'))
-                    // The path is the same but the file behind it is not, so the
-                    // title and cover we cached are no longer the book's.
-                    if (file.modifiedAt != null && existing.fileModifiedAt != file.modifiedAt) {
-                        reindexBook(
+                    // Some SAF providers leave COLUMN_LAST_MODIFIED unchanged
+                    // when the user overwrites a document. Compare the actual EPUB
+                    // bytes as well; metadata timestamps alone are not a reliable
+                    // source-of-truth for a watched folder.
+                    val fingerprint = fingerprints.inspectCurrent(existing, urlText)
+                    val changedOnDisk =
+                        (file.modifiedAt != null && existing.fileModifiedAt != file.modifiedAt) ||
+                            fingerprint?.second == true
+                    if (changedOnDisk) {
+                        val indexed = reindexBook(
                             openableUrl = url,
-                            bookUrl = url.toString(),
-                            modifiedAt = file.modifiedAt,
+                            bookUrl = urlText,
+                            modifiedAt = file.modifiedAt ?: existing.fileModifiedAt,
                             previousWorkId = existing.workId,
                             previousAuthor = existing.author,
                             previousIdentityAuthor = existing.identityAuthor,
                         )
+                        if (indexed && fingerprint != null) {
+                            fingerprints.remember(
+                                bookUrl = urlText,
+                                fileModifiedAt = file.modifiedAt ?: existing.fileModifiedAt,
+                                fingerprint = fingerprint.first,
+                            )
+                        }
                     }
                 }
                 // The file is on the shelf already, under the name the
@@ -782,15 +795,26 @@ class LocalLibraryRepository(
                     // of the file it is standing on.
                     readopt(alias, treeUri)
                     bookDao.setSourcePath(alias.url, file.relativePath, file.relativePath.substringAfterLast('/'))
-                    if (file.modifiedAt != null && alias.fileModifiedAt != file.modifiedAt) {
-                        reindexBook(
+                    val fingerprint = fingerprints.inspectCurrent(alias, urlText)
+                    val changedOnDisk =
+                        (file.modifiedAt != null && alias.fileModifiedAt != file.modifiedAt) ||
+                            fingerprint?.second == true
+                    if (changedOnDisk) {
+                        val indexed = reindexBook(
                             openableUrl = url,
                             bookUrl = alias.url,
-                            modifiedAt = file.modifiedAt,
+                            modifiedAt = file.modifiedAt ?: alias.fileModifiedAt,
                             previousWorkId = alias.workId,
                             previousAuthor = alias.author,
                             previousIdentityAuthor = alias.identityAuthor,
                         )
+                        if (indexed && fingerprint != null) {
+                            fingerprints.remember(
+                                bookUrl = alias.url,
+                                fileModifiedAt = file.modifiedAt ?: alias.fileModifiedAt,
+                                fingerprint = fingerprint.first,
+                            )
+                        }
                     }
                 }
                 else -> indexBook(url, source = treeUri.toString(), modifiedAt = file.modifiedAt, sourcePath = file.relativePath)
