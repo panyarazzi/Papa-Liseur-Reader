@@ -5308,20 +5308,21 @@ internal fun ReaderScreen(
             onSyncBook = if (syncable) onBookSyncAction.start else null,
             onEntrySelected = { link ->
                 val destination = publication.locatorFromLink(link) ?: return@ContentsScreen
-                showToc = false
-                chromeVisible = false
                 val nav = navigatorNow ?: return@ContentsScreen
                 effectScope.launch {
-                    // Save the viewport that is on screen now. The ViewModel's
-                    // last published locator can lag behind the visible page,
-                    // especially around resource/page transitions, so using
-                    // onJump() with a null origin can offer the wrong place.
+                    // Capture before dismissing the TOC/chrome: either can
+                    // trigger layout work, and the return point must describe
+                    // the page the reader saw when they made the choice.
+                    // The ViewModel's last published locator can lag behind
+                    // that viewport around resource/page transitions.
                     val returnFrom = if (effectiveScrollingNow) {
                         scrolledPlace(nav) ?: capture(nav, nav.currentLocator.value)
                     } else {
                         capture(nav, nav.currentLocator.value)
                     }
                     if (navigatorNow !== nav) return@launch
+                    showToc = false
+                    chromeVisible = false
                     onProgressAction.jumpFrom(returnFrom, true)
                     navigate(nav, destination, NavigatorPositionEvent.LOCAL_JUMP)
                 }
