@@ -3246,7 +3246,10 @@ internal fun ReaderScreen(
     val wayBack = jumpBack?.takeIf { !showingEnd }
     val goBack: (ReaderViewModel.JumpBack) -> Unit = { target ->
         if (onProgressAction.takeJumpBack(target)) {
-            navigateLater(target.locator, NavigatorPositionEvent.LOCAL_JUMP)
+            // A way-back offer may carry an exact DOM anchor. Verify that
+            // Readium actually lands on it instead of trusting the first
+            // locator emitted while the previous resource is still leaving.
+            navigateLater(target.locator, NavigatorPositionEvent.LOCAL_JUMP, verify = true)
         }
     }
     ImmersiveMode(hideSystemBars = prefs.isFullscreen)
@@ -5304,11 +5307,23 @@ internal fun ReaderScreen(
             onClose = { showToc = false },
             onSyncBook = if (syncable) onBookSyncAction.start else null,
             onEntrySelected = { link ->
+                val destination = publication.locatorFromLink(link) ?: return@ContentsScreen
                 showToc = false
                 chromeVisible = false
-                publication.locatorFromLink(link)?.let {
-                    onProgressAction.onJump()
-                    navigateLater(it, NavigatorPositionEvent.LOCAL_JUMP)
+                val nav = navigatorNow ?: return@ContentsScreen
+                effectScope.launch {
+                    // Save the viewport that is on screen now. The ViewModel's
+                    // last published locator can lag behind the visible page,
+                    // especially around resource/page transitions, so using
+                    // onJump() with a null origin can offer the wrong place.
+                    val returnFrom = if (effectiveScrollingNow) {
+                        scrolledPlace(nav) ?: capture(nav, nav.currentLocator.value)
+                    } else {
+                        capture(nav, nav.currentLocator.value)
+                    }
+                    if (navigatorNow !== nav) return@launch
+                    onProgressAction.jumpFrom(returnFrom, true)
+                    navigate(nav, destination, NavigatorPositionEvent.LOCAL_JUMP)
                 }
             },
         )
