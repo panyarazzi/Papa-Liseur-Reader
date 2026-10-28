@@ -2537,8 +2537,8 @@ class ReaderViewModel(
         stable ?: return null
         val totalProgression = stable.progression.toFloat()
         val position = stable.position
-        val chapter = positions.chapterFor(
-            publication.readingOrder.indexOfFirstWithHref(locator.href),
+        val chapter = positions.chapterForCurrentResource(
+            stable.resource?.index ?: publication.readingOrder.indexOfFirstWithHref(locator.href),
             position,
         )
         val chapterEnd = chapter?.lastPosition ?: positions.totalPositions
