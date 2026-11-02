@@ -59,6 +59,7 @@ class ReaderTapZones(
     private val isChromeVisible: () -> Boolean,
     private val isScrolling: () -> Boolean = { false },
     private val isSwapped: () -> Boolean = { false },
+    private val isTapAnywhere: () -> Boolean = { false },
     private val isPinching: () -> Boolean = { false },
     private val onTurnPage: (forward: Boolean) -> Unit,
     private val onShowChrome: () -> Unit,
@@ -85,7 +86,7 @@ class ReaderTapZones(
         val rtl = navigator.overflow.value.readingProgression == ReadingProgression.RTL
 
         val zone = zoneAt(event.point.x, event.point.y, width, height, dp, isScrolling())
-        when (val forward = forward(zone, rtl, isSwapped())) {
+        when (val forward = forward(zone, rtl, isSwapped(), isTapAnywhere())) {
             null -> onShowChrome()
             else -> onTurnPage(forward)
         }
@@ -181,10 +182,16 @@ class ReaderTapZones(
          * on the right. Both at once is the standard layout again, which
          * is why this is an equality and not a pair of branches.
          */
-        fun forward(zone: Zone, rtl: Boolean, swapped: Boolean): Boolean? = when (zone) {
-            Zone.CHROME -> null
-            Zone.BACK -> rtl != swapped
-            Zone.FORWARD -> rtl == swapped
+        fun forward(
+            zone: Zone,
+            rtl: Boolean,
+            swapped: Boolean,
+            tapAnywhere: Boolean = false,
+        ): Boolean? = when {
+            zone == Zone.CHROME -> null
+            tapAnywhere -> true
+            zone == Zone.BACK -> rtl != swapped
+            else -> rtl == swapped
         }
     }
 }

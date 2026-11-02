@@ -945,6 +945,13 @@ class ReaderActivity : FragmentActivity() {
      */
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         val turner = pageTurner ?: return super.onKeyDown(keyCode, event)
+        val repeatedVolumeTurn = keyCode in VOLUME_KEYS && volumeKeysPage &&
+            volumeKeyMode.forwardFor(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) != null
+        val repeatedKeyboardTurn = isWideEnoughForKeyboardPaging &&
+            !(chromeVisible && keyCode in FOCUS_KEYS) &&
+            (keyCode in FORWARD_KEYS || keyCode in BACK_KEYS ||
+                keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_LEFT)
+        if (event.repeatCount > 0 && (repeatedVolumeTurn || repeatedKeyboardTurn)) return true
         if (keyCode in VOLUME_KEYS) {
             if (!volumeKeysPage) return super.onKeyDown(keyCode, event)
             val forward = volumeKeyMode.forwardFor(

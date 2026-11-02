@@ -31,5 +31,7 @@ class TapZonesTest {
     fun `only the swapped preset reorders the sides`() {
         assertEquals(false, TapZones.STANDARD.swapped)
         assertEquals(true, TapZones.SWAPPED.swapped)
+        assertEquals(false, TapZones.TAP_ANYWHERE.swapped)
+        assertEquals(true, TapZones.TAP_ANYWHERE.tapAnywhere)
     }
 }

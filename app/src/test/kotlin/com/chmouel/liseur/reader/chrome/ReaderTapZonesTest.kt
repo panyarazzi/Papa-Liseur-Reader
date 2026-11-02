@@ -131,6 +131,13 @@ class ReaderTapZonesTest {
     }
 
     @Test
+    fun `tap anywhere turns forward outside the chrome zone`() {
+        assertEquals(true, forward(Zone.BACK, rtl = false, swapped = false, tapAnywhere = true))
+        assertEquals(true, forward(Zone.FORWARD, rtl = true, swapped = true, tapAnywhere = true))
+        assertNull(forward(Zone.CHROME, rtl = false, swapped = false, tapAnywhere = true))
+    }
+
+    @Test
     fun `no preset gives the chrome a direction`() {
         for (rtl in listOf(false, true)) {
             for (swapped in listOf(false, true)) {

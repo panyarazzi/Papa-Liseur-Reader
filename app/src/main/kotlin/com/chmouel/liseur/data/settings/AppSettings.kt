@@ -121,9 +121,9 @@ enum class VolumeKeyMode(val id: String) {
  * on the right there. The preset says which hand is holding the phone,
  * and leaves the book to say where its next page is.
  *
- * Only two, and deliberately: a zone editor is a settings hobby, and a
- * third preset has to earn its place by describing a hand position that
- * actually occurs. See `docs/adr/0009-tap-zone-customization.md`.
+ * Three, and deliberately: the optional third preset makes every
+ * tap outside the menu activation area turn forward. The two side-based
+ * presets remain unchanged. See `docs/adr/0009-tap-zone-customization.md`.
  *
  * The centre and the top strip still reveal the chrome under both, the
  * default volume-key mode still goes forward on down, and a book read by

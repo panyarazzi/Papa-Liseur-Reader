@@ -141,6 +141,7 @@ fun ReadingFooter(
     onCycleMode: (onChosen: (FooterMode) -> Unit) -> Unit,
     onCycleField: (FooterSlot, onChosen: (FooterField) -> Unit) -> Unit,
     onPickSlot: (FooterPickTarget) -> Unit,
+    onDoubleClick: () -> Unit,
     onNote: (label: Int, unknown: Boolean) -> Unit,
     footerLocked: Boolean,
     modifier: Modifier = Modifier,
@@ -232,6 +233,7 @@ fun ReadingFooter(
             locked = footerLocked,
             onClick = { onCycleField(startSlot, noteForField) },
             onLongClick = { onPickSlot(startSlot.pickTarget) },
+            onDoubleClick = onDoubleClick,
             padding = PaddingValues(
                 start = FOOTER_MARGIN,
                 end = FOOTER_GAP,
@@ -247,6 +249,7 @@ fun ReadingFooter(
             locked = footerLocked,
             onClick = { onCycleMode(noteForMode) },
             onLongClick = { onPickSlot(FooterPickTarget.MIDDLE) },
+            onDoubleClick = onDoubleClick,
             padding = PaddingValues(horizontal = FOOTER_GAP, vertical = slotPadding),
             alignment = Alignment.Center,
             modifier = Modifier
@@ -280,6 +283,7 @@ fun ReadingFooter(
             locked = footerLocked,
             onClick = { onCycleField(endSlot, noteForField) },
             onLongClick = { onPickSlot(endSlot.pickTarget) },
+            onDoubleClick = onDoubleClick,
             padding = PaddingValues(
                 start = FOOTER_GAP,
                 end = FOOTER_MARGIN,
@@ -355,6 +359,7 @@ private fun FooterEdge(
     locked: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onDoubleClick: () -> Unit,
     padding: PaddingValues,
     alignment: Alignment,
     modifier: Modifier = Modifier,
@@ -365,6 +370,7 @@ private fun FooterEdge(
         locked = locked,
         onClick = onClick,
         onLongClick = onLongClick,
+        onDoubleClick = onDoubleClick,
         padding = padding,
         alignment = alignment,
         modifier = modifier,
@@ -446,6 +452,7 @@ private fun FooterSlotBox(
     locked: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onDoubleClick: () -> Unit,
     padding: PaddingValues,
     alignment: Alignment,
     modifier: Modifier = Modifier,
@@ -472,12 +479,14 @@ private fun FooterSlotBox(
                 if (locked) {
                     Modifier.longClickOnly(
                         onLongClick = onLongClick,
+                        onDoubleClick = onDoubleClick,
                         onLongClickLabel = stringResource(R.string.footer_pick_action),
                     )
                 } else {
                     Modifier.combinedClickableWithoutRipple(
                         onClick = onClick,
                         onLongClick = onLongClick,
+                        onDoubleClick = onDoubleClick,
                         onClickLabel = clickLabel,
                         onLongClickLabel = stringResource(R.string.footer_pick_action),
                     )
@@ -936,6 +945,7 @@ private fun Modifier.clickableWithoutRipple(
 private fun Modifier.combinedClickableWithoutRipple(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onDoubleClick: () -> Unit,
     onClickLabel: String? = null,
     onLongClickLabel: String? = null,
 ): Modifier =
@@ -946,6 +956,7 @@ private fun Modifier.combinedClickableWithoutRipple(
         onClickLabel = onClickLabel,
         onLongClickLabel = onLongClickLabel,
         onLongClick = onLongClick,
+        onDoubleClick = onDoubleClick,
         onClick = onClick,
     )
 
@@ -959,12 +970,15 @@ private fun Modifier.combinedClickableWithoutRipple(
 @Composable
 private fun Modifier.longClickOnly(
     onLongClick: () -> Unit,
+    onDoubleClick: () -> Unit,
     onLongClickLabel: String,
 ): Modifier {
     val pick by rememberUpdatedState(onLongClick)
+    val openContents by rememberUpdatedState(onDoubleClick)
     val haptics = LocalHapticFeedback.current
     return pointerInput(Unit) {
         detectTapGestures(
+            onDoubleTap = { openContents() },
             onLongPress = {
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 pick()

@@ -574,6 +574,7 @@ internal val TapZones.label: Int
     get() = when (this) {
         TapZones.STANDARD -> R.string.tap_zones_standard
         TapZones.SWAPPED -> R.string.tap_zones_swapped
+        TapZones.TAP_ANYWHERE -> R.string.tap_zones_anywhere
     }
 
 private val DefinitionTarget.label: Int

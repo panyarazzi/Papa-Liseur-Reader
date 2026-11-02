@@ -807,7 +807,7 @@
     <string name="settings_volume_keys_off">Off</string>
     <string name="settings_volume_keys_reversed">Reversed</string>
     <string name="settings_tap_zones">Page-turn sides</string>
-    <string name="settings_tap_zones_detail">Which side of the page turns forward when you tap it. Swapped puts the forward turn under the other thumb, for holding the phone in the other hand: in most books the left of the page goes on and the right goes back, and in a book that reads right to left it is the other way about. The middle still opens the menu, the volume keys are unchanged, and a book read by scrolling has no sides to tap.</string>
+    <string name="settings_tap_zones_detail">Standard and Swapped keep the left and right page-turn zones. Tap anywhere makes a tap outside the menu activation area turn forward. The middle still opens the menu, and a book read by scrolling has no page-turn zones.</string>
     <string name="tap_zones_standard">Standard</string>
     <string name="tap_zones_swapped">Swapped</string>
     <string name="settings_pinch_to_resize">Pinch to resize text</string>

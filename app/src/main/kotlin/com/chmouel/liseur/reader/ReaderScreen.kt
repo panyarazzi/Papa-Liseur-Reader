@@ -17,7 +17,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -546,6 +549,7 @@ internal fun ReaderScreen(
     val chromeTransition = remember { MutableTransitionState(false) }
     val chromeDrawn = { chromeTransition.currentState || chromeTransition.targetState || !chromeTransition.isIdle }
     var showToc by remember { mutableStateOf(false) }
+    var moreOpen by remember { mutableStateOf(false) }
     var searchFor by remember { mutableStateOf<String?>(null) }
     var goToPage by remember { mutableStateOf(false) }
     var goToPercent by remember { mutableStateOf(false) }
@@ -579,6 +583,7 @@ internal fun ReaderScreen(
     val tapZones by tapZonesFlow.collectAsStateWithLifecycle()
     val lockFooterOn by lockFooterOnFlow.collectAsStateWithLifecycle()
     val swappedZonesNow by rememberUpdatedState(tapZones.swapped)
+    val tapAnywhereZonesNow by rememberUpdatedState(tapZones.tapAnywhere)
     val pinchToResize by pinchToResizeFlow.collectAsStateWithLifecycle()
     val highlightPalette by highlightPaletteFlow.collectAsStateWithLifecycle()
     // Readium reads vertical text off the book rather than off the
@@ -3250,6 +3255,7 @@ internal fun ReaderScreen(
                 isChromeVisible = { chromeVisibleNow },
                 isScrolling = { effectiveScrollingNow },
                 isSwapped = { swappedZonesNow },
+                isTapAnywhere = { tapAnywhereZonesNow },
                 isPinching = isPinching,
                 onTurnPage = pageTurner::turn,
                 onShowChrome = { chromeVisible = true },
@@ -4069,7 +4075,10 @@ internal fun ReaderScreen(
                         .then(behindViewer)
                         .windowInsetsPadding(WindowInsets.statusBars)
                         .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
-                        .padding(start = 12.dp, end = 12.dp, top = 2.dp),
+                        .padding(start = 12.dp, end = 12.dp, top = 2.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures(onDoubleTap = { showToc = true })
+                        },
                 )
             }
         }
@@ -4244,12 +4253,13 @@ internal fun ReaderScreen(
                 }
                 if (scrubberShown) {
                     ChromeEdgeFade(theme = readingTheme, solidAtTop = false)
+                    val chapterTicks = remember(progress?.totalPositions) {
+                        onProgressAction.chapterTicks()
+                    }
                     ReadingScrubber(
                         progress = progress,
                         theme = readingTheme,
-                        chapterTicks = remember(progress?.totalPositions) {
-                            onProgressAction.chapterTicks()
-                        },
+                        chapterTicks = chapterTicks,
                         titleAtPosition = onProgressAction.chapterTitleAtPosition,
                         positionAtProgression = onProgressAction.positionAtProgression,
                         onSeek = seek@{ position ->
@@ -4263,6 +4273,57 @@ internal fun ReaderScreen(
                         },
                         onGoToPercent = { goToPercent = true },
                     )
+                    val currentProgression = progress?.totalProgression ?: 0f
+                    val previousChapter = chapterTicks.filter { it < currentProgression - 0.005f }.maxOrNull()
+                    val nextChapter = chapterTicks.filter { it > currentProgression + 0.005f }.minOrNull()
+                    fun seekChapter(tick: Float?) {
+                        val progression = tick ?: return
+                        val position = onProgressAction.positionAtProgression(progression)
+                        val target = onProgressAction.locatorAtPosition(position) ?: return
+                        onProgressAction.onJump()
+                        navigateLater(target, NavigatorPositionEvent.LOCAL_JUMP)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = { pageTurner.turn(false) }) {
+                            Text("‹", style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_previous_page) })
+                        }
+                        IconButton(onClick = { pageTurner.turn(true) }) {
+                            Text("›", style = MaterialTheme.typography.titleLarge,
+                                modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_next_page) })
+                        }
+                        IconButton(onClick = { seekChapter(previousChapter) }, enabled = previousChapter != null) {
+                            Text("⇤", modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_previous_chapter) })
+                        }
+                        IconButton(onClick = { seekChapter(nextChapter) }, enabled = nextChapter != null) {
+                            Text("⇥", modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_next_chapter) })
+                        }
+                        IconButton(onClick = { searchFor = "" }) {
+                            Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.reader_search))
+                        }
+                        IconButton(
+                            onClick = { sheet = ReaderSheet.TYPOGRAPHY },
+                            modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_typography) },
+                        ) { Text("Aa", style = MaterialTheme.typography.titleMedium) }
+                        IconButton(onClick = { showToc = true }) {
+                            Icon(Icons.AutoMirrored.Outlined.List, contentDescription = stringResource(R.string.reader_contents))
+                        }
+                        IconButton(onClick = ::toggleBookmarkHere) {
+                            Icon(
+                                if (bookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                                contentDescription = stringResource(if (bookmarked) R.string.reader_remove_bookmark else R.string.reader_add_bookmark),
+                            )
+                        }
+                        IconButton(onClick = { moreOpen = true }) {
+                            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.more_options))
+                        }
+                    }
                 }
             }
             // The panel's own paper covers the bar when the panel is
@@ -4372,6 +4433,7 @@ internal fun ReaderScreen(
                     footerNote = null
                     footerPick = it
                 },
+                onDoubleClick = { showToc = true },
                 onNote = { label, unknown ->
                     // Dropped while a sheet is up. The tap names its
                     // figure once DataStore has written it, so a tap
@@ -4549,7 +4611,6 @@ internal fun ReaderScreen(
                                     }
                                 }
                             }
-                        var moreOpen by remember { mutableStateOf(false) }
                         Box {
                             IconButton(onClick = { moreOpen = true }) {
                                 Icon(
