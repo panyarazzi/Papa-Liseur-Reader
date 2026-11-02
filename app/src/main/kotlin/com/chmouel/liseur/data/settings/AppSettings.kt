@@ -132,6 +132,7 @@ enum class VolumeKeyMode(val id: String) {
 enum class TapZones(val id: String) {
     STANDARD("standard"),
     SWAPPED("swapped"),
+    TAP_ANYWHERE("tap_anywhere"),
     ;
 
     /**
@@ -143,6 +144,9 @@ enum class TapZones(val id: String) {
      * [com.chmouel.liseur.reader.chrome.ReaderTapZones.forward].
      */
     val swapped: Boolean get() = this == SWAPPED
+
+    /** All taps outside the chrome activation zone turn forward. */
+    val tapAnywhere: Boolean get() = this == TAP_ANYWHERE
 
     companion object {
         val Default = STANDARD

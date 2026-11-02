@@ -20,7 +20,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.detectTapGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -4283,6 +4283,10 @@ internal fun ReaderScreen(
                         onProgressAction.onJump()
                         navigateLater(target, NavigatorPositionEvent.LOCAL_JUMP)
                     }
+                    val previousPageDescription = stringResource(R.string.reader_previous_page)
+                    val nextPageDescription = stringResource(R.string.reader_next_page)
+                    val previousChapterDescription = stringResource(R.string.reader_previous_chapter)
+                    val nextChapterDescription = stringResource(R.string.reader_next_chapter)
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
@@ -4292,17 +4296,17 @@ internal fun ReaderScreen(
                     ) {
                         IconButton(onClick = { pageTurner.turn(false) }) {
                             Text("‹", style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_previous_page) })
+                                modifier = Modifier.semantics { contentDescription = previousPageDescription })
                         }
                         IconButton(onClick = { pageTurner.turn(true) }) {
                             Text("›", style = MaterialTheme.typography.titleLarge,
-                                modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_next_page) })
+                                modifier = Modifier.semantics { contentDescription = nextPageDescription })
                         }
                         IconButton(onClick = { seekChapter(previousChapter) }, enabled = previousChapter != null) {
-                            Text("⇤", modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_previous_chapter) })
+                            Text("⇤", modifier = Modifier.semantics { contentDescription = previousChapterDescription })
                         }
                         IconButton(onClick = { seekChapter(nextChapter) }, enabled = nextChapter != null) {
-                            Text("⇥", modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_next_chapter) })
+                            Text("⇥", modifier = Modifier.semantics { contentDescription = nextChapterDescription })
                         }
                         IconButton(onClick = { searchFor = "" }) {
                             Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.reader_search))
