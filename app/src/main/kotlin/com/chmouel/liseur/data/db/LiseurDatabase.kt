@@ -17,6 +17,7 @@ import androidx.sqlite.execSQL
         RemoteServer::class,
         BookAnnotation::class,
         BookTypography::class,
+        BookCustomTypography::class,
         BookScreen::class,
         BookReadingMode::class,
         ReadingSession::class,
@@ -43,7 +44,7 @@ import androidx.sqlite.execSQL
         GlossaryEntry::class,
         BookAiPreferences::class,
     ],
-    version = 71,
+    version = 72,
     exportSchema = true,
 )
 abstract class LiseurDatabase : RoomDatabase() {
@@ -65,6 +66,7 @@ abstract class LiseurDatabase : RoomDatabase() {
     abstract fun annotationDao(): BookAnnotationDao
     abstract fun annotationSyncDao(): AnnotationSyncDao
     abstract fun typographyDao(): BookTypographyDao
+    abstract fun customTypographyDao(): BookCustomTypographyDao
     abstract fun bookScreenDao(): BookScreenDao
     abstract fun bookReadingModeDao(): BookReadingModeDao
     abstract fun seriesExtraDao(): SeriesExtraDao
@@ -83,6 +85,14 @@ abstract class LiseurDatabase : RoomDatabase() {
     abstract fun glossaryDao(): GlossaryDao
 
     companion object {
+        val MIGRATION_71_72 = object : Migration(71, 72) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `book_custom_typography` (`book_url` TEXT NOT NULL, `line_height` REAL, `text_indent` REAL, PRIMARY KEY(`book_url`))",
+                )
+            }
+        }
+
         val MIGRATION_70_71 = object : Migration(70, 71) {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL("ALTER TABLE books ADD COLUMN source_path TEXT")
@@ -1989,6 +1999,7 @@ abstract class LiseurDatabase : RoomDatabase() {
             MIGRATION_68_69,
             MIGRATION_69_70,
             MIGRATION_70_71,
+            MIGRATION_71_72,
         )
     }
 }

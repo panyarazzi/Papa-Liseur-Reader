@@ -623,6 +623,14 @@
     <string name="reader_spacing_compact">Kompakt</string>
     <string name="reader_spacing_default">Standard</string>
     <string name="reader_spacing_relaxed">Luftig</string>
+    <string name="reader_spacing_custom">Benutzerdefiniert</string>
+    <string name="reader_custom_line_height">Benutzerdefinierter Zeilenabstand</string>
+    <string name="reader_paragraph_indent">Absatzeinzug</string>
+    <string name="reader_paragraph_indent_em">Einzug der ersten Zeile</string>
+    <string name="reader_customize">Anpassen</string>
+    <string name="reader_custom_reset">Benutzerdefinierten Wert zurücksetzen</string>
+    <string name="reader_increase_value">Wert erhöhen</string>
+    <string name="reader_decrease_value">Wert verringern</string>
     <string name="reader_margins">Ränder</string>
     <string name="reader_margins_narrow">Schmal</string>
     <string name="reader_margins_default">Standard</string>

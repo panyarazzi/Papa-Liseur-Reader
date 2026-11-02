@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.BrightnessHigh
 import androidx.compose.material.icons.outlined.BrightnessLow
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,6 +52,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chmouel.liseur.R
@@ -617,29 +620,93 @@ fun ReadingLayoutControls(
     onLineHeightChanged: (Double?) -> Unit,
     onPageMarginsChanged: (Double?) -> Unit,
     onColumnModeChanged: (ColumnMode) -> Unit,
+    customLineHeight: Double? = null,
+    customTextIndent: Double? = null,
+    onCustomLineHeightRequested: (() -> Unit)? = null,
+    onCustomLineHeightChanged: ((Double?) -> Unit)? = null,
+    onCustomTextIndentRequested: (() -> Unit)? = null,
+    onCustomTextIndentChanged: ((Double?) -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         ReadingSectionLabel(stringResource(R.string.reader_line_spacing))
-        // A stored value that is none of the three — from an older
-        // build, or a hand-edited row — leaves nothing selected, which
-        // is deliberate: snapping it to the nearest option would change
-        // the page to a setting the reader never chose, and do it
-        // silently, just because they opened this sheet.
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            val options = listOf(
-                R.string.reader_spacing_compact to 1.2,
-                R.string.reader_spacing_default to null,
-                R.string.reader_spacing_relaxed to 1.8,
-            )
-            options.forEachIndexed { index, (label, v) ->
+            val options = if (onCustomLineHeightRequested != null) {
+                listOf(
+                    R.string.reader_spacing_compact to "compact",
+                    R.string.reader_spacing_default to "default",
+                    R.string.reader_spacing_custom to "custom",
+                )
+            } else {
+                listOf(
+                    R.string.reader_spacing_compact to "compact",
+                    R.string.reader_spacing_default to "default",
+                    R.string.reader_spacing_relaxed to "relaxed",
+                )
+            }
+            options.forEachIndexed { index, (label, mode) ->
+                val selected = when (mode) {
+                    "compact" -> lineHeight == 1.2 && customLineHeight == null
+                    "default" -> lineHeight == null && customLineHeight == null
+                    "custom" -> customLineHeight != null ||
+                        (onCustomLineHeightRequested != null && lineHeight != null && lineHeight != 1.2)
+                    else -> lineHeight == 1.8
+                }
                 SegmentedButton(
-                    selected = lineHeight == v,
+                    selected = selected,
                     enabled = enabled,
-                    onClick = { onLineHeightChanged(v) },
+                    onClick = {
+                        when (mode) {
+                            "compact" -> {
+                                onCustomLineHeightChanged?.invoke(null)
+                                onLineHeightChanged(1.2)
+                            }
+                            "default" -> {
+                                onCustomLineHeightChanged?.invoke(null)
+                                onLineHeightChanged(null)
+                            }
+                            "custom" -> onCustomLineHeightRequested?.invoke()
+                            else -> onLineHeightChanged(1.8)
+                        }
+                    },
                     shape = SegmentedButtonDefaults.itemShape(index, options.size),
                 ) { Text(stringResource(label)) }
             }
         }
+        val shownCustomLineHeight = customLineHeight
+            ?: lineHeight?.takeIf { onCustomLineHeightRequested != null && it != 1.2 }
+        if (shownCustomLineHeight != null && onCustomLineHeightChanged != null) {
+            CustomMetricEditor(
+                label = stringResource(R.string.reader_custom_line_height),
+                value = shownCustomLineHeight,
+                suffix = "",
+                enabled = enabled,
+                onChanged = onCustomLineHeightChanged,
+                minimum = 0.1,
+                maximum = 10.0,
+            )
+        }
+
+        if (onCustomTextIndentRequested != null && onCustomTextIndentChanged != null) {
+            ReadingSectionLabel(stringResource(R.string.reader_paragraph_indent))
+            if (customTextIndent == null) {
+                TextButton(
+                    enabled = enabled,
+                    onClick = onCustomTextIndentRequested,
+                ) { Text(stringResource(R.string.reader_customize)) }
+            } else {
+                CustomMetricEditor(
+                    label = stringResource(R.string.reader_paragraph_indent_em),
+                    value = customTextIndent,
+                    suffix = "em",
+                    enabled = enabled,
+                    onChanged = onCustomTextIndentChanged,
+                    onReset = { onCustomTextIndentChanged(null) },
+                    minimum = -20.0,
+                    maximum = 20.0,
+                )
+            }
+        }
+
         ReadingSectionLabel(stringResource(R.string.reader_margins))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             val options = listOf(
@@ -656,9 +723,6 @@ fun ReadingLayoutControls(
                 ) { Text(stringResource(label)) }
             }
         }
-        // Only offered where it can be honoured. Two columns need room
-        // for two columns, and on a phone there is none: the control
-        // would sit there taking a tap and changing nothing.
         if (showColumns && widthClass().isAtLeastMedium) {
             ReadingSectionLabel(stringResource(R.string.reader_columns))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -670,6 +734,60 @@ fun ReadingLayoutControls(
                         onClick = { onColumnModeChanged(mode) },
                         shape = SegmentedButtonDefaults.itemShape(index, options.size),
                     ) { Text(stringResource(mode.label)) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomMetricEditor(
+    label: String,
+    value: Double,
+    suffix: String,
+    enabled: Boolean,
+    onChanged: (Double) -> Unit,
+    onReset: (() -> Unit)? = null,
+    minimum: Double,
+    maximum: Double,
+) {
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            IconButton(enabled = enabled && value > minimum, onClick = {
+                val next = com.chmouel.liseur.reader.CustomParagraphTypography.nudge(value, -1).coerceAtLeast(minimum)
+                text = next.toString()
+                onChanged(next)
+            }) {
+                Icon(Icons.Outlined.Remove, contentDescription = stringResource(R.string.reader_decrease_value))
+            }
+            OutlinedTextField(
+                value = text,
+                onValueChange = { next ->
+                    text = next
+                    next.toDoubleOrNull()?.takeIf { it.isFinite() && it in minimum..maximum }?.let(onChanged)
+                },
+                enabled = enabled,
+                singleLine = true,
+                suffix = { if (suffix.isNotEmpty()) Text(suffix) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(enabled = enabled && value < maximum, onClick = {
+                val next = com.chmouel.liseur.reader.CustomParagraphTypography.nudge(value, 1).coerceAtMost(maximum)
+                text = next.toString()
+                onChanged(next)
+            }) {
+                Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.reader_increase_value))
+            }
+            if (onReset != null) {
+                IconButton(enabled = enabled, onClick = onReset) {
+                    Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.reader_custom_reset))
                 }
             }
         }

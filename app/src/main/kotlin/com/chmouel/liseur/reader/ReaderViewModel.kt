@@ -48,6 +48,8 @@ import com.chmouel.liseur.data.db.BookReadingModeDao
 import com.chmouel.liseur.data.db.scrollsWith
 import com.chmouel.liseur.data.db.keepsScreenOnWith
 import com.chmouel.liseur.data.db.BookTypography
+import com.chmouel.liseur.data.db.BookCustomTypography
+import com.chmouel.liseur.data.db.BookCustomTypographyDao
 import com.chmouel.liseur.data.db.BookTypographyDao
 import com.chmouel.liseur.data.db.withTypographyOf
 import com.chmouel.liseur.data.db.ReadingProgress
@@ -163,6 +165,7 @@ class ReaderViewModel(
     private val bookDao: BookDao,
     private val annotationDao: BookAnnotationDao,
     private val typographyDao: BookTypographyDao,
+    private val customTypographyDao: BookCustomTypographyDao,
     private val bookScreenDao: BookScreenDao,
     private val readingModeDao: BookReadingModeDao,
     private val library: LocalLibraryRepository,
@@ -1214,6 +1217,10 @@ class ReaderViewModel(
     val bookOrbitGoTo: SharedFlow<Locator> = _bookOrbitGoTo.asSharedFlow()
     private var readerActive = false
     private var pendingPositionEvent: NavigatorPositionEvent? = null
+
+    val customTypography: StateFlow<BookCustomTypography?> = customTypographyDao.observe(bookId)
+        .map { it?.sanitized() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val ownTypography: StateFlow<BookTypography?> = typographyDao.observe(bookId)
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -2927,6 +2934,32 @@ class ReaderViewModel(
         own = { it.copy(lineHeight = TypographyRange.LINE_HEIGHT.sanitize(value)) },
     )
 
+    /** Temporarily exposes publisher CSS while Custom samples the live paragraph. */
+    suspend fun setLineHeightForCssProbe(value: Double?) {
+        val current = typographyDao.get(bookId)
+        if (current == null) {
+            prefsRepo.setLineHeight(value)
+        } else {
+            typographyDao.upsert(current.copy(lineHeight = TypographyRange.LINE_HEIGHT.sanitize(value)))
+        }
+    }
+
+    /** Custom paragraph metrics are stored per EPUB, never in shared Readium preferences. */
+    fun setCustomLineHeight(value: Double?) = updateCustomTypography { it.copy(lineHeight = value) }
+
+    fun setCustomTextIndent(value: Double?) = updateCustomTypography { it.copy(textIndent = value) }
+
+    private fun updateCustomTypography(change: (BookCustomTypography) -> BookCustomTypography) =
+        viewModelScope.launch {
+            val current = customTypographyDao.get(bookId) ?: BookCustomTypography(bookId)
+            val updated = change(current).sanitized()
+            if (updated.lineHeight == null && updated.textIndent == null) {
+                customTypographyDao.clear(bookId)
+            } else {
+                customTypographyDao.upsert(updated)
+            }
+        }
+
     fun setPageMargins(value: Double?) = typography(
         shared = { prefsRepo.setPageMargins(value) },
         own = { it.copy(pageMargins = TypographyRange.PAGE_MARGINS.sanitize(value)) },
@@ -3205,6 +3238,7 @@ class ReaderViewModel(
                     bookDao = container.database.bookDao(),
                     annotationDao = container.database.annotationDao(),
                     typographyDao = container.database.typographyDao(),
+                    customTypographyDao = container.database.customTypographyDao(),
                     bookScreenDao = container.database.bookScreenDao(),
                     readingModeDao = container.database.bookReadingModeDao(),
                     library = container.libraryRepository,

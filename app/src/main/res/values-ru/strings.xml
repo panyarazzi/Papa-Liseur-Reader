@@ -667,6 +667,14 @@
     <string name="reader_spacing_compact">Плотный</string>
     <string name="reader_spacing_default">Обычный</string>
     <string name="reader_spacing_relaxed">Свободный</string>
+    <string name="reader_spacing_custom">Пользовательский</string>
+    <string name="reader_custom_line_height">Настраиваемый межстрочный интервал</string>
+    <string name="reader_paragraph_indent">Отступ абзаца</string>
+    <string name="reader_paragraph_indent_em">Отступ первой строки</string>
+    <string name="reader_customize">Настроить</string>
+    <string name="reader_custom_reset">Сбросить пользовательское значение</string>
+    <string name="reader_increase_value">Увеличить значение</string>
+    <string name="reader_decrease_value">Уменьшить значение</string>
     <string name="reader_margins">Поля</string>
     <string name="reader_margins_narrow">Узкие</string>
     <string name="reader_margins_default">Обычные</string>

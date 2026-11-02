@@ -115,7 +115,7 @@ class MigrationTest {
         helper.runMigrationsAndValidate(TEST_DB, 66, true, LiseurDatabase.MIGRATION_65_66).close()
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val db = Room.databaseBuilder(context, LiseurDatabase::class.java, TEST_DB)
-            .addMigrations(LiseurDatabase.MIGRATION_66_67, LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71)
+            .addMigrations(LiseurDatabase.MIGRATION_66_67, LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72)
             .build()
         try {
             val dao = db.readingProgressDao()
@@ -192,7 +192,7 @@ class MigrationTest {
         helper.runMigrationsAndValidate(TEST_DB, 67, true, LiseurDatabase.MIGRATION_66_67).close()
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val db = Room.databaseBuilder(context, LiseurDatabase::class.java, TEST_DB)
-            .addMigrations(LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71)
+            .addMigrations(LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72)
             .allowMainThreadQueries()
             .build()
         try {
@@ -227,7 +227,7 @@ class MigrationTest {
         }
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val db = Room.databaseBuilder(context, LiseurDatabase::class.java, TEST_DB)
-            .addMigrations(LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71)
+            .addMigrations(LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72)
             .allowMainThreadQueries()
             .build()
         try {
@@ -1765,10 +1765,29 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun customParagraphTypographyArrivesEmptyAndStoresEachBookIndependently() {
+        helper.createDatabase(TEST_DB, 71).close()
+        helper.runMigrationsAndValidate(TEST_DB, 72, true, LiseurDatabase.MIGRATION_71_72).use { db ->
+            db.execSQL("INSERT INTO book_custom_typography (book_url, line_height, text_indent) VALUES ('book-a', 1.15, 0.75)")
+            db.execSQL("INSERT INTO book_custom_typography (book_url, line_height, text_indent) VALUES ('book-b', NULL, 1.0)")
+            db.query("SELECT book_url, line_height, text_indent FROM book_custom_typography ORDER BY book_url").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("book-a", cursor.getString(0))
+                assertEquals(1.15, cursor.getDouble(1), 1e-9)
+                assertEquals(0.75, cursor.getDouble(2), 1e-9)
+                assertTrue(cursor.moveToNext())
+                assertEquals("book-b", cursor.getString(0))
+                assertTrue(cursor.isNull(1))
+                assertEquals(1.0, cursor.getDouble(2), 1e-9)
+            }
+        }
+    }
+
     private companion object {
         const val TEST_DB = "migration-test.db"
 
         /** Kept in step with the `version` on [LiseurDatabase]. */
-        const val LATEST = 71
+        const val LATEST = 72
     }
 }

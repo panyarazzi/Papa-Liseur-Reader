@@ -643,6 +643,14 @@
     <string name="reader_spacing_compact">Compact</string>
     <string name="reader_spacing_default">Default</string>
     <string name="reader_spacing_relaxed">Relaxed</string>
+    <string name="reader_spacing_custom">Custom</string>
+    <string name="reader_custom_line_height">Custom line height</string>
+    <string name="reader_paragraph_indent">Paragraph indent</string>
+    <string name="reader_paragraph_indent_em">First-line indent</string>
+    <string name="reader_customize">Customize</string>
+    <string name="reader_custom_reset">Reset custom value</string>
+    <string name="reader_increase_value">Increase value</string>
+    <string name="reader_decrease_value">Decrease value</string>
     <string name="reader_margins">Margins</string>
     <string name="reader_margins_narrow">Narrow</string>
     <string name="reader_margins_default">Default</string>

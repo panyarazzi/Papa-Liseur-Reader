@@ -615,6 +615,14 @@
     <string name="reader_spacing_compact">Compatta</string>
     <string name="reader_spacing_default">Predefinita</string>
     <string name="reader_spacing_relaxed">Aria</string>
+    <string name="reader_spacing_custom">Personalizzato</string>
+    <string name="reader_custom_line_height">Interlinea personalizzata</string>
+    <string name="reader_paragraph_indent">Rientro del paragrafo</string>
+    <string name="reader_paragraph_indent_em">Rientro della prima riga</string>
+    <string name="reader_customize">Personalizza</string>
+    <string name="reader_custom_reset">Reimposta valore personalizzato</string>
+    <string name="reader_increase_value">Aumenta valore</string>
+    <string name="reader_decrease_value">Diminuisci valore</string>
     <string name="reader_margins">Margini</string>
     <string name="reader_margins_narrow">Stretti</string>
     <string name="reader_margins_default">Predefiniti</string>

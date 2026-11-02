@@ -151,6 +151,7 @@ import com.chmouel.liseur.translate.startPageTranslation
 import com.chmouel.liseur.readaloud.ReadAloudFeature
 import com.chmouel.liseur.data.db.AnnotationKind
 import com.chmouel.liseur.data.db.BookAnnotation
+import com.chmouel.liseur.data.db.BookCustomTypography
 import com.chmouel.liseur.data.settings.DefinitionTarget
 import com.chmouel.liseur.reader.annotations.BookmarkRibbon
 import com.chmouel.liseur.reader.annotations.DECORATION_GROUP
@@ -290,6 +291,8 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -462,6 +465,10 @@ internal fun ReaderScreen(
     prefsFlow: StateFlow<ReaderPrefs>,
     readingTheme: ReaderTheme,
     typographyIsOwnFlow: StateFlow<Boolean>,
+    customTypographyFlow: StateFlow<BookCustomTypography?>,
+    onCustomLineHeightChanged: (Double?) -> Unit,
+    onCustomTextIndentChanged: (Double?) -> Unit,
+    onTemporaryLineHeightChanged: suspend (Double?) -> Unit,
     progressFlow: StateFlow<ReaderProgress?>,
     jumpBackFlow: StateFlow<ReaderViewModel.JumpBack?>,
     catchUpFlow: StateFlow<ReaderViewModel.CatchUp?>,
@@ -664,6 +671,7 @@ internal fun ReaderScreen(
     // around in.
     LaunchedEffect(chromeVisible) { onChromeVisibleChanged(chromeVisible) }
     val typographyIsOwn by typographyIsOwnFlow.collectAsStateWithLifecycle()
+    val customTypography by customTypographyFlow.collectAsStateWithLifecycle()
     val progress by progressFlow.collectAsStateWithLifecycle()
     // How many screenfuls the resource on screen has, and which one is
     // being read. Measured from the laid-out page rather than derived
@@ -1963,6 +1971,33 @@ internal fun ReaderScreen(
                     }
                 }
             }
+    }
+
+    // Apply only per-book custom paragraph values. With neither value selected,
+    // no style is injected and the EPUB's original paragraph CSS remains intact.
+    var customParagraphStyleOn by remember { mutableStateOf<Triple<WebView, String, Pair<Double?, Double?>>?>(null) }
+    LaunchedEffect(navigator, customTypography, reflowableText) {
+        val nav = navigator ?: return@LaunchedEffect
+        if (!reflowableText) return@LaunchedEffect
+        val lineHeight = customTypography?.lineHeight
+        val textIndent = customTypography?.textIndent
+        val root = nav.publicationView
+        merge(nav.currentLocator.map { }, layoutPasses(root)).collect {
+            val web = visibleWebView(root) ?: return@collect
+            val href = web.url ?: return@collect
+            val key = Triple(web, href, lineHeight to textIndent)
+            if (lineHeight == null && textIndent == null) {
+                if (customParagraphStyleOn?.first === web && customParagraphStyleOn?.second == href) {
+                    runCatching { nav.evaluateJavascript(CustomParagraphTypography.applyScript(null, null)) }
+                    customParagraphStyleOn = null
+                }
+                return@collect
+            }
+            if (key == customParagraphStyleOn) return@collect
+            runCatching {
+                nav.evaluateJavascript(CustomParagraphTypography.applyScript(lineHeight, textIndent))
+            }.onSuccess { customParagraphStyleOn = key }
+        }
     }
 
     // Apply the same publisher-CSS weight transform to each newly shown
@@ -5129,6 +5164,48 @@ internal fun ReaderScreen(
             readingCss = readingCss,
             fineTypography = onPrefsAction.fineTypography,
             onLineHeightChanged = onPrefsAction.setLineHeight,
+            customLineHeight = customTypography?.lineHeight,
+            customTextIndent = customTypography?.textIndent,
+            onCustomLineHeightRequested = {
+                val nav = navigator
+                if (nav != null && customTypography?.lineHeight == null) {
+                    val previousLineHeight = prefs.lineHeight
+                    effectScope.launch {
+                        try {
+                            val publisherCssReady = if (previousLineHeight != null) {
+                                withTimeoutOrNull(2_500) {
+                                    layoutPasses(nav.publicationView)
+                                        .onStart { onTemporaryLineHeightChanged(null) }
+                                        .first()
+                                } != null
+                            } else true
+                            if (publisherCssReady) {
+                                val metrics = CustomParagraphTypography.parseMetrics(
+                                    runCatching { nav.evaluateJavascript(CustomParagraphTypography.READ_METRICS_SCRIPT) }.getOrNull(),
+                                )
+                                if (navigatorNow === nav) metrics?.lineHeight?.let(onCustomLineHeightChanged)
+                            }
+                        } finally {
+                            if (previousLineHeight != null) {
+                                withContext(NonCancellable) {
+                                    onTemporaryLineHeightChanged(previousLineHeight)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            onCustomLineHeightChanged = onCustomLineHeightChanged,
+            onCustomTextIndentRequested = {
+                val nav = navigator
+                if (nav != null && customTypography?.textIndent == null) effectScope.launch {
+                    val metrics = CustomParagraphTypography.parseMetrics(
+                        runCatching { nav.evaluateJavascript(CustomParagraphTypography.READ_METRICS_SCRIPT) }.getOrNull(),
+                    )
+                    if (navigatorNow === nav) metrics?.textIndent?.let(onCustomTextIndentChanged)
+                }
+            },
+            onCustomTextIndentChanged = onCustomTextIndentChanged,
             onPageMarginsChanged = onPrefsAction.setPageMargins,
             onFullscreenChanged = onPrefsAction.setFullscreen,
             onTopProgressModeChanged = onPrefsAction.setTopProgressMode,

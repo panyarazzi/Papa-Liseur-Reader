@@ -615,6 +615,14 @@
     <string name="reader_spacing_compact">Compacto</string>
     <string name="reader_spacing_default">Predeterminado</string>
     <string name="reader_spacing_relaxed">Holgado</string>
+    <string name="reader_spacing_custom">Personalizado</string>
+    <string name="reader_custom_line_height">Interlineado personalizado</string>
+    <string name="reader_paragraph_indent">Sangría de párrafo</string>
+    <string name="reader_paragraph_indent_em">Sangría de primera línea</string>
+    <string name="reader_customize">Personalizar</string>
+    <string name="reader_custom_reset">Restablecer valor personalizado</string>
+    <string name="reader_increase_value">Aumentar valor</string>
+    <string name="reader_decrease_value">Disminuir valor</string>
     <string name="reader_margins">Márgenes</string>
     <string name="reader_margins_narrow">Estrechos</string>
     <string name="reader_margins_default">Predeterminados</string>
