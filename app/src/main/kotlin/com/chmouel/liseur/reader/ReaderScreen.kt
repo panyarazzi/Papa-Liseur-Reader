@@ -1929,9 +1929,16 @@ internal fun ReaderScreen(
                     // Readium's root-level weight does not reach publisher rules
                     // which explicitly set `font-weight: normal`; transform those
                     // live CSS declarations before waiting for the resulting reflow.
-                    nav.evaluateJavascript(
-                        PublisherFontWeightTransform.script(it.fontWeight ?: 1.0)
-                    )
+                    try {
+                        nav.evaluateJavascript(
+                            PublisherFontWeightTransform.script(it.fontWeight ?: 1.0)
+                        )
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    } catch (_: Exception) {
+                        // A resource transition can temporarily leave no document to evaluate.
+                        // The resource/layout collector below retries on the newly shown page.
+                    }
                     // Type size, margins, columns: the book is about to
                     // be broken into different screens, so the ones
                     // counted so far stop being about this book.
@@ -1971,9 +1978,15 @@ internal fun ReaderScreen(
             val href = web.url ?: return@collect
             val key = web to href
             if (key == styled) return@collect
-            val result = nav.evaluateJavascript(
-                PublisherFontWeightTransform.script(publisherFontWeightMultiplier)
-            )
+            val result = try {
+                nav.evaluateJavascript(
+                    PublisherFontWeightTransform.script(publisherFontWeightMultiplier)
+                )
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                null
+            }
             if (result != null && result != "null") styled = key
         }
     }
