@@ -753,6 +753,8 @@ internal fun ReaderScreen(
     // `footnote` directly — it would keep seeing whatever was true when it
     // started. This gives it a window onto the current value.
     val noteShowing by rememberUpdatedState(footnote != null)
+    // This collector outlives preference recompositions; page changes use the latest weight.
+    val publisherFontWeightMultiplier by rememberUpdatedState(prefs.fontWeight.multiplier)
     var selection by remember { mutableStateOf<ActiveSelection?>(null) }
     // The settled selection drives the action bar, but it intentionally
     // waits for the WebView's reports to quiet down. Gesture arbitration
@@ -1924,6 +1926,12 @@ internal fun ReaderScreen(
                     }
                     val before = ExactLocatorAnchor.layoutSignature(nav)
                     nav.submitPreferences(it)
+                    // Readium's root-level weight does not reach publisher rules
+                    // which explicitly set `font-weight: normal`; transform those
+                    // live CSS declarations before waiting for the resulting reflow.
+                    nav.evaluateJavascript(
+                        PublisherFontWeightTransform.script(it.fontWeight ?: 1.0)
+                    )
                     // Type size, margins, columns: the book is about to
                     // be broken into different screens, so the ones
                     // counted so far stop being about this book.
@@ -1948,6 +1956,26 @@ internal fun ReaderScreen(
                     }
                 }
             }
+    }
+
+    // Apply the same publisher-CSS weight transform to each newly shown
+    // reflowable resource. The script also watches for stylesheets which finish
+    // loading after the first pass. The EPUB package itself is never modified.
+    LaunchedEffect(navigator, reflowableText) {
+        val nav = navigator ?: return@LaunchedEffect
+        if (!reflowableText) return@LaunchedEffect
+        val root = nav.publicationView
+        var styled: Pair<WebView, String>? = null
+        merge(nav.currentLocator.map { }, layoutPasses(root)).collect {
+            val web = visibleWebView(root) ?: return@collect
+            val href = web.url ?: return@collect
+            val key = web to href
+            if (key == styled) return@collect
+            val result = nav.evaluateJavascript(
+                PublisherFontWeightTransform.script(publisherFontWeightMultiplier)
+            )
+            if (result != null && result != "null") styled = key
+        }
     }
 
     // Content wider than the page paints over the page after it rather than
