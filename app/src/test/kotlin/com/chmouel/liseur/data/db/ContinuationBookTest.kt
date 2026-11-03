@@ -2,7 +2,6 @@ package com.chmouel.liseur.data.db
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.chmouel.liseur.domain.FINISHED_PROGRESSION
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -34,14 +33,14 @@ class ContinuationBookTest {
         addedAt = 0, lastOpenedAt = opened,
     )
 
-    private suspend fun selected() = db.bookDao().continuationBook(FINISHED_PROGRESSION)?.url
+    private suspend fun selected() = db.bookDao().continuationBook(com.chmouel.liseur.domain.FINISHED_PROGRESSION)?.url
 
     @Test
-    fun `continue reading lists only real unfinished positions newest first`() = runTest {
+    fun `continue reading includes queued books and respects reader finished state`() = runTest {
         val dao = db.bookDao()
         dao.upsert(book("opened-only", 1_000))
-        // Opening timestamps deliberately disagree with the actual reading
-        // order: Continue Reading must follow read_at, not last_opened_at.
+        // Opened-only books are intentional queue entries, even without a
+        // saved locator or progression. Their opening time ranks them.
         dao.upsert(book("older", 900))
         dao.upsert(book("middle", 800))
         dao.upsert(book("newest", 700))
@@ -82,23 +81,26 @@ class ContinuationBookTest {
             "restored-remote", """{"href":"restored"}""", 0.2,
             readAt = 350, now = 1_000,
         )
-        // A row created for a declined sync has no position and must not
-        // appear, even though it has a recent timestamp.
+        // A placeholder row is not a reading position. The book still
+        // appears because the reader opened it to queue it for later.
         progress.restoreBackupPosition(
             "opened-only", "{}", null, readAt = 900, now = 1_000,
         )
-        // A book at the completion boundary is no longer a continuation.
-        dao.upsert(book("at-completion", 80))
-        progress.restoreBackupPosition(
-            "at-completion", """{"href":"end"}""", FINISHED_PROGRESSION,
-            readAt = 800, now = 1_000,
-        )
+        // A reader-marked unread book remains in the queue even beyond
+        // the usual completion boundary.
+        dao.upsert(book("marked-unread", 400))
+        progress.recordLocal("marked-unread", """{"href":"last-chapter"}""", 0.99, null, null, 1_000)
+        com.chmouel.liseur.data.library.FinishedState(dao, progress)
+            .setFinished("marked-unread", false)
 
         val urls = dao.observeContinueReading(FINISHED_PROGRESSION)
             .first()
             .map { it.url }
 
-        assertEquals(listOf("newest", "middle", "older", "restored-remote"), urls)
+        assertEquals(
+            listOf("opened-only", "restored-remote", "newest", "middle", "older", "marked-unread"),
+            urls,
+        )
     }
 
     @Test
