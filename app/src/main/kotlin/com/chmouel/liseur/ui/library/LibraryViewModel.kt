@@ -607,14 +607,7 @@ class LibraryViewModel(
         },
     )
 
-    private val continueReading = library.mostRecent.flatMapLatest { book ->
-        if (book == null) {
-            flowOf(null)
-        } else {
-            progressDao.observeTotalProgression(book.url)
-                .map { ContinueReading(book, it) }
-        }
-    }
+    private val continueReading = library.continueReading
 
     val state: StateFlow<LibraryUiState> =
         combine(
@@ -645,7 +638,8 @@ class LibraryViewModel(
             // whose other volumes are still showing.
             // The grid keys by id, and a repeated one would crash it.
             val books = (baseValues[0] as List<Book>).filterNot { it.hidden }.distinctBy { it.id }
-            val recent = baseValues[1] as ContinueReading?
+            @Suppress("UNCHECKED_CAST")
+            val recent = baseValues[1] as List<Book>
             val catalogStatus = baseValues[2] as CatalogStatus
             @Suppress("UNCHECKED_CAST")
             val running = baseValues[3] as Map<String, DownloadProgress>
@@ -762,7 +756,9 @@ class LibraryViewModel(
                 } else {
                     emptyList()
                 },
-                continueReading = recent,
+                continueReading = recent.map { book ->
+                    ContinueReading(book, progressions[book.url])
+                },
                 catalogStatus = catalogStatus,
                 downloads = running,
                 canDownload = server?.canDownload != false,

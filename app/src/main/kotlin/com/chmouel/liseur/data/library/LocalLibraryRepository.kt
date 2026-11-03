@@ -72,6 +72,7 @@ class LocalLibraryRepository(
 ) {
     val books: Flow<List<Book>> = bookDao.observeAll()
     val mostRecent: Flow<Book?> = bookDao.observeMostRecent()
+    val continueReading: Flow<List<Book>> = bookDao.observeContinueReading()
     val folders: Flow<List<LibraryFolder>> = folderDao.observeAll()
 
     /**
