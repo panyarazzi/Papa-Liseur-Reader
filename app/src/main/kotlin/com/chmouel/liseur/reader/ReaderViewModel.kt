@@ -2485,6 +2485,10 @@ class ReaderViewModel(
     fun positionAtProgression(progression: Float): Int =
         bookPositions?.positionAtProgression(progression) ?: 1
 
+    /** Exact integer-position target for the adjacent chapter button. */
+    fun chapterTargetPosition(currentPosition: Int, forward: Boolean): Int? =
+        bookPositions?.chapterTargetPosition(currentPosition, forward)
+
     /** The chapter title shown while dragging the scrubber. */
     fun chapterTitleAtPosition(position: Int): String? =
         bookPositions?.chapterAt(position)?.title

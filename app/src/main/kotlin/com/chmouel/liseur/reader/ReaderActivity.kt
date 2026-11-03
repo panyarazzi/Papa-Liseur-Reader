@@ -629,6 +629,8 @@ class ReaderActivity : FragmentActivity() {
                                             dismissCatchUp = viewModel::dismissCatchUp,
                                             chapterTicks = viewModel::chapterTicks,
                                             chapterTitleAtPosition = viewModel::chapterTitleAtPosition,
+
+                                            chapterTargetPosition = viewModel::chapterTargetPosition,
                                             positionAtProgression = viewModel::positionAtProgression,
                                             locatorAtPosition = viewModel::locatorAtPosition,
                                             goToPagePrompt = viewModel::goToPagePrompt,

@@ -253,6 +253,30 @@ class BookPositionsTest {
     }
 
     @Test
+    fun `chapter navigation returns exact adjacent chapter starts`() {
+        val chapters = listOf(
+            BookChapter("One", firstPosition = 1, lastPosition = 7),
+            BookChapter("Two", firstPosition = 8, lastPosition = 15),
+            BookChapter("Three", firstPosition = 16, lastPosition = 24),
+        )
+        val book = positions(
+            resources = listOf(
+                (1..7).map { locator("one.xhtml", (it - 1) / 6.0, it) },
+                (8..15).map { locator("two.xhtml", (it - 8) / 7.0, it) },
+                (16..24).map { locator("three.xhtml", (it - 16) / 8.0, it) },
+            ),
+            chapters = chapters,
+            chapterIndexByResource = mapOf(0 to 0, 1 to 1, 2 to 2),
+        )
+
+        assertEquals(8, book.chapterTargetPosition(currentPosition = 7, forward = true))
+        assertEquals(1, book.chapterTargetPosition(currentPosition = 8, forward = false))
+        assertEquals(16, book.chapterTargetPosition(currentPosition = 15, forward = true))
+        assertNull(book.chapterTargetPosition(currentPosition = 1, forward = false))
+        assertNull(book.chapterTargetPosition(currentPosition = 24, forward = true))
+    }
+
+    @Test
     fun `chapter lookup uses the resource chapter when the position agrees`() {
         val first = BookChapter("One", firstPosition = 1, lastPosition = 2)
         val second = BookChapter("Two", firstPosition = 3, lastPosition = 4)

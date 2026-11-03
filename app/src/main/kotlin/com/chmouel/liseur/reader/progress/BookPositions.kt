@@ -80,6 +80,20 @@ class BookPositions(
     fun chapterOfResource(resourceIndex: Int): BookChapter? =
         chapterIndexByResource[resourceIndex]?.let(chapters::getOrNull)
 
+    /**
+     * The start of the adjacent chapter, based on the current integer
+     * position rather than a Float scrubber tick. This avoids rounding a
+     * chapter boundary back onto a neighbouring synthetic position.
+     */
+    fun chapterTargetPosition(currentPosition: Int, forward: Boolean): Int? {
+        val currentIndex = chapters.indexOfFirst {
+            currentPosition in it.firstPosition..it.lastPosition
+        }
+        if (currentIndex < 0) return null
+        val targetIndex = currentIndex + if (forward) 1 else -1
+        return chapters.getOrNull(targetIndex)?.firstPosition
+    }
+
     /** The chapter for [position], using the resource only when its range agrees. */
     fun chapterFor(resourceIndex: Int?, position: Int): BookChapter? {
         val resourceChapter = resourceIndex?.let(::chapterOfResource)

@@ -25,6 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -69,6 +70,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -546,6 +548,8 @@ internal fun ReaderScreen(
     var boxInWindow by remember { mutableStateOf(Offset.Zero) }
     var boxSize by remember { mutableStateOf(IntSize.Zero) }
     var chromeVisible by remember { mutableStateOf(false) }
+    // A fresh pointer-down restarts the chrome's inactivity window.
+    var chromeTouchActivity by remember { mutableIntStateOf(0) }
     val chromeTransition = remember { MutableTransitionState(false) }
     val chromeDrawn = { chromeTransition.currentState || chromeTransition.targetState || !chromeTransition.isIdle }
     var showToc by remember { mutableStateOf(false) }
@@ -2892,6 +2896,23 @@ internal fun ReaderScreen(
         !openingImage &&
         !blockedByDialog
 
+    // The chrome gets out of the reader's way after ten quiet seconds.
+    // Every new pointer-down restarts the clock; a modal surface suspends
+    // it altogether, and closing that surface starts a fresh interval.
+    val chromeAutoHideBlocked = showToc || moreOpen || sheet != ReaderSheet.NONE ||
+        searchFor != null || goToPage || goToPercent || clearingTranslations ||
+        translationSettingsOpen || wholeBookOpen || bookNoteEditor != null ||
+        footerPick != null || footnote != null || selection != null ||
+        tappedSelection != null || noteFor != null || defineWord != null ||
+        translatePassage != null || jumpBack != null || catchUp != null ||
+        codexPanel?.visible == true || companionPeek != null || viewedImage != null ||
+        openingImage || blockedByDialog
+    LaunchedEffect(chromeVisible, chromeTouchActivity, chromeAutoHideBlocked) {
+        if (!chromeVisible || chromeAutoHideBlocked) return@LaunchedEffect
+        delay(10_000L)
+        if (chromeVisible && !chromeAutoHideBlocked) chromeVisible = false
+    }
+
     // Arming is a decision taken in a sheet, and the page it applies to
     // is behind the sheet. Get out of the way so the reader can see what
     // they asked for.
@@ -3671,6 +3692,7 @@ internal fun ReaderScreen(
 
                         val down = event.changes.filter { it.pressed }
                         val was = touch.pointers
+                        if (down.size > was) chromeTouchActivity++
                         touch.pointers = down.size
 
                         // A touch that opened the viewer belongs to the
@@ -4273,13 +4295,16 @@ internal fun ReaderScreen(
                         },
                         onGoToPercent = { goToPercent = true },
                     )
-                    val currentProgression = progress?.totalProgression ?: 0f
-                    val previousChapter = chapterTicks.filter { it < currentProgression - 0.005f }.maxOrNull()
-                    val nextChapter = chapterTicks.filter { it > currentProgression + 0.005f }.minOrNull()
-                    fun seekChapter(tick: Float?) {
-                        val progression = tick ?: return
-                        val position = onProgressAction.positionAtProgression(progression)
-                        val target = onProgressAction.locatorAtPosition(position) ?: return
+                    val currentPosition = progress?.position
+                    val previousChapter = currentPosition?.let {
+                        onProgressAction.chapterTargetPosition(it, forward = false)
+                    }
+                    val nextChapter = currentPosition?.let {
+                        onProgressAction.chapterTargetPosition(it, forward = true)
+                    }
+                    fun seekChapter(position: Int?) {
+                        val targetPosition = position ?: return
+                        val target = onProgressAction.locatorAtPosition(targetPosition) ?: return
                         onProgressAction.onJump()
                         navigateLater(target, NavigatorPositionEvent.LOCAL_JUMP)
                     }
@@ -4288,13 +4313,32 @@ internal fun ReaderScreen(
                     val previousChapterDescription = stringResource(R.string.reader_previous_chapter)
                     val nextChapterDescription = stringResource(R.string.reader_next_chapter)
                     val typographyDescription = stringResource(R.string.reader_typography)
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        val canShowAllShortcuts = maxWidth >= 448.dp
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .then(
+                                    if (canShowAllShortcuts) Modifier
+                                    else Modifier.horizontalScroll(rememberScrollState()),
+                                )
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = if (canShowAllShortcuts) {
+                                Arrangement.SpaceEvenly
+                            } else {
+                                Arrangement.spacedBy(2.dp)
+                            },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                        IconButton(onClick = { seekChapter(previousChapter) }, enabled = previousChapter != null) {
+                            Text(
+                                "⏮️",
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                                modifier = Modifier.semantics { contentDescription = previousChapterDescription },
+                            )
+                        }
                         IconButton(onClick = { pageTurner.turn(false) }) {
                             Text("‹", style = MaterialTheme.typography.titleLarge,
                                 modifier = Modifier.semantics { contentDescription = previousPageDescription })
@@ -4303,11 +4347,15 @@ internal fun ReaderScreen(
                             Text("›", style = MaterialTheme.typography.titleLarge,
                                 modifier = Modifier.semantics { contentDescription = nextPageDescription })
                         }
-                        IconButton(onClick = { seekChapter(previousChapter) }, enabled = previousChapter != null) {
-                            Text("⇤", modifier = Modifier.semantics { contentDescription = previousChapterDescription })
-                        }
                         IconButton(onClick = { seekChapter(nextChapter) }, enabled = nextChapter != null) {
-                            Text("⇥", modifier = Modifier.semantics { contentDescription = nextChapterDescription })
+                            Text(
+                                "⏭️",
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.Bold,
+                                ),
+                                modifier = Modifier.semantics { contentDescription = nextChapterDescription },
+                            )
                         }
                         IconButton(onClick = { searchFor = "" }) {
                             Icon(Icons.Outlined.Search, contentDescription = stringResource(R.string.reader_search))
@@ -4327,6 +4375,7 @@ internal fun ReaderScreen(
                         }
                         IconButton(onClick = { moreOpen = true }) {
                             Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.more_options))
+                        }
                         }
                     }
                 }
@@ -5722,6 +5771,7 @@ class ReaderProgressActions(
     val dismissCatchUp: () -> Unit,
     val chapterTicks: () -> List<Float>,
     val chapterTitleAtPosition: (Int) -> String?,
+    val chapterTargetPosition: (Int, Boolean) -> Int?,
     val positionAtProgression: (Float) -> Int,
     val locatorAtPosition: (Int) -> Locator?,
     val goToPagePrompt: () -> GoToPagePrompt?,
