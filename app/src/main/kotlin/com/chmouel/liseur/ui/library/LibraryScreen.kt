@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items as lazyListItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -1461,6 +1464,8 @@ private fun BookGrid(
     modifier: Modifier = Modifier,
     bottomInset: Dp = 0.dp,
 ) {
+    var showAllContinueReading by rememberSaveable { mutableStateOf(false) }
+
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = coverMinSize(windowWidth())),
         state = gridState,
@@ -1475,15 +1480,16 @@ private fun BookGrid(
         // else entirely.
         val results = state.searchResults
         state.continueReading
-            ?.takeIf { !state.isSearchActive && !state.filters.archived }
-            ?.let { recent ->
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                ContinueReadingCard(
-                    entry = recent,
-                    onClick = { onBookSelected(recent.book) },
-                )
+            .takeIf { it.isNotEmpty() && !state.isSearchActive && !state.filters.archived }
+            ?.let { entries ->
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    ContinueReadingSection(
+                        entries = entries,
+                        onBookSelected = onBookSelected,
+                        onShowAll = { showAllContinueReading = true },
+                    )
+                }
             }
-        }
         if (results != null) {
             // In the slot the filter row sits in, at its height, so the
             // covers do not jump on the first letter typed. The filters
@@ -1586,10 +1592,213 @@ private fun BookGrid(
             }
         }
     }
+
+    if (showAllContinueReading && state.continueReading.isNotEmpty()) {
+        ContinueReadingDialog(
+            entries = state.continueReading,
+            onDismiss = { showAllContinueReading = false },
+            onBookSelected = { book ->
+                showAllContinueReading = false
+                onBookSelected(book)
+            },
+        )
+    }
 }
 
 @Composable
-private fun ContinueReadingCard(
+private fun ContinueReadingSection(
+    entries: List<ContinueReading>,
+    onBookSelected: (Book) -> Unit,
+    onShowAll: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.continue_reading).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.8.sp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = pluralStringResource(
+                    R.plurals.library_book_count,
+                    entries.size,
+                    entries.size,
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (entries.size >= 5) {
+            ElevatedCard(
+                onClick = onShowAll,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        entries.take(4).forEach { entry ->
+                            BookCover(
+                                book = entry.book,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(2f / 3f),
+                            )
+                        }
+                    }
+                    Column(
+                        modifier = Modifier.widthIn(min = 88.dp, max = 132.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.continue_reading),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.library_book_count,
+                                entries.size,
+                                entries.size,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(R.string.show_all_books),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+        } else {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val spacing = 8.dp
+                val coverWidth = (
+                    (maxWidth - spacing * (entries.size - 1)) / entries.size
+                ).coerceAtMost(112.dp)
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                    entries.forEach { entry ->
+                        Column(
+                            modifier = Modifier
+                                .width(coverWidth)
+                                .clickable { onBookSelected(entry.book) },
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            BookCover(
+                                book = entry.book,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(2f / 3f),
+                            )
+                            Text(
+                                text = entry.book.displayTitle,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            entry.progression?.let { progression ->
+                                Text(
+                                    text = "${(progression * 100).toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContinueReadingDialog(
+    entries: List<ContinueReading>,
+    onDismiss: () -> Unit,
+    onBookSelected: (Book) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.continue_reading)) },
+        text = {
+            LazyColumn(Modifier.heightIn(max = 520.dp)) {
+                lazyListItems(entries, key = { it.book.id }) { entry ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onBookSelected(entry.book) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        BookCover(
+                            book = entry.book,
+                            modifier = Modifier
+                                .width(48.dp)
+                                .height(72.dp),
+                        )
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Text(
+                                text = entry.book.displayTitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            entry.book.displayAuthor?.let { author ->
+                                Text(
+                                    text = author,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            entry.progression?.let { progression ->
+                                Text(
+                                    text = "${(progression * 100).toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider()
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.done))
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
     entry: ContinueReading,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
