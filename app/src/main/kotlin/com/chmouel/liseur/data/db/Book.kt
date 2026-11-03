@@ -290,6 +290,37 @@ interface BookDao {
     """)
     suspend fun continuationBook(finishedProgression: Double): Book?
 
+    /**
+     * All books the reader has opened or read, newest activity first.
+     * Empty placeholder progress rows do not count as reading evidence.
+     * Finished, archived, hidden and remote-only books stay off this shelf.
+     */
+    @Query(
+        """
+        SELECT books.* FROM books
+        LEFT JOIN reading_progress ON reading_progress.book_url = books.url
+        WHERE books.archived_at IS NULL
+          AND books.hidden_at IS NULL
+          AND books.finished_at IS NULL
+          AND (books.local_uri IS NOT NULL OR books.download_state = 'DOWNLOADED')
+          AND (
+              books.last_opened_at IS NOT NULL
+              OR reading_progress.total_progression IS NOT NULL
+              OR reading_progress.locator_json != '{}'
+          )
+        ORDER BY MAX(
+            COALESCE(books.last_opened_at, 0),
+            CASE
+                WHEN reading_progress.total_progression IS NOT NULL
+                     OR reading_progress.locator_json != '{}'
+                THEN COALESCE(reading_progress.read_at, reading_progress.updated_at, 0)
+                ELSE 0
+            END
+        ) DESC, books.url
+        """,
+    )
+    fun observeContinueReading(): Flow<List<Book>>
+
     @Query("SELECT * FROM books WHERE url = :url")
     suspend fun getByUrl(url: String): Book?
 
