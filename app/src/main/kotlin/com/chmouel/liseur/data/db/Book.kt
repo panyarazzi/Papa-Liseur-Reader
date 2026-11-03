@@ -264,31 +264,44 @@ interface BookDao {
     suspend fun mostRecentlyOpened(): Book?
 
     /**
-     * Every book with a real saved reading position, newest reading first.
+     * Books the reader has put into their reading queue, whether by
+     * opening them to save for later or by actually reading them.
      *
-     * Unlike [observeMostRecent], this is deliberately not based on
-     * last_opened_at: merely opening a book is not enough to put it on the
-     * Continue Reading shelf. Placeholder progress rows are excluded too.
-     * A missing progression is still eligible when a non-empty locator
-     * exists, since synced positions do not always carry a percentage.
+     * A real position is ranked by when reading happened; a book with
+     * no real position is ranked by when it was last opened. Empty
+     * placeholder rows do not count as reading evidence, but they do
+     * not hide a book that the reader deliberately opened.
+     *
+     * Completion is decided by the reader-facing finished state
+     * (finished_at), never by a percentage threshold here. In
+     * particular, a book explicitly marked unread remains on this shelf
+     * even when its saved position is near the end.
      */
     @Query(
         """
         SELECT books.* FROM books
-        INNER JOIN reading_progress ON reading_progress.book_url = books.url
+        LEFT JOIN reading_progress ON reading_progress.book_url = books.url
         WHERE books.archived_at IS NULL
           AND books.hidden_at IS NULL
           AND books.finished_at IS NULL
           AND (books.local_uri IS NOT NULL OR books.download_state = 'DOWNLOADED')
-          AND (reading_progress.total_progression IS NOT NULL
-               OR reading_progress.locator_json != '{}')
-          AND (reading_progress.total_progression IS NULL
-               OR reading_progress.total_progression < :finishedProgression)
-        ORDER BY COALESCE(reading_progress.read_at, reading_progress.updated_at) DESC,
-                 books.url
+          AND (
+              books.last_opened_at IS NOT NULL
+              OR reading_progress.total_progression IS NOT NULL
+              OR reading_progress.locator_json != '{}'
+          )
+        ORDER BY COALESCE(
+            CASE
+                WHEN reading_progress.total_progression IS NOT NULL
+                     OR reading_progress.locator_json != '{}'
+                THEN COALESCE(reading_progress.read_at, reading_progress.updated_at)
+            END,
+            books.last_opened_at,
+            0
+        ) DESC, books.url
         """,
     )
-    fun observeContinueReading(finishedProgression: Double): Flow<List<Book>>
+    fun observeContinueReading(): Flow<List<Book>>
 
     /** A placeholder progress row's timestamp records its creation, not reading, so it is not ranked. */
     @Query("""
