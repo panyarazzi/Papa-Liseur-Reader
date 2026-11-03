@@ -49,6 +49,10 @@ class ContinuationBookTest {
         dao.upsert(book("archived").copy(archivedAt = 1))
         dao.upsert(book("hidden").copy(hiddenAt = 1))
         dao.upsert(book("remote").copy(downloadState = DownloadState.REMOTE))
+        dao.upsert(book("restored-remote").copy(
+            downloadState = DownloadState.REMOTE,
+            localUri = "content://restored/document",
+        ))
 
         val progress = db.readingProgressDao()
         progress.restoreBackupPosition(
@@ -74,6 +78,10 @@ class ContinuationBookTest {
         progress.restoreBackupPosition(
             "remote", """{"href":"remote"}""", 0.2, readAt = 400, now = 1_000,
         )
+        progress.restoreBackupPosition(
+            "restored-remote", """{"href":"restored"}""", 0.2,
+            readAt = 350, now = 1_000,
+        )
         // A row created for a declined sync has no position and must not
         // appear, even though it has a recent timestamp.
         progress.restoreBackupPosition(
@@ -90,7 +98,7 @@ class ContinuationBookTest {
             .first()
             .map { it.url }
 
-        assertEquals(listOf("newest", "middle", "older"), urls)
+        assertEquals(listOf("newest", "middle", "older", "restored-remote"), urls)
     }
 
     @Test
