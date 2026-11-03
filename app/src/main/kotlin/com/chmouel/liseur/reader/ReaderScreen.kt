@@ -4297,10 +4297,10 @@ internal fun ReaderScreen(
                     )
                     val currentPosition = progress?.position
                     val previousChapter = currentPosition?.let {
-                        onProgressAction.chapterTargetPosition(it, forward = false)
+                        onProgressAction.chapterTargetPosition(it, false)
                     }
                     val nextChapter = currentPosition?.let {
-                        onProgressAction.chapterTargetPosition(it, forward = true)
+                        onProgressAction.chapterTargetPosition(it, true)
                     }
                     fun seekChapter(position: Int?) {
                         val targetPosition = position ?: return
