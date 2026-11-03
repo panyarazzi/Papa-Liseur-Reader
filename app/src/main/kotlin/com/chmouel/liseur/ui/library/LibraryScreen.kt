@@ -1667,8 +1667,19 @@ private fun BookGrid(
             }
         }
     }
-}
 
+    if (showAllContinueReading && state.continueReading.isNotEmpty()) {
+        ContinueReadingDialog(
+            entries = state.continueReading,
+            onDismiss = { showAllContinueReading = false },
+            onBookSelected = { book ->
+                showAllContinueReading = false
+                onBookSelected(book)
+            },
+        )
+    }
+}
+ 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BookListRow(
@@ -1791,16 +1802,6 @@ private fun FolderPreviewCard(
         }
     }
 
-    if (showAllContinueReading && state.continueReading.isNotEmpty()) {
-        ContinueReadingDialog(
-            entries = state.continueReading,
-            onDismiss = { showAllContinueReading = false },
-            onBookSelected = { book ->
-                showAllContinueReading = false
-                onBookSelected(book)
-            },
-        )
-    }
 }
 
 @Composable
