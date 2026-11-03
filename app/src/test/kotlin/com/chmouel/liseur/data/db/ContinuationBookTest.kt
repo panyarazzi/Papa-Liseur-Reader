@@ -90,7 +90,18 @@ class ContinuationBookTest {
         // A reader-marked unread book remains in the queue even beyond
         // the usual completion boundary.
         dao.upsert(book("marked-unread", 400))
-        progress.recordLocal("marked-unread", """{"href":"last-chapter"}""", 0.99, null, null, 1_000)
+        progress.recordLocal(
+            bookUrl = "marked-unread",
+            locatorJson = """{"href":"last-chapter"}""",
+            progression = 0.99,
+            readingSecondsPerPosition = null,
+            readingPaceSamples = null,
+            readingPaceElapsedMs = null,
+            readingPaceEvidence = null,
+            status = null,
+            updatedAt = 1_000,
+            readAt = 250,
+        )
         com.chmouel.liseur.data.library.FinishedState(dao, progress, now = { 250L })
             .setFinished("marked-unread", false)
 
