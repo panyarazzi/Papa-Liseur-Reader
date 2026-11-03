@@ -39,10 +39,12 @@ class ContinuationBookTest {
     @Test
     fun `continue reading lists only real unfinished positions newest first`() = runTest {
         val dao = db.bookDao()
-        dao.upsert(book("opened-only", 900))
-        dao.upsert(book("older", 50))
-        dao.upsert(book("middle", 60))
-        dao.upsert(book("newest", 70))
+        dao.upsert(book("opened-only", 1_000))
+        // Opening timestamps deliberately disagree with the actual reading
+        // order: Continue Reading must follow read_at, not last_opened_at.
+        dao.upsert(book("older", 900))
+        dao.upsert(book("middle", 800))
+        dao.upsert(book("newest", 700))
         dao.upsert(book("finished").copy(finishedAt = 1))
         dao.upsert(book("archived").copy(archivedAt = 1))
         dao.upsert(book("hidden").copy(hiddenAt = 1))
@@ -57,6 +59,20 @@ class ContinuationBookTest {
         )
         progress.restoreBackupPosition(
             "newest", """{"href":"newest"}""", 0.6, readAt = 300, now = 1_000,
+        )
+        // Even a valid position cannot put a finished, archived, hidden or
+        // remote-only book on the local Continue Reading shelf.
+        progress.restoreBackupPosition(
+            "finished", """{"href":"finished"}""", 0.2, readAt = 700, now = 1_000,
+        )
+        progress.restoreBackupPosition(
+            "archived", """{"href":"archived"}""", 0.2, readAt = 600, now = 1_000,
+        )
+        progress.restoreBackupPosition(
+            "hidden", """{"href":"hidden"}""", 0.2, readAt = 500, now = 1_000,
+        )
+        progress.restoreBackupPosition(
+            "remote", """{"href":"remote"}""", 0.2, readAt = 400, now = 1_000,
         )
         // A row created for a declined sync has no position and must not
         // appear, even though it has a recent timestamp.
