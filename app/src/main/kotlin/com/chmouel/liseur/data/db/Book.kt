@@ -267,10 +267,9 @@ interface BookDao {
      * Books the reader has put into their reading queue, whether by
      * opening them to save for later or by actually reading them.
      *
-     * A real position is ranked by when reading happened; a book with
-     * no real position is ranked by when it was last opened. Empty
-     * placeholder rows do not count as reading evidence, but they do
-     * not hide a book that the reader deliberately opened.
+     * Each book is ranked by its latest opening or real reading activity.
+     * Empty placeholder rows do not count as reading evidence, but they
+     * do not hide a book that the reader deliberately opened.
      *
      * Completion is decided by the reader-facing finished state
      * (finished_at), never by a percentage threshold here. In
