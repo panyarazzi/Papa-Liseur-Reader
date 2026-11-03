@@ -263,6 +263,33 @@ interface BookDao {
     @Query(MOST_RECENT)
     suspend fun mostRecentlyOpened(): Book?
 
+    /**
+     * Every book with a real saved reading position, newest reading first.
+     *
+     * Unlike [observeMostRecent], this is deliberately not based on
+     * last_opened_at: merely opening a book is not enough to put it on the
+     * Continue Reading shelf. Placeholder progress rows are excluded too.
+     * A missing progression is still eligible when a non-empty locator
+     * exists, since synced positions do not always carry a percentage.
+     */
+    @Query(
+        """
+        SELECT books.* FROM books
+        INNER JOIN reading_progress ON reading_progress.book_url = books.url
+        WHERE books.archived_at IS NULL
+          AND books.hidden_at IS NULL
+          AND books.finished_at IS NULL
+          AND (books.local_uri IS NOT NULL OR books.download_state = 'DOWNLOADED')
+          AND (reading_progress.total_progression IS NOT NULL
+               OR reading_progress.locator_json != '{}')
+          AND (reading_progress.total_progression IS NULL
+               OR reading_progress.total_progression < :finishedProgression)
+        ORDER BY COALESCE(reading_progress.read_at, reading_progress.updated_at) DESC,
+                 books.url
+        """,
+    )
+    fun observeContinueReading(finishedProgression: Double): Flow<List<Book>>
+
     /** A placeholder progress row's timestamp records its creation, not reading, so it is not ranked. */
     @Query("""
         SELECT books.* FROM books
