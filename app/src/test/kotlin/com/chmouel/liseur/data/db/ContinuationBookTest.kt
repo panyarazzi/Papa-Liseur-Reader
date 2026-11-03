@@ -3,6 +3,7 @@ package com.chmouel.liseur.data.db
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.chmouel.liseur.domain.FINISHED_PROGRESSION
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -34,6 +35,47 @@ class ContinuationBookTest {
     )
 
     private suspend fun selected() = db.bookDao().continuationBook(FINISHED_PROGRESSION)?.url
+
+    @Test
+    fun `continue reading lists only real unfinished positions newest first`() = runTest {
+        val dao = db.bookDao()
+        dao.upsert(book("opened-only", 900))
+        dao.upsert(book("older", 50))
+        dao.upsert(book("middle", 60))
+        dao.upsert(book("newest", 70))
+        dao.upsert(book("finished").copy(finishedAt = 1))
+        dao.upsert(book("archived").copy(archivedAt = 1))
+        dao.upsert(book("hidden").copy(hiddenAt = 1))
+        dao.upsert(book("remote").copy(downloadState = DownloadState.REMOTE))
+
+        val progress = db.readingProgressDao()
+        progress.restoreBackupPosition(
+            "older", """{"href":"older"}""", 0.2, readAt = 100, now = 1_000,
+        )
+        progress.restoreBackupPosition(
+            "middle", """{"href":"middle"}""", 0.4, readAt = 200, now = 1_000,
+        )
+        progress.restoreBackupPosition(
+            "newest", """{"href":"newest"}""", 0.6, readAt = 300, now = 1_000,
+        )
+        // A row created for a declined sync has no position and must not
+        // appear, even though it has a recent timestamp.
+        progress.restoreBackupPosition(
+            "opened-only", "{}", null, readAt = 900, now = 1_000,
+        )
+        // A book at the completion boundary is no longer a continuation.
+        dao.upsert(book("at-completion", 80))
+        progress.restoreBackupPosition(
+            "at-completion", """{"href":"end"}""", FINISHED_PROGRESSION,
+            readAt = 800, now = 1_000,
+        )
+
+        val urls = dao.observeContinueReading(FINISHED_PROGRESSION)
+            .first()
+            .map { it.url }
+
+        assertEquals(listOf("newest", "middle", "older"), urls)
+    }
 
     @Test
     fun `skips newer ineligible books without changing ordinary most recent`() = runTest {
