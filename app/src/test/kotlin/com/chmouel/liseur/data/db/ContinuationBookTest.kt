@@ -39,6 +39,7 @@ class ContinuationBookTest {
     fun `continue reading includes queued books and respects reader finished state`() = runTest {
         val dao = db.bookDao()
         dao.upsert(book("opened-only", 1_000))
+        dao.upsert(book("placeholder-queue", 950))
         // Opened-only books are intentional queue entries, even without a
         // saved locator or progression. Their opening time ranks them.
         dao.upsert(book("older", 900))
@@ -84,21 +85,24 @@ class ContinuationBookTest {
         // A placeholder row is not a reading position. The book still
         // appears because the reader opened it to queue it for later.
         progress.restoreBackupPosition(
-            "opened-only", "{}", null, readAt = 900, now = 1_000,
+            "placeholder-queue", "{}", null, readAt = 900, now = 1_000,
         )
         // A reader-marked unread book remains in the queue even beyond
         // the usual completion boundary.
         dao.upsert(book("marked-unread", 400))
         progress.recordLocal("marked-unread", """{"href":"last-chapter"}""", 0.99, null, null, 1_000)
-        com.chmouel.liseur.data.library.FinishedState(dao, progress)
+        com.chmouel.liseur.data.library.FinishedState(dao, progress, now = { 250L })
             .setFinished("marked-unread", false)
 
-        val urls = dao.observeContinueReading(FINISHED_PROGRESSION)
+        val urls = dao.observeContinueReading()
             .first()
             .map { it.url }
 
         assertEquals(
-            listOf("opened-only", "restored-remote", "newest", "middle", "older", "marked-unread"),
+            listOf(
+                "opened-only", "placeholder-queue", "older", "middle",
+                "newest", "marked-unread", "restored-remote",
+            ),
             urls,
         )
     }
