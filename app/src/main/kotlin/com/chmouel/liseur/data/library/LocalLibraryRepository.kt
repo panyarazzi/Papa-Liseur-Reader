@@ -15,6 +15,7 @@ import com.chmouel.liseur.data.db.DownloadState
 import com.chmouel.liseur.data.db.LibraryFolder
 import com.chmouel.liseur.data.db.LibraryFolderDao
 import com.chmouel.liseur.data.remote.ServerKind
+import com.chmouel.liseur.domain.FINISHED_PROGRESSION
 import com.chmouel.liseur.domain.SeriesMetadata
 import com.chmouel.liseur.domain.isSameWork
 import com.chmouel.liseur.domain.workIdOf
@@ -72,6 +73,7 @@ class LocalLibraryRepository(
 ) {
     val books: Flow<List<Book>> = bookDao.observeAll()
     val mostRecent: Flow<Book?> = bookDao.observeMostRecent()
+    val continueReading: Flow<List<Book>> = bookDao.observeContinueReading(FINISHED_PROGRESSION)
     val folders: Flow<List<LibraryFolder>> = folderDao.observeAll()
 
     /**
