@@ -290,14 +290,14 @@ interface BookDao {
               OR reading_progress.total_progression IS NOT NULL
               OR reading_progress.locator_json != '{}'
           )
-        ORDER BY COALESCE(
+        ORDER BY MAX(
+            COALESCE(books.last_opened_at, 0),
             CASE
                 WHEN reading_progress.total_progression IS NOT NULL
                      OR reading_progress.locator_json != '{}'
-                THEN COALESCE(reading_progress.read_at, reading_progress.updated_at)
-            END,
-            books.last_opened_at,
-            0
+                THEN COALESCE(reading_progress.read_at, reading_progress.updated_at, 0)
+                ELSE 0
+            END
         ) DESC, books.url
         """,
     )
