@@ -4287,6 +4287,7 @@ internal fun ReaderScreen(
                     val nextPageDescription = stringResource(R.string.reader_next_page)
                     val previousChapterDescription = stringResource(R.string.reader_previous_chapter)
                     val nextChapterDescription = stringResource(R.string.reader_next_chapter)
+                    val typographyDescription = stringResource(R.string.reader_typography)
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
@@ -4313,7 +4314,7 @@ internal fun ReaderScreen(
                         }
                         IconButton(
                             onClick = { sheet = ReaderSheet.TYPOGRAPHY },
-                            modifier = Modifier.semantics { contentDescription = stringResource(R.string.reader_typography) },
+                            modifier = Modifier.semantics { contentDescription = typographyDescription },
                         ) { Text("Aa", style = MaterialTheme.typography.titleMedium) }
                         IconButton(onClick = { showToc = true }) {
                             Icon(Icons.AutoMirrored.Outlined.List, contentDescription = stringResource(R.string.reader_contents))
