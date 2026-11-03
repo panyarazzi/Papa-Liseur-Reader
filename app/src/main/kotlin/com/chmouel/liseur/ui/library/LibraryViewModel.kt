@@ -176,7 +176,7 @@ data class LibraryUiState(
      * for the grid that draws it.
      */
     val shelfEntries: List<ShelfEntry> = emptyList(),
-    val continueReading: ContinueReading? = null,
+    val continueReading: List<ContinueReading> = emptyList(),
     val catalogStatus: CatalogStatus = CatalogStatus.Idle,
     val downloads: Map<String, DownloadProgress> = emptyMap(),
     val canDownload: Boolean = true,
