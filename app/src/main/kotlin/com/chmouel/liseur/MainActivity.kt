@@ -1131,6 +1131,7 @@ private fun LibraryRoute(
                 context.startActivity(ReaderActivity.intent(context, it, book.url))
             }
         },
+        onHideFromContinueReading = viewModel::hideFromContinueReading,
         onOpenSettings = onOpenSettings,
         onOpenStats = onOpenStats,
         onOpenBookStats = onOpenBookStats,
