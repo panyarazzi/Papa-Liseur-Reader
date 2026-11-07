@@ -418,6 +418,9 @@ class AppContainer(context: Context) {
         ),
         companion = CompanionBackupRepository({ companionStore }, database.bookDao(), ::companionStoreExists),
         translations = com.chmouel.liseur.data.library.TranslationBackupRepository({ savedTranslations }, database.bookDao()),
+        bookSettings = com.chmouel.liseur.data.library.BookSettingsBackupRepository(
+            database.bookDao(), database.typographyDao(), database.customTypographyDao(),
+        ),
         restoreAppSettings = { values -> serverConnections.restore(values) { appSettings.restoreBackupValues(values) } },
         exportConnections = { connectionBackup.export() },
         prepareConnectionRestore = { payload, values -> connectionBackup.prepareRestore(payload, values) },
