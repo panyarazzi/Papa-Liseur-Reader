@@ -927,6 +927,7 @@
     <string name="licences_read">%1$s \u2014 read it</string>
     <string name="read_book">Read</string>
     <string name="book_actions">Book actions</string>
+    <string name="remove_from_continue_reading">Remove from Continue Reading</string>
     <string name="state_downloading">Downloading</string>
     <string name="state_download_queued">Waiting to download</string>
 
