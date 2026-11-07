@@ -44,7 +44,7 @@ import androidx.sqlite.execSQL
         GlossaryEntry::class,
         BookAiPreferences::class,
     ],
-    version = 72,
+    version = 73,
     exportSchema = true,
 )
 abstract class LiseurDatabase : RoomDatabase() {
@@ -90,6 +90,12 @@ abstract class LiseurDatabase : RoomDatabase() {
                 connection.execSQL(
                     "CREATE TABLE IF NOT EXISTS `book_custom_typography` (`book_url` TEXT NOT NULL, `line_height` REAL, `text_indent` REAL, PRIMARY KEY(`book_url`))",
                 )
+            }
+        }
+
+        val MIGRATION_72_73 = object : Migration(72, 73) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL("ALTER TABLE books ADD COLUMN continue_reading_hidden_at INTEGER")
             }
         }
 
@@ -2000,6 +2006,7 @@ abstract class LiseurDatabase : RoomDatabase() {
             MIGRATION_69_70,
             MIGRATION_70_71,
             MIGRATION_71_72,
+            MIGRATION_72_73,
         )
     }
 }
