@@ -213,6 +213,8 @@ data class Book(
     @ColumnInfo(name = "source_path") val sourcePath: String? = null,
     /** Display name of the source file, independent of the EPUB metadata title. */
     @ColumnInfo(name = "source_file_name") val sourceFileName: String? = null,
+    /** When this book was dismissed from Continue Reading; new reading activity brings it back. */
+    @ColumnInfo(name = "continue_reading_hidden_at") val continueReadingHiddenAt: Long? = null,
 ) {
     val finished: Boolean get() = finishedAt != null
 
@@ -304,6 +306,12 @@ interface BookDao {
           AND books.finished_at IS NULL
           AND (books.local_uri IS NOT NULL OR books.download_state = 'DOWNLOADED')
           AND (
+              books.continue_reading_hidden_at IS NULL
+              OR books.last_opened_at > books.continue_reading_hidden_at
+              OR reading_progress.read_at > books.continue_reading_hidden_at
+              OR (reading_progress.read_at IS NULL AND reading_progress.updated_at > books.continue_reading_hidden_at)
+          )
+          AND (
               books.last_opened_at IS NOT NULL
               OR reading_progress.total_progression IS NOT NULL
               OR reading_progress.locator_json != '{}'
@@ -333,6 +341,10 @@ interface BookDao {
     /** Puts a book away, or brings it back to the shelf. */
     @Query("UPDATE books SET archived_at = :archivedAt WHERE url = :url")
     suspend fun setArchived(url: String, archivedAt: Long?)
+
+    /** Dismisses a book from Continue Reading without changing its library or history row. */
+    @Query("UPDATE books SET continue_reading_hidden_at = :hiddenAt WHERE url = :url")
+    suspend fun hideFromContinueReading(url: String, hiddenAt: Long?)
 
     /**
      * Ordered, so that "the first thirty of them" means the same thing
