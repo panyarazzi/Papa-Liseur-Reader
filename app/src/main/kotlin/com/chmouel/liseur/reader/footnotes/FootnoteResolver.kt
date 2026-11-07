@@ -5,66 +5,47 @@ import org.jsoup.nodes.Element
 import org.jsoup.safety.Safelist
 
 /**
- * Lifting a note out of the page it was banished to.
- *
- * Readium recognises one spelling of a footnote, `epub:type="noteref"`, and
- * hands its content back before the tap is even forwarded. That covers books
- * made carefully — Standard Ebooks, most EPUB3 — and misses everything else:
- * a converted EPUB2 whose markers are plain anchors, a book that uses the
- * ARIA vocabulary and not the EPUB one, an `<aside>` sitting quietly at the
- * foot of the chapter.
- *
- * So the target is judged by what it *is* rather than by how it was linked
- * to. Three ways of saying "this is a note" are accepted, because between
- * them they cover every book worth opening:
- *
- *  - `epub:type` naming a note of any kind;
- *  - the ARIA `doc-footnote` / `doc-endnote` role;
- *  - an `<aside>`, which is what the EPUB spec itself suggests notes be.
- *
- * Everything else is a cross-reference, not a note, and the reader asked to
- * go there. That distinction is the whole point of this file: guessing wrong
- * in one direction pops up a chapter, and in the other throws the reader out
- * of the page for a single line of Latin.
+ * Resolves EPUB footnote targets, including the common EPUB2 list-item form.
  */
 object FootnoteResolver {
 
     /**
      * The note identified by [fragment] in [html], or null if there is none.
-     *
-     * The returned HTML is sanitised the same way Readium sanitises its own,
-     * so both paths hand the same shape of thing to the card and neither can
-     * carry a script into it.
+     * The returned HTML is sanitised before it is shown in the footnote card.
      */
     fun noteAt(html: String, fragment: String): String? {
         val document = runCatching { Jsoup.parse(html) }.getOrNull() ?: return null
         val element = document.getElementById(fragment) ?: return null
         if (!isNote(element)) return null
 
-        // A list item is the usual home of an endnote, and the number in
-        // front of it is drawn by the list, not stored in the note, so its
-        // inner HTML loses nothing.
         val content = element.html()
         if (content.isBlank()) return null
         return Jsoup.clean(content, Safelist.relaxed()).takeIf { it.isNotBlank() }
     }
 
-    /**
-     * Whether [element] is a note rather than somewhere the reader asked to go.
-     *
-     * The vocabulary itself lives in [NoteVocabulary], because the stylesheet
-     * injected into the page has to reach the same verdict about the same
-     * element; see there for why.
-     */
     private fun isNote(element: Element): Boolean {
-        // Jsoup lowercases attribute names but keeps the namespace prefix, so
-        // the EPUB attribute survives as `epub:type`. `type` alone is the
-        // shape it takes once a sanitiser has flattened the namespace.
+        // Jsoup lowercases attribute names but keeps the namespace prefix.
         val epubType = element.attr("epub:type").ifEmpty { element.attr("type") }
-        return NoteVocabulary.isNote(
-            epubType = epubType,
-            role = element.attr("role"),
-            tagName = element.normalName(),
-        )
+        if (NoteVocabulary.isNote(
+                epubType = epubType,
+                role = element.attr("role"),
+                tagName = element.normalName(),
+            )
+        ) return true
+
+        // EPUB2 converters commonly emit <li id="..."> with an explicit
+        // <a class="back-link"> to the citation instead of epub:type/role.
+        // Require that backlink evidence; a plain list item is not enough.
+        if (element.normalName() != NoteVocabulary.LEGACY_LIST_NOTE_TAG) return false
+        return element.select("a[href]").any { anchor ->
+            val classes = anchor.classNames()
+            val backlinkType = anchor.attr("epub:type").ifEmpty { anchor.attr("type") }
+            NoteVocabulary.isLegacyListNote(
+                tagName = element.normalName(),
+                backlinkClasses = classes,
+                backlinkEpubType = backlinkType,
+                backlinkRole = anchor.attr("role"),
+            )
+        }
     }
 }
