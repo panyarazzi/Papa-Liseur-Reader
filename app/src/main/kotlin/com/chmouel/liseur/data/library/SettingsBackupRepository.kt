@@ -236,7 +236,7 @@ class SettingsBackupRepository(
             }
 
             val manifest = JSONObject()
-                .put("format", FORMAT)
+                .put("format", if (bookSettingsMetadata != null) FORMAT else FORMAT - 1)
                 .put("application", "liseur")
                 .put(
                     "entries",
