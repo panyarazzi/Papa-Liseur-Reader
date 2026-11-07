@@ -20,7 +20,8 @@ object FootnoteResolver {
 
         val content = element.html()
         if (content.isBlank()) return null
-        return Jsoup.clean(content, Safelist.relaxed()).takeIf { it.isNotBlank() }
+        val safelist = Safelist.relaxed().addAttributes(":all", "class")
+        return Jsoup.clean(content, safelist).takeIf { it.isNotBlank() }
     }
 
     private fun isNote(element: Element): Boolean {
