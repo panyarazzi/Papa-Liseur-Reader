@@ -589,6 +589,9 @@ class AppSettingsRepository(
         val storedMode = stored[Keys.VOLUME_KEY_MODE]
         val legacyEnabled = stored[Keys.LEGACY_VOLUME_KEYS]
         return stored.backupJson(APP_BACKUP_TYPES.keys).apply {
+            // Defaults are not necessarily written to DataStore. Persist the effective
+            // choice too, so a backup is explicit even when the reader uses Standard.
+            put("tap_zones", stored[Keys.TAP_ZONES] ?: TapZones.Default.id)
             remove("volume_keys_turn_pages")
             if (storedMode == null && legacyEnabled != null) {
                 put(
