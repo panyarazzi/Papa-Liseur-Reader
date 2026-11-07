@@ -182,6 +182,7 @@ fun LibraryScreen(
     onAddBook: () -> Unit,
     onAddFolder: () -> Unit,
     onBookSelected: (Book) -> Unit,
+    onHideFromContinueReading: (Book) -> Unit = {},
     onOpenSettings: () -> Unit,
     onOpenStats: () -> Unit,
     /** Opens the sheet that turns translation on; shown in the menu only when set. */
@@ -1489,6 +1490,7 @@ private fun BookGrid(
                         entries = entries,
                         onBookSelected = onBookSelected,
                         onShowAll = { showAllContinueReading = true },
+                        onHideFromContinueReading = onHideFromContinueReading,
                     )
                 }
             }
@@ -1676,6 +1678,7 @@ private fun BookGrid(
                 showAllContinueReading = false
                 onBookSelected(book)
             },
+            onHideFromContinueReading = onHideFromContinueReading,
         )
     }
 }
@@ -1809,6 +1812,7 @@ private fun ContinueReadingSection(
     entries: List<ContinueReading>,
     onBookSelected: (Book) -> Unit,
     onShowAll: () -> Unit,
+    onHideFromContinueReading: (Book) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -1857,7 +1861,8 @@ private fun ContinueReadingSection(
                                 book = entry.book,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .aspectRatio(2f / 3f),
+                                    .aspectRatio(2f / 3f)
+                                    .clickable(role = Role.Button) { onBookSelected(entry.book) },
                             )
                         }
                     }
@@ -1934,7 +1939,9 @@ private fun ContinueReadingDialog(
     entries: List<ContinueReading>,
     onDismiss: () -> Unit,
     onBookSelected: (Book) -> Unit,
+    onHideFromContinueReading: (Book) -> Unit,
 ) {
+    var expandedBookUrl by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.continue_reading)) },
@@ -1981,6 +1988,23 @@ private fun ContinueReadingDialog(
                                     text = "${(progression * 100).toInt()}%",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Box {
+                            IconButton(onClick = { expandedBookUrl = entry.book.url }) {
+                                Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.book_actions))
+                            }
+                            DropdownMenu(
+                                expanded = expandedBookUrl == entry.book.url,
+                                onDismissRequest = { expandedBookUrl = null },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.remove_from_continue_reading)) },
+                                    onClick = {
+                                        onHideFromContinueReading(entry.book)
+                                        expandedBookUrl = null
+                                    },
                                 )
                             }
                         }
