@@ -150,7 +150,7 @@ internal object FootnoteLayout {
             var links = el.getElementsByTagName("a");
             for (var i = 0; i < links.length; i++) {
               var link = links[i];
-              var classes = String(link.getAttribute("class") || "").split(/\\s+/);
+              var classes = String(link.getAttribute("class") || "").split(/\s+/);
               if (classes.indexOf("back-link") >= 0 ||
                   classes.indexOf("backlink") >= 0 ||
                   names(typeOf(link), ["backlink"]) ||
