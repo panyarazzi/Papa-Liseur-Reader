@@ -29,6 +29,9 @@ interface BookCustomTypographyDao {
     @Query("SELECT * FROM book_custom_typography WHERE book_url = :bookUrl")
     suspend fun get(bookUrl: String): BookCustomTypography?
 
+    @Query("SELECT * FROM book_custom_typography ORDER BY book_url")
+    suspend fun all(): List<BookCustomTypography>
+
     @Upsert
     suspend fun upsert(typography: BookCustomTypography)
 
