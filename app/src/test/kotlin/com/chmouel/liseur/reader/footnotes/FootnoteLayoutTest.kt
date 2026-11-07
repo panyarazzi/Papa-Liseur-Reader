@@ -57,10 +57,10 @@ class FootnoteLayoutTest {
 
     @Test
     fun `the live page recognises EPUB2 list notes only with backlink evidence`() {
-        assertTrue(FootnoteLayout.SCRIPT.contains('localName || "").toLowerCase() !== "li"'))
-        assertTrue(FootnoteLayout.SCRIPT.contains('classes.indexOf("back-link")'))
-        assertTrue(FootnoteLayout.SCRIPT.contains('classes.indexOf("backlink")'))
-        assertTrue(FootnoteLayout.SCRIPT.contains('names(typeOf(link), ["backlink"])'))
+        assertTrue(FootnoteLayout.SCRIPT.contains("localName || \"\").toLowerCase() !== \"li\""))
+        assertTrue(FootnoteLayout.SCRIPT.contains("classes.indexOf(\"back-link\")"))
+        assertTrue(FootnoteLayout.SCRIPT.contains("classes.indexOf(\"backlink\")"))
+        assertTrue(FootnoteLayout.SCRIPT.contains("names(typeOf(link), [\"backlink\"])"))
     }
 
     @Test
