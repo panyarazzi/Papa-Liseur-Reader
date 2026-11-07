@@ -1050,6 +1050,13 @@ class LibraryViewModel(
         }
     }
 
+    /** Hides a book from Continue Reading only; its file, shelf entry and history remain intact. */
+    fun hideFromContinueReading(book: Book) {
+        viewModelScope.launch {
+            bookDao.hideFromContinueReading(book.url, System.currentTimeMillis())
+        }
+    }
+
     /**
      * Puts a book away, or brings it back. Nothing is deleted and nothing
      * stops syncing: the book is simply not on the shelf.
