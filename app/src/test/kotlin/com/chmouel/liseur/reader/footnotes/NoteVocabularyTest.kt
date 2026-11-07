@@ -21,7 +21,7 @@ class NoteVocabularyTest {
 
     @Test
     fun `one word among several is enough`() {
-        assertTrue(NoteVocabulary.isNote("backlink footnote", "", "div"))
+        assertTrue(NoteVocabulary.isNote("backmatter footnote", "", "div"))
     }
 
     @Test
@@ -59,10 +59,17 @@ class NoteVocabularyTest {
     }
 
     @Test
+    fun `EPUB2 list notes require backlink evidence`() {
+        assertTrue(NoteVocabulary.isLegacyListNote("li", setOf("back-link"), "", ""))
+        assertTrue(NoteVocabulary.isLegacyListNote("LI", setOf("backlink"), "", ""))
+        assertTrue(NoteVocabulary.isLegacyListNote("li", emptySet(), "epub:backlink", ""))
+        assertTrue(NoteVocabulary.isLegacyListNote("li", emptySet(), "", "doc-backlink"))
+        assertFalse(NoteVocabulary.isLegacyListNote("li", emptySet(), "", ""))
+        assertFalse(NoteVocabulary.isLegacyListNote("p", setOf("back-link"), "", ""))
+    }
+
+    @Test
     fun `a token list may be written across any whitespace`() {
-        // The injected script splits on `/\s+/`, and a book is free to wrap
-        // a long `epub:type` across a line. Reading only spaces here made
-        // the two disagree about the same element.
         assertTrue(NoteVocabulary.isNote("backmatter\tfootnote", "", "div"))
         assertTrue(NoteVocabulary.isNote("backmatter\nfootnote", "", "div"))
         assertTrue(NoteVocabulary.isNote("", "doc-chapter\tdoc-footnote", "div"))
