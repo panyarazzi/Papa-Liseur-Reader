@@ -145,10 +145,27 @@ internal object FootnoteLayout {
             return false;
           }
 
+          function hasLegacyBacklink(el) {
+            if (String(el.localName || "").toLowerCase() !== "li") return false;
+            var links = el.getElementsByTagName("a");
+            for (var i = 0; i < links.length; i++) {
+              var link = links[i];
+              var classes = String(link.getAttribute("class") || "").split(/\\s+/);
+              if (classes.indexOf("back-link") >= 0 ||
+                  classes.indexOf("backlink") >= 0 ||
+                  names(typeOf(link), ["backlink"]) ||
+                  names(link.getAttribute("role") || "", ["doc-backlink"])) {
+                return true;
+              }
+            }
+            return false;
+          }
+
           function isNote(el) {
             if (names(typeOf(el), NOTE_TYPES)) return true;
             if (names(el.getAttribute("role") || "", NOTE_ROLES)) return true;
-            return String(el.localName || "").toLowerCase() === NOTE_TAG;
+            if (String(el.localName || "").toLowerCase() === NOTE_TAG) return true;
+            return hasLegacyBacklink(el);
           }
 
           function isRef(el) {
