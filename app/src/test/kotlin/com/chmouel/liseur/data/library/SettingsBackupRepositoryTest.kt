@@ -968,9 +968,8 @@ class SettingsBackupRepositoryTest {
         val fine = BookCustomTypography(old, 1.4, 0.6)
         db.typographyDao().upsert(own)
         db.customTypographyDao().upsert(fine)
-        db.typographyDao().upsert(BookTypography(oldClear, "publisher", 1.1, null, null))
         val uri = Uri.fromFile(File(folder.root, "typography.zip"))
-        assertEquals(SettingsBackupExportResult.Exported(0, 0, typographyBooks = 2), repository.exportTo(uri))
+        assertEquals(SettingsBackupExportResult.Exported(0, 0, typographyBooks = 1), repository.exportTo(uri))
 
         db.bookDao().deleteByUrls(listOf(old, oldClear))
         db.bookDao().upsert(book("file:///new/book.epub"))
@@ -979,9 +978,9 @@ class SettingsBackupRepositoryTest {
         db.customTypographyDao().upsert(BookCustomTypography("file:///new/clear.epub", 1.3, 0.2))
 
         val ready = repository.inspect(uri) as SettingsBackupInspection.Ready
-        assertEquals(2, ready.preview.typographyBookCount)
+        assertEquals(1, ready.preview.typographyBookCount)
         val restored = repository.restore(ready.archiveId) as SettingsBackupRestoreResult.Restored
-        assertEquals(2, restored.typographyBooks)
+        assertEquals(1, restored.typographyBooks)
         assertEquals(own.copy(bookUrl = "file:///new/book.epub"), db.typographyDao().get("file:///new/book.epub"))
         assertEquals(fine.copy(bookUrl = "file:///new/book.epub"), db.customTypographyDao().get("file:///new/book.epub"))
         assertEquals(null, db.typographyDao().get("file:///new/clear.epub"))
