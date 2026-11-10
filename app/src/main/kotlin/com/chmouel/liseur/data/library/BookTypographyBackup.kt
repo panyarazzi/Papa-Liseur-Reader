@@ -6,6 +6,9 @@ import com.chmouel.liseur.data.db.BookTypography
 import com.chmouel.liseur.data.db.LiseurDatabase
 import com.chmouel.liseur.data.settings.ReadingFont
 import com.chmouel.liseur.data.settings.TypographyRange
+import com.chmouel.liseur.domain.KnownBook
+import com.chmouel.liseur.domain.matchBackedUpBookUrl
+import java.util.Locale
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -92,17 +95,24 @@ internal class BookTypographyBackup(private val database: LiseurDatabase?) {
         if (records.isEmpty()) return emptyList()
         val books = db.bookDao().allOnce()
         val byUrl = books.associateBy { it.url }
-        val fallbackIdentityCounts = records.groupingBy { it.title to it.author }.eachCount()
+        fun identity(title: String, author: String?): Pair<String, String?>? {
+            val normalizedTitle = title.trim().lowercase(Locale.ROOT).takeIf { it.isNotEmpty() } ?: return null
+            val normalizedAuthor = author?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
+            return normalizedTitle to normalizedAuthor
+        }
+        val fallbackIdentityCounts = records.groupingBy { identity(it.title, it.author) }.eachCount()
+        val known = books.map { KnownBook(it.url, it.title, it.author) }
         val claimed = mutableSetOf<String>()
         return buildList {
             records.forEach { record ->
-                val target = byUrl[record.bookUrl] ?: if (
-                    record.title.isNotBlank() && fallbackIdentityCounts[record.title to record.author] == 1
-                ) {
-                    books.filter { it.title == record.title && it.author == record.author }.singleOrNull()
+                val targetUrl = if (record.bookUrl in byUrl) {
+                    record.bookUrl
+                } else if (fallbackIdentityCounts[identity(record.title, record.author)] == 1) {
+                    matchBackedUpBookUrl(record.bookUrl, record.title, record.author, known)
                 } else {
                     null
                 }
+                val target = targetUrl?.let(byUrl::get)
                 if (target != null && claimed.add(target.url)) {
                     add(
                         MatchedTypography(

@@ -972,7 +972,7 @@ class SettingsBackupRepositoryTest {
         assertEquals(SettingsBackupExportResult.Exported(0, 0, typographyBooks = 1), repository.exportTo(uri))
 
         db.bookDao().deleteByUrls(listOf(old, oldClear))
-        db.bookDao().upsert(book("file:///new/book.epub"))
+        db.bookDao().upsert(book("file:///new/book.epub").copy(title = "a BOOK ", author = "AUTHOR"))
         db.bookDao().upsert(book("file:///new/clear.epub").copy(title = "Clear me"))
         db.typographyDao().upsert(BookTypography("file:///new/clear.epub", "literata", 1.4, null, null))
         db.customTypographyDao().upsert(BookCustomTypography("file:///new/clear.epub", 1.3, 0.2))
