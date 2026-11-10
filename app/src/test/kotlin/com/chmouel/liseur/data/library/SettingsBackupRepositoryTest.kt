@@ -988,6 +988,33 @@ class SettingsBackupRepositoryTest {
     }
 
     @Test
+    fun `invalid per-book typography is rejected before settings are written`() = runTest {
+        val app = AppSettingsRepository(store("invalid-typography-app.preferences_pb"))
+        val reader = ReaderPreferencesRepository(store("invalid-typography-reader.preferences_pb"))
+        val settings = JSONObject().put("app", JSONObject().put("theme_mode", "dark")).put("reader", JSONObject())
+        val invalidTypography = JSONObject().put("format", 1).put("application", "liseur").put(
+            "books", org.json.JSONArray().put(
+                JSONObject().put("book_url", "file:///book.epub").put("title", "A book").put("author", "An author")
+                    .put("typography", JSONObject().put("font", "publisher").put("font_size", 1.0)
+                        .put("line_height", 9.0).put("page_margins", JSONObject.NULL))
+                    .put("custom", JSONObject.NULL),
+            ),
+        )
+        val file = archive("invalid-typography.zip", settings, mapOf(
+            "annotations.json" to encodeAnnotationBackup(emptyList()).toByteArray(),
+            "positions.json" to """{"format":1,"application":"liseur","positions":[]}""".toByteArray(),
+            "companion.json" to """{"format":1,"application":"liseur","recaps":[]}""".toByteArray(),
+            "typography.json" to invalidTypography.toString().toByteArray(),
+        ), format = 7)
+        val repository = repository(app, reader, UserFontRepository(context, this, loadCheck = { true }))
+        assertEquals(
+            SettingsBackupInspection.Failed(SettingsBackupFailure.INVALID_ARCHIVE),
+            repository.inspect(Uri.fromFile(file)),
+        )
+        assertEquals(ThemeMode.SYSTEM, app.settings.first().themeMode)
+    }
+
+    @Test
     fun `ambiguous source books are not mapped to one destination typography row`() = runTest {
         val app = AppSettingsRepository(store("ambiguous-typography-app.preferences_pb"))
         val reader = ReaderPreferencesRepository(store("ambiguous-typography-reader.preferences_pb"))

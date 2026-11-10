@@ -151,6 +151,7 @@ internal class BookTypographyBackup(private val database: LiseurDatabase?) {
         .put("text_indent", value.textIndent ?: JSONObject.NULL)
 
     private fun decodeTypography(url: String, json: JSONObject): BookTypography {
+        require(json.has("font") && json.has("font_size") && json.has("line_height") && json.has("page_margins"))
         val font = json.opt("font") as? String ?: throw IllegalArgumentException("Invalid font")
         require(ReadingFont.fromId(font).id == font) { "Unknown font" }
         val fontSize = requiredDouble(json, "font_size")
@@ -163,6 +164,7 @@ internal class BookTypographyBackup(private val database: LiseurDatabase?) {
     }
 
     private fun decodeCustom(url: String, json: JSONObject): BookCustomTypography {
+        require(json.has("line_height") && json.has("text_indent"))
         val value = BookCustomTypography(
             bookUrl = url,
             lineHeight = optionalDouble(json, "line_height"),
