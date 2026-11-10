@@ -1788,6 +1788,7 @@ class MigrationTest {
     fun `continue reading dismissal table arrives empty and cascades with its book`() {
         helper.createDatabase(TEST_DB, 72).close()
         helper.runMigrationsAndValidate(TEST_DB, 73, true, LiseurDatabase.MIGRATION_72_73).use { db ->
+            db.execSQL("PRAGMA foreign_keys = ON")
             db.execSQL("INSERT INTO books (url, title, added_at, download_state, series_checked, series_override, series_claim_pending, series_claim_reset, series_index_override) VALUES ('book', 'Book', 1, 'DOWNLOADED', 0, 0, 0, 0, 0)")
             db.execSQL("INSERT INTO continue_reading_dismissals (book_url) VALUES ('book')")
             db.query("SELECT book_url FROM continue_reading_dismissals").use { cursor -> assertTrue(cursor.moveToFirst()); assertEquals("book", cursor.getString(0)) }
