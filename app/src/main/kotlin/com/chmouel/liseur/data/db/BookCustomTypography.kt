@@ -32,6 +32,9 @@ interface BookCustomTypographyDao {
     @Upsert
     suspend fun upsert(typography: BookCustomTypography)
 
+    @Query("SELECT * FROM book_custom_typography")
+    suspend fun all(): List<BookCustomTypography>
+
     @Query("DELETE FROM book_custom_typography WHERE book_url = :bookUrl")
     suspend fun clear(bookUrl: String)
 }

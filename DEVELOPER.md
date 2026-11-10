@@ -110,9 +110,9 @@ keytool -genkeypair -v -keystore /path/to/your.p12 -storetype PKCS12 \
 
 A backup is a ZIP with a versioned `manifest.json`, `settings.json`,
 `annotations.json`, `positions.json`, `companion.json`, optional
-`fonts/<sha256>.(ttf|otf)`, (v5) optional `connections.enc.json` and (v6)
-optional `translations.json`. Versions 1-5 stay readable and leave data
-they lack unchanged.
+`fonts/<sha256>.(ttf|otf)`, (v5) optional `connections.enc.json`, (v6)
+optional `translations.json` and (v7) `typography.json`. Versions 1-6
+stay readable and leave data they lack unchanged.
 
 - Manifest records each entry's size and SHA-256. Reject malformed known
   fields, unsafe or duplicate paths, checksum mismatches, unsupported
@@ -126,6 +126,12 @@ they lack unchanged.
 - Settings use explicit allowlists per store; transient notices excluded;
   unset keys stay absent so restore leaves destination values alone. Fonts
   keep content-based names and go through the normal font importer.
+- `typography.json` records per-book Separate Typography and Custom Line
+  Spacing / Paragraph Indent, including explicit absence so restore can
+  clear destination overrides. Books match by URL or unambiguous title and
+  author; ambiguous, duplicate or missing matches are skipped. Both tables
+  restore together in one Room transaction. `tap_zones` accepts every
+  supported mode, including `tap_anywhere`.
 - Service addresses are included; credentials and API keys are excluded
   unless "Include accounts, services and passwords" (unchecked, password
   entered twice) is set; then only `connections.enc.json` (library

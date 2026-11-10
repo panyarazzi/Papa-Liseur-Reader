@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import android.util.Log
 import com.chmouel.liseur.data.remote.UnreadableCredentialException
+import com.chmouel.liseur.data.db.LiseurDatabase
 import com.chmouel.liseur.data.settings.AppSettingsRepository
 import com.chmouel.liseur.data.settings.APP_BACKUP_TYPES
 import com.chmouel.liseur.data.settings.AutoScrollPreference
@@ -14,6 +15,7 @@ import com.chmouel.liseur.data.settings.READER_BACKUP_TYPES
 import com.chmouel.liseur.data.settings.ReaderPreferencesRepository
 import com.chmouel.liseur.data.settings.ServerSettings
 import com.chmouel.liseur.data.settings.TypographyRange
+import com.chmouel.liseur.data.settings.TapZones
 import com.chmouel.liseur.data.settings.UserFontImport
 import com.chmouel.liseur.data.settings.UserFontRepository
 import com.chmouel.liseur.data.settings.VolumeKeyMode
@@ -48,6 +50,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import androidx.room.withTransaction
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -78,6 +81,7 @@ data class SettingsBackupPreview(
     val companionRecapCount: Int = 0,
     val includesConnections: Boolean = false,
     val translationBookCount: Int = 0,
+    val typographyBookCount: Int = 0,
 )
 
 sealed interface SettingsBackupInspection {
@@ -92,6 +96,7 @@ sealed interface SettingsBackupExportResult {
         val liseurSyncNeedsPairing: Boolean = false,
         val translationBooks: Int = 0,
         val translationBooksSkipped: Int = 0,
+        val typographyBooks: Int = 0,
     ) : SettingsBackupExportResult
     data class Failed(val failure: SettingsBackupFailure) : SettingsBackupExportResult
 }
@@ -108,6 +113,7 @@ sealed interface SettingsBackupRestoreResult {
         val liseurSyncNeedsPairing: Boolean = false,
         val translationBooks: Int = 0,
         val translationBooksSkipped: Int = 0,
+        val typographyBooks: Int = 0,
     ) : SettingsBackupRestoreResult
 
     data class Failed(val failure: SettingsBackupFailure) : SettingsBackupRestoreResult
@@ -128,8 +134,10 @@ class SettingsBackupRepository(
     private val exportConnections: suspend () -> JSONObject = { error("Connection backup unavailable") },
     private val prepareConnectionRestore: (JSONObject, JSONObject) -> (suspend () -> Unit) = { _, _ -> error("Connection restore unavailable") },
     private val translations: TranslationBackupRepository? = null,
+    private val database: LiseurDatabase? = null,
 ) {
     private val operationMutex = Mutex()
+    private val typographyBackup = BookTypographyBackup(database)
 
     suspend fun exportTo(target: Uri, password: CharArray? = null, includeTranslations: Boolean = true): SettingsBackupExportResult = withContext(Dispatchers.IO) {
         operationMutex.withLock {
@@ -138,6 +146,7 @@ class SettingsBackupRepository(
         var positionFile: File? = null
         var companionFile: File? = null
         var translationFile: File? = null
+        var typographyBytes: ByteArray? = null
         try {
             val settings = JSONObject()
                 .put("app", appSettings.backupValues())
@@ -186,6 +195,12 @@ class SettingsBackupRepository(
             companionFile = stagedCompanion
             companion.writeContents(stagedCompanion, MAX_COMPANION_BYTES)
             val companionMetadata = hashFile(COMPANION_PATH, stagedCompanion)
+            val encodedTypography = typographyBackup.encode()
+            typographyBytes = encodedTypography.first
+            if (typographyBytes!!.size > MAX_TYPOGRAPHY_BYTES) {
+                throw BackupFailureException(SettingsBackupFailure.TOO_LARGE)
+            }
+            val typographyMetadata = EntryMetadata(TYPOGRAPHY_PATH, typographyBytes!!.size.toLong(), sha256(typographyBytes!!))
             var translationResult = TranslationBackupResult()
             val translationMetadata = if (includeTranslations && translations != null) {
                 val staged = File.createTempFile("translations-export-", ".json", context.cacheDir)
@@ -199,14 +214,15 @@ class SettingsBackupRepository(
                 return@withContext SettingsBackupExportResult.Failed(SettingsBackupFailure.TOO_LARGE)
             }
 
-            val listed = ArrayList<EntryMetadata>(fonts.size + 4)
+            val listed = ArrayList<EntryMetadata>(fonts.size + 5)
             listed += EntryMetadata(SETTINGS_PATH, settingsBytes.size.toLong(), sha256(settingsBytes))
             listed += annotationMetadata
             listed += positionMetadata
             listed += companionMetadata
+            listed += typographyMetadata
             translationMetadata?.let { listed += it }
             connectionBytes?.let { listed += EntryMetadata(CONNECTIONS_PATH, it.size.toLong(), sha256(it)) }
-            var totalBytes = settingsBytes.size.toLong() + annotationMetadata.size + positionMetadata.size + companionMetadata.size + (connectionBytes?.size ?: 0) + (translationMetadata?.size ?: 0)
+            var totalBytes = settingsBytes.size.toLong() + annotationMetadata.size + positionMetadata.size + companionMetadata.size + (connectionBytes?.size ?: 0) + (translationMetadata?.size ?: 0) + typographyMetadata.size
             val fontMetadata = ArrayList<EntryMetadata>(fonts.size)
             val fontNames = fonts.associate { "fonts/${it.fileName}" to it.displayName }
             for (font in fonts) {
@@ -256,6 +272,7 @@ class SettingsBackupRepository(
                 writeFileEntry(zip, ANNOTATIONS_PATH, stagedAnnotations)
                 writeFileEntry(zip, POSITIONS_PATH, stagedPositions)
                 writeFileEntry(zip, COMPANION_PATH, stagedCompanion)
+                writeEntry(zip, TYPOGRAPHY_PATH, typographyBytes!!)
                 translationFile?.let { writeFileEntry(zip, TRANSLATIONS_PATH, it) }
                 connectionBytes?.let { writeEntry(zip, CONNECTIONS_PATH, it) }
                 fonts.zip(fontMetadata).forEach { (font, expected) ->
@@ -268,7 +285,7 @@ class SettingsBackupRepository(
             }
             completed = true
             SettingsBackupExportResult.Exported(fonts.size, annotationCount, liseurSyncNeedsPairing,
-                translationResult.books, translationResult.skipped)
+                translationResult.books, translationResult.skipped, encodedTypography.second)
         } catch (e: CancellationException) {
             throw e
         } catch (e: BackupFailureException) {
@@ -311,6 +328,8 @@ class SettingsBackupRepository(
                     val positionContents = decodePositions(result.entries)
                     val companionContents = decodeCompanion(result.entries)
                     val translationContents = decodeTranslations(result.entries)
+                    val typographyContents = decodeTypography(result.entries)
+                    val matchedTypography = typographyBackup.match(typographyContents)
                     result.entries[CONNECTIONS_PATH]?.let {
                         BackupEncryption.validate(readStagedBytes(it.file, BackupEncryption.MAX_BYTES))
                     }
@@ -341,6 +360,7 @@ class SettingsBackupRepository(
                             companionRecapCount = companionContents.recaps.size,
                             includesConnections = CONNECTIONS_PATH in result.entries,
                             translationBookCount = translationContents.size,
+                            typographyBookCount = matchedTypography.count { it.hasSettings },
                         ),
                         result.stagingDirectory.name.removePrefix(PROCESS_STAGING_PREFIX),
                     )
@@ -401,6 +421,14 @@ class SettingsBackupRepository(
                 return@withContext SettingsBackupRestoreResult.Failed(e.failure)
             }
 
+            val matchedTypography = try {
+                typographyBackup.match(decodeTypography(archive.entries))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                return@withContext SettingsBackupRestoreResult.Failed(SettingsBackupFailure.INVALID_ARCHIVE)
+            }
+
             val connections = archive.entries[CONNECTIONS_PATH]?.let { entry ->
                 val plaintext = try {
                     if (password == null) throw IllegalArgumentException("Password required")
@@ -445,6 +473,15 @@ class SettingsBackupRepository(
                 } else {
                     SettingsBackupRestoreResult.Failed(SettingsBackupFailure.RESTORE)
                 }
+            }
+
+            val restoredTypography = try {
+                typographyBackup.restore(matchedTypography)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Typography restore stopped after settings were restored", e)
+                return@withContext SettingsBackupRestoreResult.PartiallyRestored(liseurSyncNeedsPairing)
             }
 
             var imported = 0
@@ -510,6 +547,7 @@ class SettingsBackupRepository(
             SettingsBackupRestoreResult.Restored(
                 imported, present, failures, annotationResult.added, annotationResult.alreadyHere, restoredPositions,
                 companionRecapsAdded, liseurSyncNeedsPairing, translationResult.books, translationResult.skipped,
+                restoredTypography,
             )
         } finally {
             if (!retainForRetry) removeStaging(archive.stagingDirectory)
@@ -629,7 +667,7 @@ class SettingsBackupRepository(
                     if (
                         entry.isDirectory ||
                         !safePath(path) ||
-                        path !in setOf(MANIFEST_PATH, SETTINGS_PATH, ANNOTATIONS_PATH, POSITIONS_PATH, COMPANION_PATH, CONNECTIONS_PATH, TRANSLATIONS_PATH) && !path.startsWith("fonts/") ||
+                        path !in setOf(MANIFEST_PATH, SETTINGS_PATH, ANNOTATIONS_PATH, POSITIONS_PATH, COMPANION_PATH, CONNECTIONS_PATH, TRANSLATIONS_PATH, TYPOGRAPHY_PATH) && !path.startsWith("fonts/") ||
                         path in entries ||
                         entries.size >= MAX_ARCHIVE_ENTRIES
                     ) {
@@ -642,6 +680,7 @@ class SettingsBackupRepository(
                         POSITIONS_PATH -> MAX_POSITIONS_BYTES
                         COMPANION_PATH -> MAX_COMPANION_BYTES
                         TRANSLATIONS_PATH -> TranslationBackupRepository.MAX_BYTES
+                        TYPOGRAPHY_PATH -> MAX_TYPOGRAPHY_BYTES
                         CONNECTIONS_PATH -> BackupEncryption.MAX_BYTES
                         else -> MAX_ENTRY_BYTES
                     }
@@ -685,7 +724,7 @@ class SettingsBackupRepository(
             if (manifest.opt("application") != "liseur") {
                 return ArchiveResult.Error(SettingsBackupFailure.INVALID_ARCHIVE)
             }
-            if (manifest.opt("format") !in setOf(1, 2, 3, 4, 5, FORMAT)) {
+            if (manifest.opt("format") !in setOf(1, 2, 3, 4, 5, 6, FORMAT)) {
                 return ArchiveResult.Error(SettingsBackupFailure.UNSUPPORTED_VERSION)
             }
             if ((manifest.optInt("format") >= 2) != (ANNOTATIONS_PATH in entries)) {
@@ -701,6 +740,9 @@ class SettingsBackupRepository(
                 return ArchiveResult.Error(SettingsBackupFailure.INVALID_ARCHIVE)
             }
             if (manifest.optInt("format") < 6 && TRANSLATIONS_PATH in entries) {
+                return ArchiveResult.Error(SettingsBackupFailure.INVALID_ARCHIVE)
+            }
+            if ((manifest.optInt("format") >= 7) != (TYPOGRAPHY_PATH in entries)) {
                 return ArchiveResult.Error(SettingsBackupFailure.INVALID_ARCHIVE)
             }
             val listed = manifest.optJSONArray("entries")
@@ -856,6 +898,17 @@ class SettingsBackupRepository(
         }
     }
 
+    private fun decodeTypography(entries: Map<String, StagedEntry>): List<BackedUpTypography> {
+        val entry = entries[TYPOGRAPHY_PATH] ?: return emptyList()
+        return try {
+            typographyBackup.decode(readStagedBytes(entry.file, MAX_TYPOGRAPHY_BYTES))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            throw BackupFailureException(SettingsBackupFailure.INVALID_ARCHIVE, e)
+        }
+    }
+
     private fun decodeSettings(file: File): JSONObject =
         try {
             JSONObject(readStagedBytes(file, MAX_SETTINGS_BYTES).toString(Charsets.UTF_8))
@@ -897,7 +950,7 @@ class SettingsBackupRepository(
         validateIds(app, mapOf(
             "theme_mode" to setOf("system", "light", "dark"),
             "volume_keys_mode" to VolumeKeyMode.entries.map { it.id }.toSet(),
-            "tap_zones" to setOf("standard", "swapped"),
+            "tap_zones" to TapZones.entries.map { it.id }.toSet(),
             "library_sort" to setOf("recent", "title", "author", "added", "series"),
             "eink_mode" to setOf("auto", "on", "off"),
             "definition_target" to setOf("built_in", "external_app"),
@@ -1107,7 +1160,7 @@ class SettingsBackupRepository(
         private const val INDEX_PATH = "inspection.json"
         private val ARCHIVE_ID = Regex("[0-9a-f-]{36}")
         private val ENTRY_FILE = Regex("entry-[0-9]+")
-        private const val FORMAT = 6
+        private const val FORMAT = 7
         private const val MANIFEST_PATH = "manifest.json"
         private const val SETTINGS_PATH = "settings.json"
         private const val ANNOTATIONS_PATH = "annotations.json"
@@ -1115,24 +1168,30 @@ class SettingsBackupRepository(
         private const val CONNECTIONS_PATH = "connections.enc.json"
         private const val COMPANION_PATH = "companion.json"
         private const val TRANSLATIONS_PATH = "translations.json"
+        private const val TYPOGRAPHY_PATH = "typography.json"
         // JSON trees expand well beyond their file size during inspection and restore.
         private const val MAX_READING_DATA_BYTES = 4L * 1024 * 1024
         private const val MAX_POSITIONS_BYTES = MAX_READING_DATA_BYTES
         private const val MAX_ANNOTATIONS_BYTES = MAX_READING_DATA_BYTES
         private const val MAX_COMPANION_BYTES = 16L * 1024 * 1024
         private const val MAX_SETTINGS_BYTES = 1024L * 1024
+        private const val MAX_TYPOGRAPHY_BYTES = 4L * 1024 * 1024
         private const val MAX_MANIFEST_BYTES = 1024L * 1024
         private const val MAX_FONT_FILES = UserFontRepository.MAX_FONTS
         private const val MAX_ENTRY_BYTES = UserFontRepository.MAX_BYTES
-        private const val MAX_ARCHIVE_ENTRIES = MAX_FONT_FILES + 7
+        private const val MAX_ARCHIVE_ENTRIES = MAX_FONT_FILES + 8
         private const val MAX_TOTAL_BYTES =
-            MAX_FONT_FILES * MAX_ENTRY_BYTES + MAX_SETTINGS_BYTES + MAX_MANIFEST_BYTES + MAX_ANNOTATIONS_BYTES + MAX_POSITIONS_BYTES + MAX_COMPANION_BYTES + BackupEncryption.MAX_BYTES + TranslationBackupRepository.MAX_BYTES
+            MAX_FONT_FILES * MAX_ENTRY_BYTES + MAX_SETTINGS_BYTES + MAX_MANIFEST_BYTES + MAX_ANNOTATIONS_BYTES + MAX_POSITIONS_BYTES + MAX_COMPANION_BYTES + BackupEncryption.MAX_BYTES + TranslationBackupRepository.MAX_BYTES + MAX_TYPOGRAPHY_BYTES
         private const val BUFFER_SIZE = 32 * 1024
         private const val NUMBER_EPSILON = 0.000001
         private val SHA256 = Regex("[0-9a-f]{64}")
 
         private fun entryLimit(path: String) =
-            if (path == TRANSLATIONS_PATH) TranslationBackupRepository.MAX_BYTES else MAX_ENTRY_BYTES
+            when (path) {
+                TRANSLATIONS_PATH -> TranslationBackupRepository.MAX_BYTES
+                TYPOGRAPHY_PATH -> MAX_TYPOGRAPHY_BYTES
+                else -> MAX_ENTRY_BYTES
+            }
 
         private fun safePath(path: String) = path.isNotBlank() && !path.startsWith('/') &&
             '\\' !in path && path.split('/').none { it.isEmpty() || it == "." || it == ".." }

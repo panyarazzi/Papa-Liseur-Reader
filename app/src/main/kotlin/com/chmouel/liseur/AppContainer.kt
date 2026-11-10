@@ -421,6 +421,7 @@ class AppContainer(context: Context) {
         restoreAppSettings = { values -> serverConnections.restore(values) { appSettings.restoreBackupValues(values) } },
         exportConnections = { connectionBackup.export() },
         prepareConnectionRestore = { payload, values -> connectionBackup.prepareRestore(payload, values) },
+        database = database,
     )
 
     private val connectionBackup by lazy {

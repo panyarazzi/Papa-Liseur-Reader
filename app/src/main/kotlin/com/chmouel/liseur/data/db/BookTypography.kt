@@ -100,6 +100,9 @@ interface BookTypographyDao {
     @Upsert
     suspend fun upsert(typography: BookTypography)
 
+    @Query("SELECT * FROM book_typography")
+    suspend fun all(): List<BookTypography>
+
     /** Hands the book back to the shared settings. */
     @Query("DELETE FROM book_typography WHERE book_url = :bookUrl")
     suspend fun clear(bookUrl: String)

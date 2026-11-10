@@ -29,6 +29,8 @@ import com.chmouel.liseur.data.db.Book
 import com.chmouel.liseur.data.db.RemoteServer
 import com.chmouel.liseur.data.db.ReadingProgress
 import com.chmouel.liseur.data.db.BookAnnotation
+import com.chmouel.liseur.data.db.BookTypography
+import com.chmouel.liseur.data.db.BookCustomTypography
 import com.chmouel.liseur.data.db.BookAnnotationDao
 import com.chmouel.liseur.data.db.AnnotationKind
 import com.chmouel.liseur.domain.BackedUpBook
@@ -42,6 +44,7 @@ import com.chmouel.liseur.data.settings.ReaderPrefs
 import com.chmouel.liseur.data.settings.PageTurnStyle
 import com.chmouel.liseur.data.settings.ThemeMode
 import com.chmouel.liseur.data.settings.VolumeKeyMode
+import com.chmouel.liseur.data.settings.TapZones
 import com.chmouel.liseur.data.settings.UserFontRepository
 import com.chmouel.liseur.data.settings.ImportResult as FontImportResult
 import com.chmouel.liseur.data.settings.fonts.SfntFixtures
@@ -926,7 +929,8 @@ class SettingsBackupRepositoryTest {
         ZipFile(File(uri.path!!)).use { zip ->
             assertTrue(zip.getEntry("annotations.json") != null)
             val manifest = JSONObject(zip.getInputStream(zip.getEntry("manifest.json")).bufferedReader().readText())
-            assertEquals(6, manifest.getInt("format"))
+            assertEquals(7, manifest.getInt("format"))
+            assertTrue(zip.getEntry("typography.json") != null)
         }
 
         db.annotationDao().deleteForBook("source-book")
@@ -949,6 +953,52 @@ class SettingsBackupRepositoryTest {
         requested.clear()
         assertEquals(SettingsBackupRestoreResult.Restored(0, 0, 0, 0, 4), restore(repository, uri))
         assertTrue(requested.isEmpty())
+    }
+
+    @Test
+    fun `ZIP round trip restores per-book typography across changed URLs and clears absent overrides`() = runTest {
+        val app = AppSettingsRepository(store("book-typography-app.preferences_pb"))
+        val reader = ReaderPreferencesRepository(store("book-typography-reader.preferences_pb"))
+        val repository = repository(app, reader, UserFontRepository(context, this, loadCheck = { true }))
+        val old = "file:///old/book.epub"
+        val oldClear = "file:///old/clear.epub"
+        db.bookDao().upsert(book(old))
+        db.bookDao().upsert(book(oldClear).copy(title = "Clear me"))
+        val own = BookTypography(old, "publisher", 1.25, 1.2, 0.9)
+        val fine = BookCustomTypography(old, 1.4, 0.6)
+        db.typographyDao().upsert(own)
+        db.customTypographyDao().upsert(fine)
+        db.typographyDao().upsert(BookTypography(oldClear, "publisher", 1.1, null, null))
+        val uri = Uri.fromFile(File(folder.root, "typography.zip"))
+        assertEquals(SettingsBackupExportResult.Exported(0, 0, typographyBooks = 2), repository.exportTo(uri))
+
+        db.bookDao().deleteByUrls(listOf(old, oldClear))
+        db.bookDao().upsert(book("file:///new/book.epub"))
+        db.bookDao().upsert(book("file:///new/clear.epub").copy(title = "Clear me"))
+        db.typographyDao().upsert(BookTypography("file:///new/clear.epub", "literata", 1.4, null, null))
+        db.customTypographyDao().upsert(BookCustomTypography("file:///new/clear.epub", 1.3, 0.2))
+
+        val ready = repository.inspect(uri) as SettingsBackupInspection.Ready
+        assertEquals(2, ready.preview.typographyBookCount)
+        val restored = repository.restore(ready.archiveId) as SettingsBackupRestoreResult.Restored
+        assertEquals(2, restored.typographyBooks)
+        assertEquals(own.copy(bookUrl = "file:///new/book.epub"), db.typographyDao().get("file:///new/book.epub"))
+        assertEquals(fine.copy(bookUrl = "file:///new/book.epub"), db.customTypographyDao().get("file:///new/book.epub"))
+        assertEquals(null, db.typographyDao().get("file:///new/clear.epub"))
+        assertEquals(null, db.customTypographyDao().get("file:///new/clear.epub"))
+    }
+
+    @Test
+    fun `tap anywhere survives settings backup and restore`() = runTest {
+        val app = AppSettingsRepository(store("tap-anywhere-app.preferences_pb"))
+        val reader = ReaderPreferencesRepository(store("tap-anywhere-reader.preferences_pb"))
+        val repository = repository(app, reader, UserFontRepository(context, this, loadCheck = { true }))
+        app.setTapZones(TapZones.TAP_ANYWHERE)
+        val uri = Uri.fromFile(File(folder.root, "tap-anywhere.zip"))
+        repository.exportTo(uri)
+        app.setTapZones(TapZones.STANDARD)
+        assertEquals(SettingsBackupRestoreResult.Restored(0, 0, 0), restore(repository, uri))
+        assertEquals(TapZones.TAP_ANYWHERE, app.settings.first().tapZones)
     }
 
     @Test
@@ -1128,6 +1178,7 @@ class SettingsBackupRepositoryTest {
             AnnotationBackupRepository(context, db.annotationDao(), db.bookDao(), requested::add),
             ReadingPositionBackupRepository(db.readingProgressDao(), db.bookDao(), requested::add),
             companionBackup(),
+            database = db,
             exportConnections = { payload },
             prepareConnectionRestore = { restored, values ->
                 if (failPreparation) throw IOException("Keystore unavailable")
@@ -1272,6 +1323,7 @@ class SettingsBackupRepositoryTest {
         AnnotationBackupRepository(context, db.annotationDao(), db.bookDao(), requested::add),
         ReadingPositionBackupRepository(db.readingProgressDao(), db.bookDao(), requested::add),
         companion = companionBackup(),
+        database = db,
     )
 
     private suspend fun restore(
