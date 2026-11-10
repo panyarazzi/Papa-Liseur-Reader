@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
+import android.util.Log
 import android.media.AudioManager
 import android.view.KeyEvent
 import android.widget.Toast
@@ -80,6 +81,17 @@ import org.readium.r2.shared.util.toAbsoluteUrl
 
 class ReaderActivity : FragmentActivity() {
 
+    private fun logReaderLifecycle(event: String) {
+        val config = resources.configuration
+        Log.i(
+            "ReaderLifecycle",
+            "event=$event activity=${System.identityHashCode(this)} pid=${android.os.Process.myPid()} " +
+                "changingConfigurations=$isChangingConfigurations target=${target?.id} " +
+                "keyboard=${config.keyboard} hardKeyboardHidden=${config.hardKeyboardHidden} " +
+                "orientation=${config.orientation} screenLayout=${config.screenLayout}",
+        )
+    }
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(newBase)
         AppLocales.overrideConfiguration(newBase)?.let(::applyOverrideConfiguration)
@@ -149,6 +161,7 @@ class ReaderActivity : FragmentActivity() {
         // the persisted locator instead. Rotation is handled without
         // recreation via android:configChanges.
         super.onCreate(null)
+        logReaderLifecycle("onCreate savedInstanceState=${savedInstanceState != null}")
         if (savedInstanceState == null) LaunchRequests.shared.supersede()
 
         val fromLibrary = intent.getStringExtra(EXTRA_URL)
@@ -893,6 +906,7 @@ class ReaderActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        logReaderLifecycle("onResume")
         // Nothing was ever opened, or the book is still being shelved, so
         // there is no view model to ask — touching it here would build one
         // around a URL that is not settled yet. See onCreate, which has
@@ -905,6 +919,7 @@ class ReaderActivity : FragmentActivity() {
     }
 
     override fun onPause() {
+        logReaderLifecycle("onPause")
         if (target != null) {
             // Mark the reader inactive before FragmentActivity pauses the
             // navigator. Readium can publish a layout/restoration locator
@@ -921,6 +936,11 @@ class ReaderActivity : FragmentActivity() {
         // than in onStop because a process killed while paused never
         // gets there.
         if (target != null) viewModel.onReaderLeft()
+    }
+
+    override fun onDestroy() {
+        logReaderLifecycle("onDestroy")
+        super.onDestroy()
     }
 
     /**
