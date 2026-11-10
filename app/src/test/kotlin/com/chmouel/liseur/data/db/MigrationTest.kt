@@ -227,7 +227,7 @@ class MigrationTest {
         }
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val db = Room.databaseBuilder(context, LiseurDatabase::class.java, TEST_DB)
-            .addMigrations(LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72)
+            .addMigrations(LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72, LiseurDatabase.MIGRATION_72_73)
             .allowMainThreadQueries()
             .build()
         try {

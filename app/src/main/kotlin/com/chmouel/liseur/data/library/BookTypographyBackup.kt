@@ -61,7 +61,7 @@ internal class BookTypographyBackup(private val database: LiseurDatabase?) {
         return buildList {
             for (index in 0 until rows.length()) {
                 val row = rows.optJSONObject(index) ?: throw IllegalArgumentException("Invalid book row")
-                val url = row.optString("book_url").takeIf { it.isNotBlank() }
+                val url = (row.opt("book_url") as? String)?.takeIf { it.isNotBlank() }
                     ?: throw IllegalArgumentException("Missing book URL")
                 require(seen.add(url)) { "Duplicate book URL" }
                 val title = row.opt("title") as? String ?: throw IllegalArgumentException("Invalid title")
