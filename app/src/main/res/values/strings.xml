@@ -109,6 +109,7 @@
     <string name="series_source_shared">Series corrected by the library admin</string>
     <string name="series_source_personal">Your personal series claim</string>
     <string name="clear">Clear</string>
+    <string name="remove_from_continue_reading">Remove from Continue reading</string>
     <string name="continue_reading">Continue reading</string>
     <string name="empty_library_title">Your library is empty</string>
     <string name="empty_library_subtitle">Here is how to fill it.</string>

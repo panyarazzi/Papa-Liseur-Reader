@@ -102,6 +102,7 @@
     <string name="series_source_shared">Reihe vom Bibliotheksadmin korrigiert</string>
     <string name="series_source_personal">Deine persönliche Reihenzuordnung</string>
     <string name="clear">Löschen</string>
+    <string name="remove_from_continue_reading">Aus „Weiterlesen“ entfernen</string>
     <string name="continue_reading">Weiterlesen</string>
     <string name="empty_library_title">Deine Bibliothek ist leer</string>
     <string name="empty_library_subtitle">So füllst du sie.</string>

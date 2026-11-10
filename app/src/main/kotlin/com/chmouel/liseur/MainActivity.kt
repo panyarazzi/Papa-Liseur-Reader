@@ -1141,6 +1141,7 @@ private fun LibraryRoute(
         onCancelDownload = viewModel::cancelDownload,
         onRemoveDownload = viewModel::removeDownload,
         onSetFinished = viewModel::setFinished,
+        onDismissContinueReading = viewModel::dismissFromContinueReading,
         onSetArchived = viewModel::setArchived,
         onDeleteLocal = viewModel::deleteLocalBook,
         onRemoveFromLibrary = viewModel::removeFromLibrary,

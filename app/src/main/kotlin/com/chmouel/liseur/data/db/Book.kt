@@ -3,6 +3,7 @@ package com.chmouel.liseur.data.db
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Entity
+import androidx.room.Transaction
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
@@ -302,6 +303,7 @@ interface BookDao {
         WHERE books.archived_at IS NULL
           AND books.hidden_at IS NULL
           AND books.finished_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM continue_reading_dismissals WHERE book_url = books.url)
           AND (books.local_uri IS NOT NULL OR books.download_state = 'DOWNLOADED')
           AND (
               books.last_opened_at IS NOT NULL
@@ -993,6 +995,19 @@ interface BookDao {
 
     @Query("UPDATE books SET last_opened_at = :at WHERE url = :url")
     suspend fun touchLastOpened(url: String, at: Long)
+
+    @Upsert
+    suspend fun dismissFromContinueReading(dismissal: ContinueReadingDismissal)
+
+    @Query("DELETE FROM continue_reading_dismissals WHERE book_url = :url")
+    suspend fun clearContinueReadingDismissal(url: String)
+
+    /** Opening a book returns it to Continue Reading in the same write as its recent timestamp. */
+    @Transaction
+    suspend fun markOpened(url: String, at: Long) {
+        touchLastOpened(url, at)
+        clearContinueReadingDismissal(url)
+    }
 
     companion object {
         const val MOST_RECENT = """

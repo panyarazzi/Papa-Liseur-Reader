@@ -1043,6 +1043,10 @@ class LibraryViewModel(
         }
     }
 
+    fun dismissFromContinueReading(book: Book) {
+        viewModelScope.launch { library.dismissFromContinueReading(book.url) }
+    }
+
     fun setFinished(book: Book, finished: Boolean) {
         viewModelScope.launch {
             finishedState.setFinished(book.url, finished)

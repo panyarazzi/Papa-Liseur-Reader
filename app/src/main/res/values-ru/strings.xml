@@ -107,6 +107,7 @@
     <string name="series_source_shared">Серия, исправленная администратором библиотеки</string>
     <string name="series_source_personal">Ваша личная привязка серии</string>
     <string name="clear">Очистить</string>
+    <string name="remove_from_continue_reading">Убрать из «Продолжить чтение»</string>
     <string name="continue_reading">Продолжить чтение</string>
     <string name="empty_library_title">Библиотека пуста</string>
     <string name="empty_library_subtitle">Вот как её заполнить.</string>

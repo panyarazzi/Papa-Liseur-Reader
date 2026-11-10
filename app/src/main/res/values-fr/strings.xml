@@ -101,6 +101,7 @@
     <string name="series_source_shared">Série corrigée par l\'administrateur de la bibliothèque</string>
     <string name="series_source_personal">Votre série personnelle</string>
     <string name="clear">Effacer</string>
+    <string name="remove_from_continue_reading">Retirer de Continuer la lecture</string>
     <string name="continue_reading">Continuer la lecture</string>
     <string name="empty_library_title">Votre bibliothèque est vide</string>
     <string name="empty_library_subtitle">Voici comment la remplir.</string>

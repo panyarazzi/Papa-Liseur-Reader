@@ -10,6 +10,7 @@ import android.util.Log
 import android.provider.DocumentsContract
 import androidx.annotation.RequiresApi
 import com.chmouel.liseur.data.db.Book
+import com.chmouel.liseur.data.db.ContinueReadingDismissal
 import com.chmouel.liseur.data.db.BookDao
 import com.chmouel.liseur.data.db.DownloadState
 import com.chmouel.liseur.data.db.LibraryFolder
@@ -504,7 +505,12 @@ class LocalLibraryRepository(
         metadata.authors.joinToString(", ") { it.name }.ifBlank { null }
 
     suspend fun markOpened(url: String) {
-        bookDao.touchLastOpened(url, System.currentTimeMillis())
+        bookDao.markOpened(url, System.currentTimeMillis())
+    }
+
+    /** Removes a book from this strip only; its library row and reading history stay untouched. */
+    suspend fun dismissFromContinueReading(url: String) {
+        bookDao.dismissFromContinueReading(ContinueReadingDismissal(url))
     }
 
     /** Indexes the metadata that only becomes available once a download is on the device. */

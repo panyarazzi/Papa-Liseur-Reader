@@ -115,7 +115,7 @@ class MigrationTest {
         helper.runMigrationsAndValidate(TEST_DB, 66, true, LiseurDatabase.MIGRATION_65_66).close()
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val db = Room.databaseBuilder(context, LiseurDatabase::class.java, TEST_DB)
-            .addMigrations(LiseurDatabase.MIGRATION_66_67, LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72)
+            .addMigrations(LiseurDatabase.MIGRATION_66_67, LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72, LiseurDatabase.MIGRATION_72_73)
             .build()
         try {
             val dao = db.readingProgressDao()
@@ -192,7 +192,7 @@ class MigrationTest {
         helper.runMigrationsAndValidate(TEST_DB, 67, true, LiseurDatabase.MIGRATION_66_67).close()
         val context = ApplicationProvider.getApplicationContext<android.app.Application>()
         val db = Room.databaseBuilder(context, LiseurDatabase::class.java, TEST_DB)
-            .addMigrations(LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72)
+            .addMigrations(LiseurDatabase.MIGRATION_67_68, LiseurDatabase.MIGRATION_68_69, LiseurDatabase.MIGRATION_69_70, LiseurDatabase.MIGRATION_70_71, LiseurDatabase.MIGRATION_71_72, LiseurDatabase.MIGRATION_72_73)
             .allowMainThreadQueries()
             .build()
         try {
@@ -1784,10 +1784,22 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun `continue reading dismissal table arrives empty and cascades with its book`() {
+        helper.createDatabase(TEST_DB, 72).close()
+        helper.runMigrationsAndValidate(TEST_DB, 73, true, LiseurDatabase.MIGRATION_72_73).use { db ->
+            db.execSQL("INSERT INTO books (url, title, added_at, download_state, series_checked, series_override, series_claim_pending, series_claim_reset, series_index_override) VALUES ('book', 'Book', 1, 'DOWNLOADED', 0, 0, 0, 0, 0)")
+            db.execSQL("INSERT INTO continue_reading_dismissals (book_url) VALUES ('book')")
+            db.query("SELECT book_url FROM continue_reading_dismissals").use { cursor -> assertTrue(cursor.moveToFirst()); assertEquals("book", cursor.getString(0)) }
+            db.execSQL("DELETE FROM books WHERE url = 'book'")
+            db.query("SELECT book_url FROM continue_reading_dismissals").use { cursor -> assertFalse(cursor.moveToFirst()) }
+        }
+    }
+
     private companion object {
         const val TEST_DB = "migration-test.db"
 
         /** Kept in step with the `version` on [LiseurDatabase]. */
-        const val LATEST = 72
+        const val LATEST = 73
     }
 }

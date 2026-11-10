@@ -219,6 +219,7 @@
     <string name="series_source_shared">由书库管理员更正的系列</string>
     <string name="series_source_personal">您的个人系列认定</string>
     <string name="clear">清除</string>
+    <string name="remove_from_continue_reading">从“继续阅读”中移除</string>
     <string name="continue_reading">继续阅读</string>
     <string name="empty_library_title">您的书库是空的</string>
     <string name="empty_library_subtitle">您可以这样把书加进来。</string>

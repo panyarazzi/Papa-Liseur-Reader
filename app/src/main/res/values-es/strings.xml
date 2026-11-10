@@ -101,6 +101,7 @@
     <string name="series_source_shared">Serie corregida por el administrador de la biblioteca</string>
     <string name="series_source_personal">Tu reclamo personal de serie</string>
     <string name="clear">Borrar</string>
+    <string name="remove_from_continue_reading">Quitar de Seguir leyendo</string>
     <string name="continue_reading">Seguir leyendo</string>
     <string name="empty_library_title">Tu biblioteca está vacía</string>
     <string name="empty_library_subtitle">Así es como la rellenas.</string>

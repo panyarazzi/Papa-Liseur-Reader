@@ -43,8 +43,9 @@ import androidx.sqlite.execSQL
         RemoteStatsWindow::class,
         GlossaryEntry::class,
         BookAiPreferences::class,
+        ContinueReadingDismissal::class,
     ],
-    version = 72,
+    version = 73,
     exportSchema = true,
 )
 abstract class LiseurDatabase : RoomDatabase() {
@@ -85,6 +86,17 @@ abstract class LiseurDatabase : RoomDatabase() {
     abstract fun glossaryDao(): GlossaryDao
 
     companion object {
+        val MIGRATION_72_73 = object : Migration(72, 73) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `continue_reading_dismissals` (`book_url` TEXT NOT NULL, PRIMARY KEY(`book_url`), FOREIGN KEY(`book_url`) REFERENCES `books`(`url`) ON UPDATE NO ACTION ON DELETE CASCADE)",
+                )
+                connection.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_continue_reading_dismissals_book_url` ON `continue_reading_dismissals` (`book_url`)",
+                )
+            }
+        }
+
         val MIGRATION_71_72 = object : Migration(71, 72) {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL(
@@ -2000,6 +2012,7 @@ abstract class LiseurDatabase : RoomDatabase() {
             MIGRATION_69_70,
             MIGRATION_70_71,
             MIGRATION_71_72,
+            MIGRATION_72_73,
         )
     }
 }

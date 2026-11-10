@@ -194,6 +194,7 @@ fun LibraryScreen(
     onCancelDownload: (Book) -> Unit,
     onRemoveDownload: (Book, clearAccountTranslations: Boolean) -> Unit,
     onSetFinished: (Book, Boolean) -> Unit,
+    onDismissContinueReading: (Book) -> Unit = {},
     onSetArchived: (Book, Boolean) -> Unit,
     onDeleteLocal: (Book, clearAccountTranslations: Boolean) -> Unit,
     onRemoveFromLibrary: (Book, clearAccountTranslations: Boolean) -> Unit,
@@ -1488,6 +1489,7 @@ private fun BookGrid(
                     ContinueReadingSection(
                         entries = entries,
                         onBookSelected = onBookSelected,
+                        onDismissBook = onDismissContinueReading,
                         onShowAll = { showAllContinueReading = true },
                     )
                 }
@@ -1676,6 +1678,7 @@ private fun BookGrid(
                 showAllContinueReading = false
                 onBookSelected(book)
             },
+            onDismissBook = onDismissContinueReading,
         )
     }
 }
@@ -1808,6 +1811,7 @@ private fun FolderPreviewCard(
 private fun ContinueReadingSection(
     entries: List<ContinueReading>,
     onBookSelected: (Book) -> Unit,
+    onDismissBook: (Book) -> Unit,
     onShowAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1853,12 +1857,21 @@ private fun ContinueReadingSection(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         entries.take(4).forEach { entry ->
-                            BookCover(
-                                book = entry.book,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .aspectRatio(2f / 3f),
-                            )
+                            Box(
+                                modifier = Modifier.weight(1f).aspectRatio(2f / 3f),
+                            ) {
+                                BookCover(
+                                    book = entry.book,
+                                    modifier = Modifier.fillMaxSize().clickable { onBookSelected(entry.book) },
+                                )
+                                IconButton(
+                                    onClick = { onDismissBook(entry.book) },
+                                    modifier = Modifier.align(Alignment.TopEnd).size(32.dp)
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), CircleShape),
+                                ) {
+                                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.remove_from_continue_reading))
+                                }
+                            }
                         }
                     }
                     Column(
@@ -1896,17 +1909,22 @@ private fun ContinueReadingSection(
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing)) {
                     entries.forEach { entry ->
                         Column(
-                            modifier = Modifier
-                                .width(coverWidth)
-                                .clickable { onBookSelected(entry.book) },
+                            modifier = Modifier.width(coverWidth),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            BookCover(
-                                book = entry.book,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(2f / 3f),
-                            )
+                            Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f)) {
+                                BookCover(
+                                    book = entry.book,
+                                    modifier = Modifier.fillMaxSize().clickable { onBookSelected(entry.book) },
+                                )
+                                IconButton(
+                                    onClick = { onDismissBook(entry.book) },
+                                    modifier = Modifier.align(Alignment.TopEnd).size(32.dp)
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), CircleShape),
+                                ) {
+                                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.remove_from_continue_reading))
+                                }
+                            }
                             Text(
                                 text = entry.book.displayTitle,
                                 style = MaterialTheme.typography.labelSmall,
@@ -1934,6 +1952,7 @@ private fun ContinueReadingDialog(
     entries: List<ContinueReading>,
     onDismiss: () -> Unit,
     onBookSelected: (Book) -> Unit,
+    onDismissBook: (Book) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1957,6 +1976,7 @@ private fun ContinueReadingDialog(
                         Column(
                             modifier = Modifier
                                 .weight(1f)
+                                .clickable { onBookSelected(entry.book) }
                                 .padding(start = 12.dp),
                             verticalArrangement = Arrangement.spacedBy(3.dp),
                         ) {
@@ -1983,6 +2003,9 @@ private fun ContinueReadingDialog(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
+                        }
+                        IconButton(onClick = { onDismissBook(entry.book) }) {
+                            Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.remove_from_continue_reading))
                         }
                     }
                     HorizontalDivider()

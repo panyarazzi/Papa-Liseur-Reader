@@ -3,6 +3,7 @@ package com.chmouel.liseur.data.db
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.chmouel.liseur.domain.FINISHED_PROGRESSION
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -102,6 +103,22 @@ class ContinuationBookTest {
             downloadState = DownloadState.REMOTE, localUri = "content://restored/document",
         ))
         assertEquals("restored", selected())
+    }
+
+    @Test
+    fun `dismissal affects only Continue Reading and reopening restores it`() = runTest {
+        val book = book("dismissed")
+        db.bookDao().upsert(book)
+        db.readingProgressDao().recordLocal("dismissed", """{"href":"chapter"}""", 0.4, null, null, 1)
+        assertEquals(listOf("dismissed"), db.bookDao().observeContinueReading().first().map { it.url })
+
+        db.bookDao().dismissFromContinueReading(ContinueReadingDismissal("dismissed"))
+        assertEquals(emptyList<String>(), db.bookDao().observeContinueReading().first().map { it.url })
+        assertEquals("dismissed", db.bookDao().getByUrl("dismissed")!!.url)
+        assertEquals(0.4, db.readingProgressDao().get("dismissed")!!.totalProgression!!, 0.0)
+
+        db.bookDao().markOpened("dismissed", 2)
+        assertEquals(listOf("dismissed"), db.bookDao().observeContinueReading().first().map { it.url })
     }
 
     @Test
