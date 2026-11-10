@@ -92,12 +92,17 @@ internal class BookTypographyBackup(private val database: LiseurDatabase?) {
         if (records.isEmpty()) return emptyList()
         val books = db.bookDao().allOnce()
         val byUrl = books.associateBy { it.url }
+        val fallbackIdentityCounts = records.groupingBy { it.title to it.author }.eachCount()
         val claimed = mutableSetOf<String>()
         return buildList {
             records.forEach { record ->
-                val target = byUrl[record.bookUrl] ?: books.filter {
-                    it.title == record.title && it.author == record.author
-                }.singleOrNull()
+                val target = byUrl[record.bookUrl] ?: if (
+                    record.title.isNotBlank() && fallbackIdentityCounts[record.title to record.author] == 1
+                ) {
+                    books.filter { it.title == record.title && it.author == record.author }.singleOrNull()
+                } else {
+                    null
+                }
                 if (target != null && claimed.add(target.url)) {
                     add(
                         MatchedTypography(

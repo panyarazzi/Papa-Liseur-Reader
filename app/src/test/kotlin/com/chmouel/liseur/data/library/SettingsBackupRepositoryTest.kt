@@ -989,6 +989,30 @@ class SettingsBackupRepositoryTest {
     }
 
     @Test
+    fun `ambiguous source books are not mapped to one destination typography row`() = runTest {
+        val app = AppSettingsRepository(store("ambiguous-typography-app.preferences_pb"))
+        val reader = ReaderPreferencesRepository(store("ambiguous-typography-reader.preferences_pb"))
+        val repository = repository(app, reader, UserFontRepository(context, this, loadCheck = { true }))
+        val first = "file:///old/first.epub"
+        val second = "file:///old/second.epub"
+        db.bookDao().upsert(book(first))
+        db.bookDao().upsert(book(second))
+        db.typographyDao().upsert(BookTypography(first, "publisher", 1.1, null, null))
+        db.typographyDao().upsert(BookTypography(second, "vollkorn", 1.2, null, null))
+        val uri = Uri.fromFile(File(folder.root, "ambiguous-typography.zip"))
+        repository.exportTo(uri)
+
+        db.bookDao().deleteByUrls(listOf(first, second))
+        db.bookDao().upsert(book("file:///new/only.epub"))
+        val existing = BookTypography("file:///new/only.epub", "literata", 1.4, null, null)
+        db.typographyDao().upsert(existing)
+
+        val restored = restore(repository, uri) as SettingsBackupRestoreResult.Restored
+        assertEquals(0, restored.typographyBooks)
+        assertEquals(existing, db.typographyDao().get("file:///new/only.epub"))
+    }
+
+    @Test
     fun `tap anywhere survives settings backup and restore`() = runTest {
         val app = AppSettingsRepository(store("tap-anywhere-app.preferences_pb"))
         val reader = ReaderPreferencesRepository(store("tap-anywhere-reader.preferences_pb"))
