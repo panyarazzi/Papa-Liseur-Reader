@@ -1608,6 +1608,7 @@
     <string name="whole_book_storage">Behaltene Übersetzungen: %2$s · Sätze: %1$s. Werden beim Leeren des Caches nicht gelöscht.</string>
     <string name="whole_book_backup_include">Übersetzungen ganzer Bücher einschließen</string>
     <string name="whole_book_backup_unencrypted">Übersetzter Buchtext ist auch mit einem Sicherungspasswort nicht verschlüsselt. Unfertige Bücher und Bücher über der Größenbegrenzung werden übersprungen.</string>
+    <string name="settings_backup_typography_preview">Typografie pro Buch: %1$d Bücher. Separate Typografie, benutzerdefinierter Zeilenabstand und Absatzeinzug sind enthalten.</string>
     <string name="whole_book_backup_preview">Übersetzte Bücher: %1$d. Die Bücher müssen bereits in deiner Bibliothek sein. Nicht zugeordnete Bücher werden übersprungen; prüfe die Abdeckung nach der Wiederherstellung.</string>
     <string name="whole_book_backup_exported">Übersetzte Bücher exportiert: %1$d · Übersprungen: %2$d.</string>
     <string name="whole_book_backup_restored">Übersetzte Bücher wiederhergestellt: %1$d · Übersprungen (einschließlich fehlender Bücher in deiner Bibliothek): %2$d. Prüfe die Abdeckung in den Übersetzungseinstellungen.</string>

@@ -1543,6 +1543,7 @@
     <string name="whole_book_storage">保留的译文：%1$s 句 · %2$s。清理缓存时不会删除。</string>
     <string name="whole_book_backup_include">包含整本书译文</string>
     <string name="whole_book_backup_unencrypted">即使设置了备份密码，书籍译文也不会加密。未完成的书籍及超出备份大小限制的书籍将被跳过。</string>
+    <string name="settings_backup_typography_preview">按书籍保存的排版设置：%1$d 本。包含独立排版、自定义行距和段落缩进。</string>
     <string name="whole_book_backup_preview">整本书译文：%1$d 本。书籍必须已在书库中。未匹配的书籍将被跳过；恢复后请检查覆盖情况。</string>
     <string name="whole_book_backup_exported">已导出译文的书籍：%1$d · 已跳过：%2$d。</string>
     <string name="whole_book_backup_restored">已恢复译文的书籍：%1$d · 已跳过（包括不在书库中的书籍）：%2$d。请在翻译设置中检查覆盖情况。</string>

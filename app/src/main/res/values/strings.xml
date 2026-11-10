@@ -1668,6 +1668,7 @@
     <string name="whole_book_storage">Kept translations: %2$s · Sentences: %1$s. Not removed by clearing the cache.</string>
     <string name="whole_book_backup_include">Include whole-book translations</string>
     <string name="whole_book_backup_unencrypted">Translated book text is not encrypted, even with a backup password. Unfinished books and books over the backup size limit are skipped.</string>
+    <string name="settings_backup_typography_preview">Per-book typography: %1$d books. Separate Typography, Custom Line Spacing and Paragraph Indent are included.</string>
     <string name="whole_book_backup_preview">Translated books: %1$d. Books must already be in your library. Unmatched books are skipped; check coverage after restoring.</string>
     <string name="whole_book_backup_exported">Translated books exported: %1$d · Skipped: %2$d.</string>
     <string name="whole_book_backup_restored">Translated books restored: %1$d · Skipped (including books not in your library): %2$d. Check coverage in Translation settings.</string>

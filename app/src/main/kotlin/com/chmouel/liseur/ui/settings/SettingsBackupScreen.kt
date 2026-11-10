@@ -119,6 +119,8 @@ fun SettingsBackupScreen(
                         "\n\n" + stringResource(R.string.settings_backup_companion_preview, ready.preview.companionRecapCount)
                     } else { "" }) + (if (ready.preview.translationBookCount > 0) {
                         "\n\n" + stringResource(R.string.whole_book_backup_preview, ready.preview.translationBookCount)
+                    } else { "" }) + (if (ready.preview.typographyBookCount > 0) {
+                        "\n\n" + stringResource(R.string.settings_backup_typography_preview, ready.preview.typographyBookCount)
                     } else { "" }) + (if (ready.preview.includesConnections) {
                         "\n\n" + stringResource(R.string.settings_backup_connections_replace)
                     } else { "" }) + (if (ready.preview.annotationCount > 0) {

@@ -50,7 +50,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import androidx.room.withTransaction
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject

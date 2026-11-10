@@ -1596,6 +1596,7 @@
     <string name="whole_book_storage">Traduzioni conservate: %2$s · Frasi: %1$s. Non vengono rimosse svuotando la cache.</string>
     <string name="whole_book_backup_include">Includi le traduzioni di libri interi</string>
     <string name="whole_book_backup_unencrypted">Il testo tradotto dei libri non è cifrato, anche se il backup ha una password. I libri incompleti e quelli che superano il limite di dimensione vengono saltati.</string>
+    <string name="settings_backup_typography_preview">Tipografia per libro: %1$d libri. Sono inclusi tipografia separata, interlinea personalizzata e rientro del paragrafo.</string>
     <string name="whole_book_backup_preview">Libri tradotti: %1$d. I libri devono essere già nella libreria. Quelli senza corrispondenza vengono saltati; verifica la copertura dopo il ripristino.</string>
     <string name="whole_book_backup_exported">Libri tradotti esportati: %1$d · Saltati: %2$d.</string>
     <string name="whole_book_backup_restored">Libri tradotti ripristinati: %1$d · Saltati (inclusi quelli non presenti nella libreria): %2$d. Verifica la copertura nelle impostazioni di traduzione.</string>
