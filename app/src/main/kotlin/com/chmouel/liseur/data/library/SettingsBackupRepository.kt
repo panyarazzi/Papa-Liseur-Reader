@@ -599,7 +599,7 @@ class SettingsBackupRepository(
             if (!file.isFile) return null
             entries[path] = StagedEntry(file, file.length(), "", displayName)
         }
-        if (SETTINGS_PATH !in entries || entries.keys.any { it !in setOf(SETTINGS_PATH, ANNOTATIONS_PATH, POSITIONS_PATH, COMPANION_PATH, CONNECTIONS_PATH, TRANSLATIONS_PATH) && !it.startsWith("fonts/") }) {
+        if (SETTINGS_PATH !in entries || entries.keys.any { it !in setOf(SETTINGS_PATH, ANNOTATIONS_PATH, POSITIONS_PATH, COMPANION_PATH, CONNECTIONS_PATH, TRANSLATIONS_PATH, TYPOGRAPHY_PATH) && !it.startsWith("fonts/") }) {
             return null
         }
         return ArchiveResult.Valid(directory, entries)

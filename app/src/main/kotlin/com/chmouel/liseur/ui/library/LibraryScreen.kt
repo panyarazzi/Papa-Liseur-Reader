@@ -794,6 +794,7 @@ fun LibraryScreen(
                         onToggleFilter = onToggleFilter,
                         onSetGroupBySeries = onSetGroupBySeries,
                         onClearFilters = onClearFilters,
+                        onDismissContinueReading = onDismissContinueReading,
                         onBookSelected = openShelfBook,
                         onBookLongPress = { sheetBook = it },
                         onSeriesSelected = onSeriesSelected,
@@ -868,6 +869,7 @@ fun LibraryScreen(
                         onToggleFilter = onToggleFilter,
                         onSetGroupBySeries = onSetGroupBySeries,
                         onClearFilters = onClearFilters,
+                        onDismissContinueReading = onDismissContinueReading,
                         onBookSelected = openShelfBook,
                         onBookLongPress = { sheetBook = it },
                         onSeriesSelected = onSeriesSelected,
@@ -1462,6 +1464,7 @@ private fun BookGrid(
     onToggleFilter: (LibraryFilterOption) -> Unit,
     onSetGroupBySeries: (Boolean) -> Unit,
     onClearFilters: () -> Unit,
+    onDismissContinueReading: (Book) -> Unit,
     modifier: Modifier = Modifier,
     bottomInset: Dp = 0.dp,
 ) {
