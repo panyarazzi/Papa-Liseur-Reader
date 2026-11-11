@@ -509,7 +509,17 @@ class ReaderActivity : FragmentActivity() {
                                             if (next == null) return@collect
                                             val url = (next.availability as? NextVolumeAvailability.Ready)
                                                 ?.fileUrl ?: return@collect
+                                            // The next volume is another way of leaving this
+                                            // reader; it observes the same durable-save rule as Back.
                                             viewModel.consumeOpenNext()
+                                            if (!viewModel.savePositionForExit()) {
+                                                Toast.makeText(
+                                                    this@ReaderActivity,
+                                                    R.string.reader_position_not_saved,
+                                                    Toast.LENGTH_LONG,
+                                                ).show()
+                                                return@collect
+                                            }
                                             startActivity(
                                                 intent(this@ReaderActivity, url, next.id),
                                             )
