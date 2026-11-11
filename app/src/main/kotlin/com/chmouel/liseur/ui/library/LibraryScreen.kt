@@ -1567,6 +1567,7 @@ private fun BookGrid(
                 BookCard(
                     book = book,
                     progress = state.downloads[book.url],
+                    readingProgress = state.readingProgress[book.url],
                     inASeries = !book.seriesName.isNullOrBlank(),
                     highlight = state.searchQuery,
                     onClick = { onBookSelected(book) },
@@ -1619,6 +1620,7 @@ private fun BookGrid(
                     BookListRow(
                         book = book,
                         progress = state.downloads[book.url],
+                        readingProgress = state.readingProgress[book.url],
                         onClick = { onBookSelected(book) },
                         onLongClick = { onBookLongPress(book) },
                     )
@@ -1628,6 +1630,7 @@ private fun BookGrid(
                     BookCard(
                         book = book,
                         progress = state.downloads[book.url],
+                        readingProgress = state.readingProgress[book.url],
                         inASeries = seriesKey(book.seriesName) in state.shownSeries,
                         onClick = { onBookSelected(book) },
                         onLongClick = { onBookLongPress(book) },
@@ -1645,6 +1648,7 @@ private fun BookGrid(
                     is ShelfEntry.Single -> BookCard(
                         book = entry.book,
                         progress = state.downloads[entry.book.url],
+                        readingProgress = state.readingProgress[entry.book.url],
                         inASeries = false,
                         onClick = { onBookSelected(entry.book) },
                         onLongClick = { onBookLongPress(entry.book) },
