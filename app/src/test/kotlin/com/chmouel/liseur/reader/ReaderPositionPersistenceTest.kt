@@ -88,6 +88,7 @@ class ReaderPositionPersistenceTest {
             val release = CompletableDeferred<Unit>()
             var failWrites = false
             var writes = 0
+            var closeRequests = 0
             val publisher = ReadingPositionPublisher(
                 scope = scope,
                 overrideFor = { FinishedOverride.NONE },
@@ -98,7 +99,7 @@ class ReaderPositionPersistenceTest {
                     writer.save(update, status)
                     writes++
                 },
-                refreshFinished = {}, markFinished = {}, scheduleClose = {}, onError = { _, _ -> },
+                refreshFinished = {}, markFinished = {}, scheduleClose = { closeRequests++ }, onError = { _, _ -> },
                 latestSync = LatestPositionSync(scope, { SyncOutcome.NotApplicable }, {}, { _, _ -> }),
             )
             fun model() = ReaderViewModel(
@@ -147,7 +148,7 @@ class ReaderPositionPersistenceTest {
 
             val jump = place(0.3)
             reader.onLocatorChanged(jump, NavigatorPositionEvent.OPENING_RESTORATION)
-            assertEquals(1, writes)
+            assertEquals(2, writes)
             reader.onLocatorChanged(jump, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
             assertEquals(0.3, stored().locations.progression!!, 0.000001)
@@ -165,6 +166,22 @@ class ReaderPositionPersistenceTest {
             reader.onLocatorChanged(reflow, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
             assertEquals(4, writes)
+
+            // A normal exit must not be reported complete until the final
+            // captured position has committed and the close notification
+            // has reached the publisher queue.
+            val exitPlace = place(0.4)
+            var exitCaptureCalled = false
+            reader.preparePositionAction = {
+                exitCaptureCalled = true
+                reader.onLocatorChanged(exitPlace, NavigatorPositionEvent.LOCAL_JUMP)
+                true
+            }
+            assertTrue(reader.savePositionForExit())
+            assertTrue(exitCaptureCalled)
+            assertEquals(0.4, stored().locations.progression!!, 0.000001)
+            assertEquals(1, closeRequests)
+            assertEquals(5, writes)
 
             models.clear()
             assertTrue(publisher.flush(url))
@@ -185,13 +202,19 @@ class ReaderPositionPersistenceTest {
                 ReaderViewModel.BookSync.Note(R.string.reader_position_not_saved),
                 reopening.bookSync.value,
             )
+            reopening.preparePositionAction = {
+                reopening.onLocatorChanged(place(0.95), NavigatorPositionEvent.LOCAL_JUMP)
+                true
+            }
+            assertFalse(reopening.savePositionForExit())
+            assertEquals("A failed final save must not schedule book close", 1, closeRequests)
 
             failWrites = false
             reopening.onLocatorChanged(place(0.8), NavigatorPositionEvent.PREFERENCE_REFLOW)
             reopening.onLocatorChanged(failedPlace, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
             assertEquals(0.9, stored().locations.progression!!, 0.000001)
-            assertEquals(5, writes)
+            assertEquals(6, writes)
         } finally {
             models.clear()
             scope.cancel()
