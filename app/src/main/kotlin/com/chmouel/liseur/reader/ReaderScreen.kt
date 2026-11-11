@@ -1127,9 +1127,13 @@ internal fun ReaderScreen(
         navigatorNow?.let { nav ->
             // A page turn can be requested before Readium publishes its
             // arrival. Wait for any issued move and the viewport to settle
-            // before asking for the final locator.
-            awaitPageAtRest(nav)
-            if (navigatorNow !== nav) return@let false
+            // before asking for the final locator. If the WebView never
+            // becomes observable, fail closed instead of trapping Back.
+            val settled = withTimeoutOrNull(PAGE_REST_TIMEOUT_MS) {
+                awaitPageAtRest(nav)
+                true
+            } ?: false
+            if (!settled || navigatorNow !== nav) return@let false
             val native = nav.currentLocator.value
             val since = heldPlace.mark()
             val captured = if (effectiveScrolling) scrolledPlace(nav) else capture(nav, native)
@@ -5636,6 +5640,7 @@ private const val DRAG_QUIET_MS = 300L
 
 /** How often a moving page is looked at to see whether it has stopped. */
 private const val PAGE_REST_POLL_MS = 150L
+private const val PAGE_REST_TIMEOUT_MS = 8_000L
 
 /** How long a book reopened translated waits for a still page before giving up until the next one. */
 private const val TRANSLATION_RESUME_WAIT_MS = 10_000L
