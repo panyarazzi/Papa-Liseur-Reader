@@ -1497,7 +1497,10 @@ private fun BookGrid(
         if (selectedFolder != null) {
             stickyHeader(span = { GridItemSpan(maxLineSpan) }) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = 4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextButton(onClick = { selectedFolder = null }) {
@@ -1703,9 +1706,9 @@ private fun BookGrid(
 private fun BookListRow(
     book: Book,
     progress: DownloadProgress?,
-    readingProgress: Double? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    readingProgress: Double? = null,
 ) {
     val haptics = LocalHapticFeedback.current
     Row(
@@ -1729,7 +1732,11 @@ private fun BookListRow(
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = if (readingProgress != null) "${book.displayTitle} · ${(readingProgress * 100).toInt()}%" else book.displayTitle,
+                text = if (readingProgress != null) {
+                    "${book.displayTitle} · ${(readingProgress * 100).toInt()}%"
+                } else {
+                    book.displayTitle
+                },
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
