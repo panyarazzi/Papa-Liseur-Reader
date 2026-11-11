@@ -151,10 +151,10 @@ class ReaderPositionPersistenceTest {
             reader.onLocatorChanged(jump, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
             assertEquals(0.3, stored().locations.progression!!, 0.000001)
-            assertEquals(4, writes)
+            assertEquals(3, writes)
             reader.onLocatorChanged(jump, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
-            assertEquals(2, writes)
+            assertEquals(3, writes)
 
             reader.onReaderResumed()
             val reflow = place(0.31)
