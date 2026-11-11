@@ -15,6 +15,7 @@ import com.chmouel.liseur.sync.LatestPositionSync
 import com.chmouel.liseur.sync.PositionUpdate
 import com.chmouel.liseur.sync.ReadingPositionPublisher
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.CompletableDeferred
@@ -23,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -86,6 +88,9 @@ class ReaderPositionPersistenceTest {
             writer.save(update(place(0.1)), null)
             val writing = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
+            val holdNextWrite = AtomicBoolean(false)
+            val exitWriteStarted = CompletableDeferred<Unit>()
+            val releaseExitWrite = CompletableDeferred<Unit>()
             var failWrites = false
             var writes = 0
             var closeRequests = 0
@@ -94,6 +99,10 @@ class ReaderPositionPersistenceTest {
                 overrideFor = { FinishedOverride.NONE },
                 persist = { update, status ->
                     writing.complete(Unit)
+                    if (holdNextWrite.compareAndSet(true, false)) {
+                        exitWriteStarted.complete(Unit)
+                        releaseExitWrite.await()
+                    }
                     release.await()
                     check(!failWrites) { "Test write failure" }
                     writer.save(update, status)
@@ -177,7 +186,13 @@ class ReaderPositionPersistenceTest {
                 reader.onLocatorChanged(exitPlace, NavigatorPositionEvent.LOCAL_JUMP)
                 true
             }
-            assertTrue(reader.savePositionForExit())
+            holdNextWrite.set(true)
+            val exitSave = async { reader.savePositionForExit() }
+            withTimeout(5_000) { exitWriteStarted.await() }
+            assertFalse("Exit must wait for the Room transaction", exitSave.isCompleted)
+            assertEquals("Close must not be scheduled before the final write commits", 0, closeRequests)
+            releaseExitWrite.complete(Unit)
+            assertTrue(exitSave.await())
             assertTrue(exitCaptureCalled)
             assertEquals(0.4, stored().locations.progression!!, 0.000001)
             assertEquals(1, closeRequests)
