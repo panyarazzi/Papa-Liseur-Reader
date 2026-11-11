@@ -1926,19 +1926,40 @@ class ReaderViewModel(
     }
 
     /**
-     * Called once the reader has been paused and its last place written.
-     *
-     * Queues the background push behind that write. The foreground push
-     * has usually gone already on the page turn itself; this is the
-     * backstop for a push still in the air when the process is killed.
-     * It is asked at pause rather than at stop because a process killed
-     * while paused never reaches stop, and because pause is when the
-     * settled place is known: with the reader inactive no further page
-     * is written.
+     * A normal exit is not complete until the visible page has been
+     * captured and every accepted position write has committed to Room.
+     * Only then is the close notification queued for background sync.
      */
-    fun onReaderLeft() {
-        if (!positionPublisher.closeBook(bookId)) {
+    suspend fun savePositionForExit(): Boolean {
+        val captured = try {
+            preparePositionAction()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w("reading-position", "Could not capture the page before leaving", error)
+            false
+        }
+        if (!captured || !positionPublisher.flush(bookId)) {
             _bookSync.value = BookSync.Note(R.string.reader_position_not_saved)
+            return false
+        }
+        if (!positionPublisher.closeBook(bookId) || !positionPublisher.flush(bookId)) {
+            _bookSync.value = BookSync.Note(R.string.reader_position_not_saved)
+            return false
+        }
+        return true
+    }
+
+    /**
+     * A pause caused by app switching or screen-off is opportunistic:
+     * the ON_PAUSE observer has already queued its final snapshot, and
+     * this waits for Room without holding up Android's lifecycle or sleep.
+     */
+    fun flushPositionInBackground() {
+        viewModelScope.launch {
+            if (!positionPublisher.flush(bookId)) {
+                _bookSync.value = BookSync.Note(R.string.reader_position_not_saved)
+            }
         }
     }
 
