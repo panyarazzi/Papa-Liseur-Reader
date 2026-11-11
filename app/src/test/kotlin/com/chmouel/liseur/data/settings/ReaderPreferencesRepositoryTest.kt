@@ -34,8 +34,8 @@ class ReaderPreferencesRepositoryTest {
     @get:Rule
     val folder = TemporaryFolder()
 
-    private fun store() =
-        PreferenceDataStoreFactory.create { folder.newFile("reader.preferences_pb") }
+    private fun store(name: String = "reader.preferences_pb") =
+        PreferenceDataStoreFactory.create { folder.newFile(name) }
 
     @Test
     fun `nothing set is the page the book asked for`() = runTest {
@@ -112,7 +112,7 @@ class ReaderPreferencesRepositoryTest {
         assertEquals(1.27, backup.getDouble("custom_line_height"), 1e-9)
         assertEquals(-0.5, backup.getDouble("custom_text_indent"), 1e-9)
 
-        val restored = ReaderPreferencesRepository(store())
+        val restored = ReaderPreferencesRepository(store("restored.preferences_pb"))
         restored.restoreBackupValues(backup)
         assertEquals(1.27, restored.prefs.first().customLineHeight!!, 1e-9)
         assertEquals(-0.5, restored.prefs.first().customTextIndent!!, 1e-9)
