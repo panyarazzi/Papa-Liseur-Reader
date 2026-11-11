@@ -137,13 +137,21 @@ class ReaderPositionPersistenceTest {
             assertTrue(publisher.flush(url))
             assertEquals(1, writes)
 
+            // A final pause snapshot must persist even while ordinary
+            // reader movement is ignored because the reader is inactive.
+            val finalPause = place(0.22)
+            reader.onLocatorChanged(finalPause, NavigatorPositionEvent.LOCAL_JUMP)
+            assertTrue(publisher.flush(url))
+            assertEquals(0.22, stored().locations.progression!!, 0.000001)
+            assertEquals(2, writes)
+
             val jump = place(0.3)
             reader.onLocatorChanged(jump, NavigatorPositionEvent.OPENING_RESTORATION)
             assertEquals(1, writes)
             reader.onLocatorChanged(jump, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
             assertEquals(0.3, stored().locations.progression!!, 0.000001)
-            assertEquals(2, writes)
+            assertEquals(4, writes)
             reader.onLocatorChanged(jump, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
             assertEquals(2, writes)
@@ -183,7 +191,7 @@ class ReaderPositionPersistenceTest {
             reopening.onLocatorChanged(failedPlace, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
             assertEquals(0.9, stored().locations.progression!!, 0.000001)
-            assertEquals(4, writes)
+            assertEquals(5, writes)
         } finally {
             models.clear()
             scope.cancel()
