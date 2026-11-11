@@ -98,6 +98,39 @@ class ReaderPreferencesRepositoryTest {
     }
 
     @Test
+    fun `custom paragraph metrics are app-wide preferences and survive backup restore`() = runTest {
+        val data = store()
+        val repo = ReaderPreferencesRepository(data)
+        repo.setCustomLineHeight(1.27)
+        repo.setCustomTextIndent(-0.5)
+
+        val prefs = repo.prefs.first()
+        assertEquals(1.27, prefs.customLineHeight!!, 1e-9)
+        assertEquals(-0.5, prefs.customTextIndent!!, 1e-9)
+
+        val backup = repo.backupValues()
+        assertEquals(1.27, backup.getDouble("custom_line_height"), 1e-9)
+        assertEquals(-0.5, backup.getDouble("custom_text_indent"), 1e-9)
+
+        val restored = ReaderPreferencesRepository(store())
+        restored.restoreBackupValues(backup)
+        assertEquals(1.27, restored.prefs.first().customLineHeight!!, 1e-9)
+        assertEquals(-0.5, restored.prefs.first().customTextIndent!!, 1e-9)
+    }
+
+    @Test
+    fun `invalid custom paragraph metrics are discarded`() = runTest {
+        val data = store()
+        data.edit {
+            it[doublePreferencesKey("custom_line_height")] = Double.NaN
+            it[doublePreferencesKey("custom_text_indent")] = 21.0
+        }
+        val prefs = ReaderPreferencesRepository(data).prefs.first()
+        assertNull(prefs.customLineHeight)
+        assertNull(prefs.customTextIndent)
+    }
+
+    @Test
     fun `the page turn is written under its own key`() = runTest {
         val data = store()
         val repo = ReaderPreferencesRepository(data)

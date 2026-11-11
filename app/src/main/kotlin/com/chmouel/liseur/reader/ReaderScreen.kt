@@ -2000,7 +2000,7 @@ internal fun ReaderScreen(
             }
     }
 
-    // Apply only per-book custom paragraph values. With neither value selected,
+    // Apply the effective custom paragraph values (global or per-book). With neither value selected,
     // no style is injected and the EPUB's original paragraph CSS remains intact.
     var customParagraphStyleOn by remember { mutableStateOf<Triple<WebView, String, Pair<Double?, Double?>>?>(null) }
     LaunchedEffect(navigator, customTypography, reflowableText) {

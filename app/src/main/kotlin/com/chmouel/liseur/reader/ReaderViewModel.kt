@@ -1218,12 +1218,28 @@ class ReaderViewModel(
     private var readerActive = false
     private var pendingPositionEvent: NavigatorPositionEvent? = null
 
-    val customTypography: StateFlow<BookCustomTypography?> = customTypographyDao.observe(bookId)
-        .map { it?.sanitized() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
     private val ownTypography: StateFlow<BookTypography?> = typographyDao.observe(bookId)
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Effective custom paragraph metrics: app-wide by default, or the
+     * preserved per-book values while Separate Typography is enabled.
+     */
+    val customTypography: StateFlow<BookCustomTypography?> = combine(
+        prefsRepo.prefs,
+        ownTypography,
+        customTypographyDao.observe(bookId),
+    ) { shared, own, perBook ->
+        if (own != null) {
+            perBook?.sanitized()
+        } else {
+            BookCustomTypography(
+                bookUrl = bookId,
+                lineHeight = shared.customLineHeight,
+                textIndent = shared.customTextIndent,
+            ).sanitized().takeIf { it.lineHeight != null || it.textIndent != null }
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** Whether this book has been set apart from the shared settings. */
     val typographyIsOwn: StateFlow<Boolean> = ownTypography
@@ -2936,8 +2952,24 @@ class ReaderViewModel(
      */
     fun setTypographyIsOwn(own: Boolean) = viewModelScope.launch {
         if (own) {
-            typographyDao.upsert(BookTypography.from(bookId, rawPrefs.value))
+            if (typographyDao.get(bookId) == null) {
+                val shared = prefsRepo.prefs.first()
+                // Keep an older per-book choice if this book was separated before.
+                // A first separation starts from the values currently in use.
+                if (customTypographyDao.get(bookId) == null) {
+                    val custom = BookCustomTypography(
+                        bookUrl = bookId,
+                        lineHeight = shared.customLineHeight,
+                        textIndent = shared.customTextIndent,
+                    ).sanitized()
+                    if (custom.lineHeight != null || custom.textIndent != null) {
+                        customTypographyDao.upsert(custom)
+                    }
+                }
+                typographyDao.upsert(BookTypography.from(bookId, shared))
+            }
         } else {
+            // Keep the per-book row so turning Separate back on restores its prior choices.
             typographyDao.clear(bookId)
         }
     }
@@ -2969,21 +3001,32 @@ class ReaderViewModel(
         }
     }
 
-    /** Custom paragraph metrics are stored per EPUB, never in shared Readium preferences. */
-    fun setCustomLineHeight(value: Double?) = updateCustomTypography { it.copy(lineHeight = value) }
-
-    fun setCustomTextIndent(value: Double?) = updateCustomTypography { it.copy(textIndent = value) }
-
-    private fun updateCustomTypography(change: (BookCustomTypography) -> BookCustomTypography) =
-        viewModelScope.launch {
-            val current = customTypographyDao.get(bookId) ?: BookCustomTypography(bookId)
-            val updated = change(current).sanitized()
-            if (updated.lineHeight == null && updated.textIndent == null) {
-                customTypographyDao.clear(bookId)
-            } else {
-                customTypographyDao.upsert(updated)
-            }
+    /** Custom paragraph metrics are app-wide unless this book is explicitly separated. */
+    fun setCustomLineHeight(value: Double?) = viewModelScope.launch {
+        if (typographyDao.get(bookId) == null) {
+            prefsRepo.setCustomLineHeight(value)
+        } else {
+            updateCustomTypography { it.copy(lineHeight = value) }
         }
+    }
+
+    fun setCustomTextIndent(value: Double?) = viewModelScope.launch {
+        if (typographyDao.get(bookId) == null) {
+            prefsRepo.setCustomTextIndent(value)
+        } else {
+            updateCustomTypography { it.copy(textIndent = value) }
+        }
+    }
+
+    private suspend fun updateCustomTypography(change: (BookCustomTypography) -> BookCustomTypography) {
+        val current = customTypographyDao.get(bookId) ?: BookCustomTypography(bookId)
+        val updated = change(current).sanitized()
+        if (updated.lineHeight == null && updated.textIndent == null) {
+            customTypographyDao.clear(bookId)
+        } else {
+            customTypographyDao.upsert(updated)
+        }
+    }
 
     fun setPageMargins(value: Double?) = typography(
         shared = { prefsRepo.setPageMargins(value) },

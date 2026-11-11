@@ -875,6 +875,9 @@ data class ReaderPrefs(
     val progressFontSizeSp: Float = 12f,
     val marginTopDp: Float = 12f,
     val marginBottomDp: Float = 12f,
+    /** Custom paragraph metrics used app-wide unless a book is explicitly separated. */
+    val customLineHeight: Double? = null,
+    val customTextIndent: Double? = null,
 ) {
     companion object {
         const val MIN_FONT_SIZE = 0.6
@@ -929,6 +932,8 @@ fun ReaderPrefs.sanitized(): ReaderPrefs = copy(
     progressFontSizeSp = progressFontSizeSp.takeIf { it.isFinite() }?.coerceIn(9f, 20f) ?: 12f,
     marginTopDp = marginTopDp.takeIf { it.isFinite() }?.coerceIn(0f, 48f) ?: 12f,
     marginBottomDp = marginBottomDp.takeIf { it.isFinite() }?.coerceIn(0f, 48f) ?: 12f,
+    customLineHeight = customLineHeight?.takeIf { it.isFinite() && it in 0.1..10.0 },
+    customTextIndent = customTextIndent?.takeIf { it.isFinite() && it in -20.0..20.0 },
     brightness = brightness?.takeIf { it.isFinite() }?.coerceIn(0f, 1f),
     autoScrollSpeed = AutoScrollPreference.sanitize(autoScrollSpeed),
 )

@@ -32,6 +32,8 @@ internal val READER_BACKUP_TYPES = mapOf(
     "font_weight" to BackupValueType.STRING, "hyphens" to BackupValueType.BOOLEAN,
     "letter_spacing" to BackupValueType.DOUBLE, "word_spacing" to BackupValueType.DOUBLE,
     "paragraph_spacing" to BackupValueType.DOUBLE,
+    "custom_line_height" to BackupValueType.DOUBLE,
+    "custom_text_indent" to BackupValueType.DOUBLE,
     "is_fullscreen" to BackupValueType.BOOLEAN,
     "top_progress_mode" to BackupValueType.STRING,
     "progress_font_size_sp" to BackupValueType.FLOAT,
@@ -103,6 +105,8 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
         val LETTER_SPACING = doublePreferencesKey("letter_spacing")
         val WORD_SPACING = doublePreferencesKey("word_spacing")
         val PARAGRAPH_SPACING = doublePreferencesKey("paragraph_spacing")
+        val CUSTOM_LINE_HEIGHT = doublePreferencesKey("custom_line_height")
+        val CUSTOM_TEXT_INDENT = doublePreferencesKey("custom_text_indent")
         val IS_FULLSCREEN = booleanPreferencesKey("is_fullscreen")
         val TOP_PROGRESS_MODE = stringPreferencesKey("top_progress_mode")
         val PROGRESS_FONT_SIZE_SP = floatPreferencesKey("progress_font_size_sp")
@@ -139,6 +143,8 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
             letterSpacing = p[Keys.LETTER_SPACING],
             wordSpacing = p[Keys.WORD_SPACING],
             paragraphSpacing = p[Keys.PARAGRAPH_SPACING],
+            customLineHeight = p[Keys.CUSTOM_LINE_HEIGHT],
+            customTextIndent = p[Keys.CUSTOM_TEXT_INDENT],
             isFullscreen = p[Keys.IS_FULLSCREEN] ?: false,
             topProgressMode = TopProgressMode.fromId(p[Keys.TOP_PROGRESS_MODE]),
             progressFontSizeSp = (p[Keys.PROGRESS_FONT_SIZE_SP] ?: 12f).coerceIn(9f, 20f),
@@ -235,6 +241,16 @@ class ReaderPreferencesRepository(private val store: DataStore<Preferences>) {
 
     suspend fun setPageMargins(value: Double?) {
         setNullableDouble(Keys.PAGE_MARGINS, TypographyRange.PAGE_MARGINS.sanitize(value))
+    }
+
+    /** App-wide custom paragraph line height, overridden only by an explicitly separated book. */
+    suspend fun setCustomLineHeight(value: Double?) {
+        setNullableDouble(Keys.CUSTOM_LINE_HEIGHT, value?.takeIf { it.isFinite() && it in 0.1..10.0 })
+    }
+
+    /** App-wide custom first-line indent, overridden only by an explicitly separated book. */
+    suspend fun setCustomTextIndent(value: Double?) {
+        setNullableDouble(Keys.CUSTOM_TEXT_INDENT, value?.takeIf { it.isFinite() && it in -20.0..20.0 })
     }
 
     suspend fun setBrightness(value: Float?) {

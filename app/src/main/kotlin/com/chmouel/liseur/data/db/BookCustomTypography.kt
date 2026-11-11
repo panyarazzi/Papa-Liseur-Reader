@@ -8,7 +8,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
-/** Custom paragraph metrics chosen for one EPUB, independent of shared typography. */
+/** Per-book custom paragraph overrides, retained while Separate Typography is off. */
 @Entity(tableName = "book_custom_typography")
 data class BookCustomTypography(
     @PrimaryKey @ColumnInfo(name = "book_url") val bookUrl: String,
