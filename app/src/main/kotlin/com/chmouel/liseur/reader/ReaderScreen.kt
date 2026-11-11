@@ -542,6 +542,10 @@ internal fun ReaderScreen(
     // Who a selected name is, from the chapters before; null leaves the action out.
     companion: ReaderCompanion? = null,
 ) {
+    // This is the fallback Back action. More specific handlers for search,
+    // contents, sheets and other overlays are composed later and take priority.
+    BackHandler { onBack() }
+
     var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     val navigatorNow by rememberUpdatedState(navigator)
     val readingThemeNow by rememberUpdatedState(readingTheme)
@@ -1089,19 +1093,24 @@ internal fun ReaderScreen(
         return captured
     }
 
+    // Capture the page actually on screen before any operation that must
+    // leave the reader. In scrolling mode Readium's current locator has no
+    // reliable viewport progression, so measure and hold the visible place;
+    // in paginated mode enrich the navigator's current locator directly.
     onProgressAction.prepareCatchUp = {
-        if (!effectiveScrolling) {
-            true
-        } else {
-            navigatorNow?.let { nav ->
-                val since = heldPlace.mark()
-                scrolledPlace(nav)?.let {
-                    if (!heldPlace.hold(it, since)) return@let false
-                    publishCaptured(nav, it, NavigatorPositionEvent.LOCAL_JUMP)
-                    true
-                } ?: false
-            } ?: false
-        }
+        navigatorNow?.let { nav ->
+            val native = nav.currentLocator.value
+            val since = heldPlace.mark()
+            val captured = if (effectiveScrolling) scrolledPlace(nav) else capture(nav, native)
+            if (captured == null || navigatorNow !== nav) {
+                false
+            } else if (effectiveScrolling && !heldPlace.hold(captured, since)) {
+                false
+            } else {
+                publishCaptured(nav, captured, NavigatorPositionEvent.LOCAL_JUMP, expectedNative = native)
+                true
+            }
+        } ?: false
     }
 
     onBookSyncAction.registerCapture(onProgressAction.prepareCatchUp)
