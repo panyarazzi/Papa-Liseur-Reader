@@ -1093,6 +1093,32 @@ internal fun ReaderScreen(
         return captured
     }
 
+    suspend fun settleLayout() {
+        withFrameNanos { }
+        withFrameNanos { }
+    }
+
+    // Returns once the reader's finger has been still for a moment, no
+    // issued move is in the air, and the page has stopped: the same web
+    // view, scrolled the same, in the same place on screen, on two looks
+    // in a row. A fling and a swipe animation both keep it waiting.
+    suspend fun awaitPageAtRest(nav: EpubNavigatorFragment) {
+        val origin = IntArray(2)
+        var last: List<Int>? = null
+        while (true) {
+            delay(PAGE_REST_POLL_MS)
+            val now = SystemClock.elapsedRealtime()
+            val web = visibleWebView(nav.publicationView)
+            val here = web?.let {
+                it.getLocationOnScreen(origin)
+                listOf(System.identityHashCode(it), it.scrollX, it.scrollY, origin[0], origin[1])
+            }
+            val fingerStill = lastDragAt == Long.MIN_VALUE || now - lastDragAt >= DRAG_QUIET_MS
+            if (fingerStill && moves.mark(now) != IssuedMoves.NONE && here != null && here == last) return
+            last = here
+        }
+    }
+
     // Capture the page actually on screen before any operation that must
     // leave the reader. In scrolling mode Readium's current locator has no
     // reliable viewport progression, so measure and hold the visible place;
@@ -1119,32 +1145,6 @@ internal fun ReaderScreen(
     }
 
     onBookSyncAction.registerCapture(onProgressAction.prepareCatchUp)
-
-    suspend fun settleLayout() {
-        withFrameNanos { }
-        withFrameNanos { }
-    }
-
-    // Returns once the reader's finger has been still for a moment, no
-    // issued move is in the air, and the page has stopped: the same web
-    // view, scrolled the same, in the same place on screen, on two looks
-    // in a row. A fling and a swipe animation both keep it waiting.
-    suspend fun awaitPageAtRest(nav: EpubNavigatorFragment) {
-        val origin = IntArray(2)
-        var last: List<Int>? = null
-        while (true) {
-            delay(PAGE_REST_POLL_MS)
-            val now = SystemClock.elapsedRealtime()
-            val web = visibleWebView(nav.publicationView)
-            val here = web?.let {
-                it.getLocationOnScreen(origin)
-                listOf(System.identityHashCode(it), it.scrollX, it.scrollY, origin[0], origin[1])
-            }
-            val fingerStill = lastDragAt == Long.MIN_VALUE || now - lastDragAt >= DRAG_QUIET_MS
-            if (fingerStill && moves.mark(now) != IssuedMoves.NONE && here != null && here == last) return
-            last = here
-        }
-    }
 
     // Waits for the WebView to finish reflowing after a preference lands.
     // Readium applies preferences as CSS inside the WebView on its own
