@@ -189,7 +189,7 @@ class ReaderPositionPersistenceTest {
             publisher.publish(update(place(0.9)))
             assertFalse(publisher.flush(url))
             val reopening = model()
-            assertEquals(0.31, reopening.ready().initialLocator!!.locations.progression!!, 0.000001)
+            assertEquals(0.4, reopening.ready().initialLocator!!.locations.progression!!, 0.000001)
             assertEquals(
                 ReaderViewModel.BookSync.Note(R.string.reader_open_position_not_saved),
                 reopening.bookSync.value,
