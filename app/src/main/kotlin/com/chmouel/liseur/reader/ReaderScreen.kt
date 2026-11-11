@@ -3249,14 +3249,29 @@ internal fun ReaderScreen(
             val putBack = pageTurner.draggedFrom
             pageTurnDrag.abandon()
             putBack?.let { publishUnverified(it, NavigatorPositionEvent.LOCAL_JUMP) }
-            heldPlace.current()?.let {
-                val candidate = cachedBookOrbitCfi?.takeIf { saved ->
-                    saved.locatorJson == it.toJSON().toString()
+            if (effectiveScrollingNow) {
+                // A scrolling page has no useful progression in Readium's
+                // currentLocator. Its last measured visible place is the
+                // authoritative pause snapshot.
+                heldPlace.current()?.let {
+                    val candidate = cachedBookOrbitCfi?.takeIf { saved ->
+                        saved.locatorJson == it.toJSON().toString()
+                    }
+                    if (candidate != null) {
+                        onVerifiedLocatorChanged(it, NavigatorPositionEvent.LOCAL_JUMP, candidate)
+                    } else {
+                        publishUnverified(it, NavigatorPositionEvent.LOCAL_JUMP)
+                    }
                 }
-                if (candidate != null) {
-                    onVerifiedLocatorChanged(it, NavigatorPositionEvent.LOCAL_JUMP, candidate)
-                } else {
-                    publishUnverified(it, NavigatorPositionEvent.LOCAL_JUMP)
+            } else if (putBack == null) {
+                // In paginated mode there is no HeldPlace: page turns are
+                // normally persisted from the locator stream. Take one
+                // final synchronous snapshot as well, because the last
+                // Readium emission may still be debounced when ON_PAUSE
+                // makes the reader inactive and later emissions are
+                // deliberately ignored.
+                navigatorNow?.let { nav ->
+                    publishUnverified(nav.currentLocator.value, NavigatorPositionEvent.LOCAL_JUMP)
                 }
             }
         }
