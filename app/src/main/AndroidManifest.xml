@@ -79,7 +79,7 @@
             android:name=".reader.ReaderActivity"
             android:windowSoftInputMode="adjustResize"
             android:exported="true"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode"
             android:theme="@style/Theme.Liseur">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
