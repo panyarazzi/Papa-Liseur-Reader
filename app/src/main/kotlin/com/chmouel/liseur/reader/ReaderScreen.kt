@@ -1099,6 +1099,11 @@ internal fun ReaderScreen(
     // in paginated mode enrich the navigator's current locator directly.
     onProgressAction.prepareCatchUp = {
         navigatorNow?.let { nav ->
+            // A page turn can be requested before Readium publishes its
+            // arrival. Wait for any issued move and the viewport to settle
+            // before asking for the final locator.
+            awaitPageAtRest(nav)
+            if (navigatorNow !== nav) return@let false
             val native = nav.currentLocator.value
             val since = heldPlace.mark()
             val captured = if (effectiveScrolling) scrolledPlace(nav) else capture(nav, native)
