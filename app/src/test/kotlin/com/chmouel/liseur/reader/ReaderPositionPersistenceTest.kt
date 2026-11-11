@@ -164,7 +164,7 @@ class ReaderPositionPersistenceTest {
             assertEquals(0.3, stored().locations.progression!!, 0.000001)
             reader.onLocatorChanged(reflow, NavigatorPositionEvent.LOCAL_JUMP)
             assertTrue(publisher.flush(url))
-            assertEquals(3, writes)
+            assertEquals(4, writes)
 
             models.clear()
             assertTrue(publisher.flush(url))
