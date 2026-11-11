@@ -1495,7 +1495,7 @@ private fun BookGrid(
     ) {
         // Keep the current folder and its back action visible while the books scroll.
         if (selectedFolder != null) {
-            stickyHeader(span = { GridItemSpan(maxLineSpan) }) {
+            stickyHeader {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
