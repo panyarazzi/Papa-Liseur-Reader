@@ -179,6 +179,8 @@ data class LibraryUiState(
     val continueReading: List<ContinueReading> = emptyList(),
     val catalogStatus: CatalogStatus = CatalogStatus.Idle,
     val downloads: Map<String, DownloadProgress> = emptyMap(),
+    /** Last known reading progression for books in the library, keyed by book URL. */
+    val readingProgress: Map<String, Double> = emptyMap(),
     val canDownload: Boolean = true,
     /** The saved catalogs whose books may be downloaded, by id. */
     val downloadableBrowse: Set<Long> = emptySet(),
@@ -761,6 +763,7 @@ class LibraryViewModel(
                 },
                 catalogStatus = catalogStatus,
                 downloads = running,
+                readingProgress = progressions,
                 canDownload = server?.canDownload != false,
                 downloadableBrowse = browseServers.filter { it.canDownload }.mapTo(mutableSetOf()) { it.id },
                 canDeleteFromServer = canDeleteFrom(server, router),

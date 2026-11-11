@@ -155,6 +155,9 @@ class ReaderActivity : FragmentActivity() {
     /** A link out of the book, waiting for the reader to allow it. */
     private var pendingExternalLink by mutableStateOf<AbsoluteUrl?>(null)
 
+    /** Prevents repeated Back presses from starting parallel exit saves. */
+    private var exitSaveInProgress = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // The Publication doesn't survive process death, so saved navigator
         // fragment state can't be restored; drop it and reopen the book at
@@ -506,7 +509,17 @@ class ReaderActivity : FragmentActivity() {
                                             if (next == null) return@collect
                                             val url = (next.availability as? NextVolumeAvailability.Ready)
                                                 ?.fileUrl ?: return@collect
+                                            // The next volume is another way of leaving this
+                                            // reader; it observes the same durable-save rule as Back.
                                             viewModel.consumeOpenNext()
+                                            if (!viewModel.savePositionForExit()) {
+                                                Toast.makeText(
+                                                    this@ReaderActivity,
+                                                    R.string.reader_position_not_saved,
+                                                    Toast.LENGTH_LONG,
+                                                ).show()
+                                                return@collect
+                                            }
                                             startActivity(
                                                 intent(this@ReaderActivity, url, next.id),
                                             )
@@ -695,7 +708,7 @@ class ReaderActivity : FragmentActivity() {
                                             registerCapture = { viewModel.preparePositionAction = it },
                                         )
                                     },
-                                    onBack = ::finish,
+                                    onBack = ::leaveReaderAfterSaving,
                                     readAloud = remember(viewModel) {
                                         val open = checkNotNull(target)
                                         ReaderReadAloud(
@@ -918,24 +931,35 @@ class ReaderActivity : FragmentActivity() {
         viewModel.onReaderResumed()
     }
 
+    private fun leaveReaderAfterSaving() {
+        if (exitSaveInProgress) return
+        exitSaveInProgress = true
+        lifecycleScope.launch {
+            if (viewModel.savePositionForExit()) {
+                finish()
+            } else {
+                exitSaveInProgress = false
+                Toast.makeText(
+                    this@ReaderActivity,
+                    R.string.reader_position_not_saved,
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        }
+    }
+
     override fun onPause() {
         logReaderLifecycle("onPause")
         if (target != null) {
-            // Mark the reader inactive before FragmentActivity pauses the
-            // navigator. Readium can publish a layout/restoration locator
-            // from inside that pause; it is not a page the reader turned.
-            // This also stops the reading clock the moment the book stops
-            // being looked at, rather than counting the interruption.
+            // Stop the reading clock before FragmentActivity pauses the
+            // navigator. Its ON_PAUSE observer captures the final viewport.
             viewModel.onReaderPaused()
         }
         super.onPause()
-        // Leaving the book is the moment the position is worth sending:
-        // it is settled, and the reader is likely to pick up elsewhere.
-        // After super, so the held place the ON_PAUSE observers publish
-        // is queued ahead of the push that carries it. Asked here rather
-        // than in onStop because a process killed while paused never
-        // gets there.
-        if (target != null) viewModel.onReaderLeft()
+        // App switching and screen-off must not block Android's lifecycle
+        // or keep the device awake. The final snapshot is already queued by
+        // the Compose observer; wait for Room asynchronously in ViewModel.
+        if (target != null) viewModel.flushPositionInBackground()
     }
 
     override fun onDestroy() {

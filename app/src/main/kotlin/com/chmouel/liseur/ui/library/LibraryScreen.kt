@@ -134,6 +134,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
@@ -1453,6 +1454,7 @@ internal fun BookActionsSheet(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun BookGrid(
     state: LibraryUiState,
     gridState: LazyGridState,
@@ -1471,6 +1473,17 @@ private fun BookGrid(
     var showAllContinueReading by rememberSaveable { mutableStateOf(false) }
     var selectedFolder by rememberSaveable { mutableStateOf<String?>(null) }
     var bookViewMode by rememberSaveable { mutableStateOf("grid") }
+    val selectedBooks = selectedFolder?.let { folder ->
+        state.books.filter { book ->
+            val source = book.sourcePath?.replace('\\', '/')
+            val parent = when {
+                source == null -> "__OTHER__"
+                '/' !in source -> "__ROOT__"
+                else -> source.substringBeforeLast('/')
+            }
+            parent == folder
+        }
+    }.orEmpty()
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = coverMinSize(windowWidth())),
@@ -1480,6 +1493,35 @@ private fun BookGrid(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        // Keep the current folder and its back action visible while the books scroll.
+        if (selectedFolder != null) {
+            stickyHeader {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = { selectedFolder = null }) {
+                        Text(text = "‹  All folders")
+                    }
+                    Text(
+                        text = selectedFolder?.substringAfterLast('/') ?: "",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = selectedBooks.size.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
         // Not a search result, so it has no business sitting above them
         // and pushing the real answers off the screen. Nor is it an
         // archived book, so in the archive it is a book from somewhere
@@ -1528,6 +1570,7 @@ private fun BookGrid(
                 BookCard(
                     book = book,
                     progress = state.downloads[book.url],
+                    readingProgress = state.readingProgress[book.url],
                     inASeries = !book.seriesName.isNullOrBlank(),
                     highlight = state.searchQuery,
                     onClick = { onBookSelected(book) },
@@ -1575,42 +1618,12 @@ private fun BookGrid(
             }
         }
         if (selectedFolder != null) {
-            val selectedBooks = state.books.filter { book ->
-                val source = book.sourcePath?.replace('\\', '/')
-                val parent = when {
-                    source == null -> "__OTHER__"
-                    '/' !in source -> "__ROOT__"
-                    else -> source.substringBeforeLast('/')
-                }
-                parent == selectedFolder
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(onClick = { selectedFolder = null }) {
-                        Text(text = "‹  All folders")
-                    }
-                    Text(
-                        text = selectedFolder?.substringAfterLast('/') ?: "",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = selectedBooks.size.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
             if (bookViewMode == "list") {
                 items(selectedBooks, key = { it.id }, span = { GridItemSpan(maxLineSpan) }) { book ->
                     BookListRow(
                         book = book,
                         progress = state.downloads[book.url],
+                        readingProgress = state.readingProgress[book.url],
                         onClick = { onBookSelected(book) },
                         onLongClick = { onBookLongPress(book) },
                     )
@@ -1620,6 +1633,7 @@ private fun BookGrid(
                     BookCard(
                         book = book,
                         progress = state.downloads[book.url],
+                        readingProgress = state.readingProgress[book.url],
                         inASeries = seriesKey(book.seriesName) in state.shownSeries,
                         onClick = { onBookSelected(book) },
                         onLongClick = { onBookLongPress(book) },
@@ -1637,6 +1651,7 @@ private fun BookGrid(
                     is ShelfEntry.Single -> BookCard(
                         book = entry.book,
                         progress = state.downloads[entry.book.url],
+                        readingProgress = state.readingProgress[entry.book.url],
                         inASeries = false,
                         onClick = { onBookSelected(entry.book) },
                         onLongClick = { onBookLongPress(entry.book) },
@@ -1693,6 +1708,7 @@ private fun BookListRow(
     progress: DownloadProgress?,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    readingProgress: Double? = null,
 ) {
     val haptics = LocalHapticFeedback.current
     Row(
@@ -1716,7 +1732,11 @@ private fun BookListRow(
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = book.displayTitle,
+                text = if (readingProgress != null) {
+                    "${book.displayTitle} · ${(readingProgress * 100).toInt()}%"
+                } else {
+                    book.displayTitle
+                },
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
@@ -2039,6 +2059,7 @@ private fun BookCard(
     modifier: Modifier = Modifier,
     /** What was searched for, to embolden where it matched; null on the shelf. */
     highlight: String? = null,
+    readingProgress: Double? = null,
 ) {
     val haptics = LocalHapticFeedback.current
     // The whole card is one thing to a screen reader: the cover, the badges
@@ -2098,7 +2119,10 @@ private fun BookCard(
                 .heightIn(min = 56.dp),
         ) {
             Text(
-                text = searchHighlighted(book.displayTitle, highlight),
+                text = buildAnnotatedString {
+                    append(searchHighlighted(book.displayTitle, highlight))
+                    readingProgress?.let { append(" · ${(it * 100).toInt()}%") }
+                },
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 lineHeight = 18.sp,

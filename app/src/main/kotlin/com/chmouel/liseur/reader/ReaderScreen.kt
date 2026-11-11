@@ -542,6 +542,10 @@ internal fun ReaderScreen(
     // Who a selected name is, from the chapters before; null leaves the action out.
     companion: ReaderCompanion? = null,
 ) {
+    // This is the fallback Back action. More specific handlers for search,
+    // contents, sheets and other overlays are composed later and take priority.
+    BackHandler { onBack() }
+
     var navigator by remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     val navigatorNow by rememberUpdatedState(navigator)
     val readingThemeNow by rememberUpdatedState(readingTheme)
@@ -1089,23 +1093,6 @@ internal fun ReaderScreen(
         return captured
     }
 
-    onProgressAction.prepareCatchUp = {
-        if (!effectiveScrolling) {
-            true
-        } else {
-            navigatorNow?.let { nav ->
-                val since = heldPlace.mark()
-                scrolledPlace(nav)?.let {
-                    if (!heldPlace.hold(it, since)) return@let false
-                    publishCaptured(nav, it, NavigatorPositionEvent.LOCAL_JUMP)
-                    true
-                } ?: false
-            } ?: false
-        }
-    }
-
-    onBookSyncAction.registerCapture(onProgressAction.prepareCatchUp)
-
     suspend fun settleLayout() {
         withFrameNanos { }
         withFrameNanos { }
@@ -1131,6 +1118,37 @@ internal fun ReaderScreen(
             last = here
         }
     }
+
+    // Capture the page actually on screen before any operation that must
+    // leave the reader. In scrolling mode Readium's current locator has no
+    // reliable viewport progression, so measure and hold the visible place;
+    // in paginated mode enrich the navigator's current locator directly.
+    onProgressAction.prepareCatchUp = {
+        navigatorNow?.let { nav ->
+            // A page turn can be requested before Readium publishes its
+            // arrival. Wait for any issued move and the viewport to settle
+            // before asking for the final locator. If the WebView never
+            // becomes observable, fail closed instead of trapping Back.
+            val settled = withTimeoutOrNull(PAGE_REST_TIMEOUT_MS) {
+                awaitPageAtRest(nav)
+                true
+            } ?: false
+            if (!settled || navigatorNow !== nav) return@let false
+            val native = nav.currentLocator.value
+            val since = heldPlace.mark()
+            val captured = if (effectiveScrolling) scrolledPlace(nav) else capture(nav, native)
+            if (captured == null || navigatorNow !== nav) {
+                false
+            } else if (effectiveScrolling && !heldPlace.hold(captured, since)) {
+                false
+            } else {
+                publishCaptured(nav, captured, NavigatorPositionEvent.LOCAL_JUMP, expectedNative = native)
+                true
+            }
+        } ?: false
+    }
+
+    onBookSyncAction.registerCapture(onProgressAction.prepareCatchUp)
 
     // Waits for the WebView to finish reflowing after a preference lands.
     // Readium applies preferences as CSS inside the WebView on its own
@@ -3249,14 +3267,29 @@ internal fun ReaderScreen(
             val putBack = pageTurner.draggedFrom
             pageTurnDrag.abandon()
             putBack?.let { publishUnverified(it, NavigatorPositionEvent.LOCAL_JUMP) }
-            heldPlace.current()?.let {
-                val candidate = cachedBookOrbitCfi?.takeIf { saved ->
-                    saved.locatorJson == it.toJSON().toString()
+            if (effectiveScrollingNow) {
+                // A scrolling page has no useful progression in Readium's
+                // currentLocator. Its last measured visible place is the
+                // authoritative pause snapshot.
+                heldPlace.current()?.let {
+                    val candidate = cachedBookOrbitCfi?.takeIf { saved ->
+                        saved.locatorJson == it.toJSON().toString()
+                    }
+                    if (candidate != null) {
+                        onVerifiedLocatorChanged(it, NavigatorPositionEvent.LOCAL_JUMP, candidate)
+                    } else {
+                        publishUnverified(it, NavigatorPositionEvent.LOCAL_JUMP)
+                    }
                 }
-                if (candidate != null) {
-                    onVerifiedLocatorChanged(it, NavigatorPositionEvent.LOCAL_JUMP, candidate)
-                } else {
-                    publishUnverified(it, NavigatorPositionEvent.LOCAL_JUMP)
+            } else if (putBack == null) {
+                // In paginated mode there is no HeldPlace: page turns are
+                // normally persisted from the locator stream. Take one
+                // final synchronous snapshot as well, because the last
+                // Readium emission may still be debounced when ON_PAUSE
+                // makes the reader inactive and later emissions are
+                // deliberately ignored.
+                navigatorNow?.let { nav ->
+                    publishUnverified(nav.currentLocator.value, NavigatorPositionEvent.LOCAL_JUMP)
                 }
             }
         }
@@ -5607,6 +5640,7 @@ private const val DRAG_QUIET_MS = 300L
 
 /** How often a moving page is looked at to see whether it has stopped. */
 private const val PAGE_REST_POLL_MS = 150L
+private const val PAGE_REST_TIMEOUT_MS = 8_000L
 
 /** How long a book reopened translated waits for a still page before giving up until the next one. */
 private const val TRANSLATION_RESUME_WAIT_MS = 10_000L
