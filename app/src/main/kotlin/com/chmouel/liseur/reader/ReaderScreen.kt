@@ -3518,7 +3518,10 @@ internal fun ReaderScreen(
                         }
                     }
                 }
-                bookmarkPreview = ExactLocatorAnchor.bookmarkParagraph(nav, bookmarkLocator)
+                val verifiedLocator = captureExactly(nav, bookmarkLocator)
+                bookmarkPreview = verifiedLocator?.let {
+                    ExactLocatorAnchor.bookmarkParagraph(nav, it)
+                }
             }
             val pageSnapshot = sectionScreens.takeIf {
                 measuredHref != null &&
