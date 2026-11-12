@@ -3509,27 +3509,26 @@ internal fun ReaderScreen(
         effectScope.launch {
             val nav = navigatorNow ?: return@launch
             var bookmarkLocator = nav.currentLocator.value
-                if (effectiveScrollingNow) {
-                    val since = heldPlace.mark()
-                    scrolledPlace(nav)?.let { captured ->
-                        bookmarkLocator = captured
-                        if (heldPlace.hold(captured, since)) {
-                            publishCaptured(nav, captured, NavigatorPositionEvent.LOCAL_JUMP)
-                        }
+            if (effectiveScrollingNow) {
+                val since = heldPlace.mark()
+                scrolledPlace(nav)?.let { captured ->
+                    bookmarkLocator = captured
+                    if (heldPlace.hold(captured, since)) {
+                        publishCaptured(nav, captured, NavigatorPositionEvent.LOCAL_JUMP)
                     }
                 }
-            val verifiedLocator = captureExactly(nav, bookmarkLocator) ?: bookmarkLocator
-            val bookmarkPreview = if (verifiedLocator === bookmarkLocator) {
-                null
-            } else {
-                ExactLocatorAnchor.bookmarkParagraph(nav, verifiedLocator)
+            }
+            val capturedLocator = captureExactly(nav, bookmarkLocator)
+            val locatorToSave = capturedLocator ?: bookmarkLocator
+            val bookmarkPreview = capturedLocator?.let {
+                ExactLocatorAnchor.bookmarkParagraph(nav, it)
             }
             val pageSnapshot = sectionScreens.takeIf {
                 measuredHref != null &&
                     navigatorNow?.currentLocator?.value?.href?.toString() == measuredHref
             }
             onAnnotationAction.toggleBookmark(
-                verifiedLocator,
+                locatorToSave,
                 bookmarkPreview,
                 pageSnapshot?.screen,
                 pageSnapshot?.screens,
