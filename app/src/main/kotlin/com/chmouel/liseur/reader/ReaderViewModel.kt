@@ -2780,13 +2780,26 @@ class ReaderViewModel(
     }
 
     /** Puts a bookmark on the current page, or takes it off again. */
-    fun toggleBookmark() {
-        val locator = lastLocator ?: return
+    fun toggleBookmark(
+        paragraphPreview: String?,
+        chapterScreen: Int?,
+        chapterScreens: Int?,
+    ) {
+        val current = lastLocator ?: return
         val existing = bookmarkForCurrentPage()
         if (existing != null) {
             remove(existing)
         } else {
-            save(annotation(locator, AnnotationKind.BOOKMARK))
+            val locator = ExactLocatorAnchor.withBookmarkScreenProgress(
+                current, chapterScreen, chapterScreens,
+            )
+            save(
+                annotation(
+                    locator,
+                    AnnotationKind.BOOKMARK,
+                    paragraphPreview = paragraphPreview,
+                ),
+            )
         }
     }
 
@@ -2902,7 +2915,11 @@ class ReaderViewModel(
         }
     }
 
-    private fun annotation(locator: Locator, kind: AnnotationKind): BookAnnotation {
+    private fun annotation(
+        locator: Locator,
+        kind: AnnotationKind,
+        paragraphPreview: String? = null,
+    ): BookAnnotation {
         val progression = locator.locations.totalProgression
         // The page a mark is filed under has to be the page the reader
         // saw, and that is the one the footer counts: resolve()
@@ -2916,7 +2933,12 @@ class ReaderViewModel(
             bookId = bookId,
             kind = kind.name,
             locatorJson = locator.toJSON().toString(),
-            text = locator.text.highlight?.takeIf { it.isNotBlank() },
+            text = if (kind == AnnotationKind.BOOKMARK) {
+                paragraphPreview?.takeIf { it.isNotBlank() }
+                    ?: locator.text.highlight?.takeIf { it.isNotBlank() }
+            } else {
+                locator.text.highlight?.takeIf { it.isNotBlank() }
+            },
             tint = if (kind == AnnotationKind.BOOKMARK) {
                 null
             } else {
