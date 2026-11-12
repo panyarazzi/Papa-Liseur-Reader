@@ -167,7 +167,7 @@ object ExactLocatorAnchor {
               const paragraph = candidates.find(el => (el.textContent || "").includes(quote)) ||
                 ((root.textContent || "").includes(quote) ? root : null);
               if (!paragraph) return null;
-              const text = (paragraph.textContent || "").replace(/\\s+/g, " ").trim();
+              const text = (paragraph.textContent || "").replace(/\s+/g, " ").trim();
               return text || null;
             })()
         """.trimIndent()
