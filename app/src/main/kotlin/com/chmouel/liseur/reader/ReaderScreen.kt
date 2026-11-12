@@ -688,8 +688,9 @@ internal fun ReaderScreen(
     val progress by progressFlow.collectAsStateWithLifecycle()
     // How many screenfuls the resource on screen has, and which one is
     // being read. Measured from the laid-out page rather than derived
-    // from the book, so it is display only: nothing here is saved,
-    // synced, or counted as reading. See [SectionScreenProgress].
+    // from the book, so the live value is transient. A snapshot may be
+    // attached to a bookmark for context, never used as its locator.
+    // See [SectionScreenProgress].
     var sectionScreens by remember { mutableStateOf<SectionScreens?>(null) }
     // Which resource the figure above belongs to, so that moving into
     // another one takes it off rather than letting it stand.
