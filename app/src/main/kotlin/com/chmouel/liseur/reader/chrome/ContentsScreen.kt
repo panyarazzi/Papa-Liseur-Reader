@@ -75,6 +75,7 @@ import com.chmouel.liseur.data.db.AnnotationKind
 import com.chmouel.liseur.data.db.BookAnnotation
 import com.chmouel.liseur.data.settings.ReaderTheme
 import com.chmouel.liseur.reader.annotations.HighlightTint
+import com.chmouel.liseur.reader.progress.ExactLocatorAnchor
 import com.chmouel.liseur.ui.contentWidthCap
 import com.chmouel.liseur.ui.windowWidth
 import com.chmouel.liseur.ui.withoutBottom
@@ -469,18 +470,45 @@ private fun AnnotationRow(
             )
         }
         Column(Modifier.weight(1f)) {
-            val where = listOfNotNull(
-                annotation.chapter?.takeIf { it.isNotBlank() },
-                annotation.position?.let { stringResource(R.string.reader_page_short, it) },
-            ).joinToString(" · ")
-            if (where.isNotEmpty()) {
-                Text(
-                    text = where,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = theme.foreground.copy(alpha = 0.6f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            val isBookmark = annotation.kind == AnnotationKind.BOOKMARK.name
+            if (isBookmark) {
+                annotation.chapter?.takeIf { it.isNotBlank() }?.let { chapter ->
+                    Text(
+                        text = chapter,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = theme.foreground.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                val chapterScreens = ExactLocatorAnchor.bookmarkScreenProgress(annotation.locatorJson)
+                val pageContext = listOfNotNull(
+                    annotation.position?.toString(),
+                    chapterScreens?.let { "${it.first}/${it.second}" },
+                ).joinToString(" · ")
+                if (pageContext.isNotEmpty()) {
+                    Text(
+                        text = pageContext,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = theme.foreground.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
+                val where = listOfNotNull(
+                    annotation.chapter?.takeIf { it.isNotBlank() },
+                    annotation.position?.let { stringResource(R.string.reader_page_short, it) },
+                ).joinToString(" · ")
+                if (where.isNotEmpty()) {
+                    Text(
+                        text = where,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = theme.foreground.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             excerpt?.let {
                 Text(
