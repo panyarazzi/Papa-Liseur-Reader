@@ -69,6 +69,18 @@ class ExactLocatorAnchorTest {
     }
 
     @Test
+    fun `bookmark footer page snapshot survives locator json`() {
+        val saved = ExactLocatorAnchor.withBookmarkScreenProgress(locator(), 4, 23)
+        val restored = Locator.fromJSON(saved.toJSON())
+
+        assertEquals(4 to 23, ExactLocatorAnchor.bookmarkScreenProgress(restored?.toJSON()?.toString()))
+        assertEquals(null, ExactLocatorAnchor.bookmarkScreenProgress(locator().toJSON().toString()))
+        assertEquals(null, ExactLocatorAnchor.bookmarkScreenProgress(
+            ExactLocatorAnchor.withBookmarkScreenProgress(locator(), 24, 23).toJSON().toString(),
+        ))
+    }
+
+    @Test
     fun `legacy text locator is approximate`() {
         val legacy = locator().copy(
             text = Locator.Text(before = "before", highlight = "next", after = "after"),
