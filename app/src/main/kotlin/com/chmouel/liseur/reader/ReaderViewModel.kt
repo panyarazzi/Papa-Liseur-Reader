@@ -2781,12 +2781,12 @@ class ReaderViewModel(
 
     /** Puts a bookmark on the current page, or takes it off again. */
     fun toggleBookmark(
+        current: Locator,
         paragraphPreview: String?,
         chapterScreen: Int?,
         chapterScreens: Int?,
     ) {
-        val current = lastLocator ?: return
-        val existing = bookmarkForCurrentPage()
+        val existing = bookmarkForCurrentPage(current)
         if (existing != null) {
             remove(existing)
         } else {
@@ -2829,8 +2829,7 @@ class ReaderViewModel(
             marks.any { (mark, place) -> mark.isHere(place, here, scrolled) }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    private fun bookmarkForCurrentPage(): BookAnnotation? {
-        val here = lastLocator
+    private fun bookmarkForCurrentPage(here: Locator): BookAnnotation? {
         val scrolled = _scrolling.value
         return bookmarkPlaces.value
             .firstOrNull { (mark, place) -> mark.isHere(place, here, scrolled) }
