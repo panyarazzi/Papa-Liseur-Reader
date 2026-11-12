@@ -2,6 +2,8 @@ package com.chmouel.liseur.domain
 
 import com.chmouel.liseur.data.db.AnnotationKind
 import com.chmouel.liseur.data.db.BookAnnotation
+import com.chmouel.liseur.reader.progress.ExactLocatorAnchor
+import org.readium.r2.shared.publication.Locator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -156,6 +158,26 @@ class AnnotationBackupTest {
     fun `a bookmark with nothing written on it comes back empty, not blank`() {
         val back = roundTrip(listOf(BackedUpBook("calibre:uuid-1", null, null, listOf(bare))))
         assertEquals(bare, back.single().annotations.single())
+    }
+
+    @Test
+    fun `bookmark paragraph and chapter page snapshot survive annotation backup`() {
+        val locator = requireNotNull(Locator.fromJSON(org.json.JSONObject(bare.locatorJson)))
+        val savedLocator = ExactLocatorAnchor.withBookmarkScreenProgress(locator, 4, 23)
+        val bookmark = bare.copy(
+            locatorJson = savedLocator.toJSON().toString(),
+            text = "ลู่โหยวกำลังจะเอ่ยตอบ",
+        )
+
+        val restored = roundTrip(
+            listOf(BackedUpBook(bookmark.bookId, null, null, listOf(bookmark))),
+        ).single().annotations.single()
+
+        assertEquals(bookmark, restored)
+        assertEquals(
+            4 to 23,
+            ExactLocatorAnchor.bookmarkScreenProgress(restored.locatorJson),
+        )
     }
 
     @Test
