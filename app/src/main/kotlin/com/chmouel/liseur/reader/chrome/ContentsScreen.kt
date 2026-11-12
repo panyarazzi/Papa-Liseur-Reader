@@ -482,10 +482,10 @@ private fun AnnotationRow(
                     )
                 }
                 val chapterScreens = ExactLocatorAnchor.bookmarkScreenProgress(annotation.locatorJson)
-                val pageContext = listOfNotNull(
-                    annotation.position?.toString(),
-                    chapterScreens?.let { "${it.first}/${it.second}" },
-                ).joinToString(" · ")
+                // The footer's chapter progress is the reader's familiar
+                // reference. The absolute Readium position is useful internally
+                // for navigation, but is not meaningful in this list.
+                val pageContext = chapterScreens?.let { "${it.first}/${it.second}" }.orEmpty()
                 if (pageContext.isNotEmpty()) {
                     Text(
                         text = pageContext,
