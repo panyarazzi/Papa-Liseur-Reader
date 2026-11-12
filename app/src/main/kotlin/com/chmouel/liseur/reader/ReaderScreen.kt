@@ -3520,7 +3520,10 @@ internal fun ReaderScreen(
                 }
                 bookmarkPreview = ExactLocatorAnchor.bookmarkParagraph(nav, bookmarkLocator)
             }
-            val pageSnapshot = sectionScreens
+            val pageSnapshot = sectionScreens.takeIf {
+                measuredHref != null &&
+                    navigatorNow?.currentLocator?.value?.href?.toString() == measuredHref
+            }
             onAnnotationAction.toggleBookmark(
                 bookmarkPreview,
                 pageSnapshot?.screen,
