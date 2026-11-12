@@ -3507,9 +3507,8 @@ internal fun ReaderScreen(
         }
         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
         effectScope.launch {
-            var bookmarkPreview: String? = null
-            navigatorNow?.let { nav ->
-                var bookmarkLocator = nav.currentLocator.value
+            val nav = navigatorNow ?: return@launch
+            var bookmarkLocator = nav.currentLocator.value
                 if (effectiveScrollingNow) {
                     val since = heldPlace.mark()
                     scrolledPlace(nav)?.let { captured ->
@@ -3519,16 +3518,18 @@ internal fun ReaderScreen(
                         }
                     }
                 }
-                val verifiedLocator = captureExactly(nav, bookmarkLocator)
-                bookmarkPreview = verifiedLocator?.let {
-                    ExactLocatorAnchor.bookmarkParagraph(nav, it)
-                }
+            val verifiedLocator = captureExactly(nav, bookmarkLocator) ?: bookmarkLocator
+            val bookmarkPreview = if (verifiedLocator === bookmarkLocator) {
+                null
+            } else {
+                ExactLocatorAnchor.bookmarkParagraph(nav, verifiedLocator)
             }
             val pageSnapshot = sectionScreens.takeIf {
                 measuredHref != null &&
                     navigatorNow?.currentLocator?.value?.href?.toString() == measuredHref
             }
             onAnnotationAction.toggleBookmark(
+                verifiedLocator,
                 bookmarkPreview,
                 pageSnapshot?.screen,
                 pageSnapshot?.screens,
@@ -5688,7 +5689,7 @@ class ReaderAnnotationActions(
     val addNote: (Locator, String, String?) -> Unit,
     val saveBookNote: (String, String?) -> Unit,
     val annotationAt: (Locator) -> BookAnnotation?,
-    val toggleBookmark: (String?, Int?, Int?) -> Unit,
+    val toggleBookmark: (Locator, String?, Int?, Int?) -> Unit,
     val remove: (BookAnnotation) -> Unit,
     val notebookMarkdown: () -> String,
 )
