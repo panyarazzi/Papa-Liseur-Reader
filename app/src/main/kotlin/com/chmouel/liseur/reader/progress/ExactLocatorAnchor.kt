@@ -146,6 +146,64 @@ object ExactLocatorAnchor {
     }
 
     /**
+     * Reads the complete paragraph containing this locator's verified
+     * first-visible-word anchor. The selector is never trusted alone:
+     * the quote captured with it must still occur inside the selected
+     * paragraph, otherwise no preview is returned.
+     */
+    @OptIn(ExperimentalReadiumApi::class)
+    suspend fun bookmarkParagraph(
+        navigator: EpubNavigatorFragment,
+        locator: Locator,
+    ): String? {
+        val anchor = anchorIn(locator) ?: return null
+        val script = """
+            (() => {
+              const root = document.querySelector(${JSONObject.quote(anchor.cssSelector)});
+              if (!root) return null;
+              const quote = ${JSONObject.quote(anchor.before + anchor.highlight + anchor.after)};
+              const tags = "p,li,blockquote,pre,td,th,figcaption,h1,h2,h3,h4,h5,h6";
+              const candidates = Array.from(root.querySelectorAll(tags));
+              const paragraph = candidates.find(el => (el.textContent || "").includes(quote)) ||
+                ((root.textContent || "").includes(quote) ? root : null);
+              if (!paragraph) return null;
+              const text = (paragraph.textContent || "").replace(/\\s+/g, " ").trim();
+              return text || null;
+            })()
+        """.trimIndent()
+        val result = runCatching { navigator.evaluateJavascript(script) }.getOrNull() ?: return null
+        val decoded = runCatching { JSONTokener(result).nextValue() }.getOrNull()
+        return (decoded as? String)?.takeIf { it.isNotBlank() }
+    }
+
+    private const val BOOKMARK_SCREEN = "liseurBookmarkScreen"
+    private const val BOOKMARK_SCREENS = "liseurBookmarkScreens"
+
+    /** Stores the footer's chapter-page snapshot in the existing Locator JSON. */
+    fun withBookmarkScreenProgress(locator: Locator, screen: Int?, screens: Int?): Locator {
+        val other = locator.locations.otherLocations - BOOKMARK_SCREEN - BOOKMARK_SCREENS
+        val valid = screen != null && screens != null && screen in 1..screens
+        val updated = if (valid) {
+            other + mapOf(BOOKMARK_SCREEN to screen!!, BOOKMARK_SCREENS to screens!!)
+        } else {
+            other
+        }
+        return locator.copy(locations = locator.locations.copy(otherLocations = updated))
+    }
+
+    /** The saved footer snapshot, if both values are valid. */
+    fun bookmarkScreenProgress(locatorJson: String?): Pair<Int, Int>? {
+        val locator = parse(locatorJson) ?: return null
+        val screen = (locator.locations.otherLocations[BOOKMARK_SCREEN] as? Number)?.toInt()
+        val screens = (locator.locations.otherLocations[BOOKMARK_SCREENS] as? Number)?.toInt()
+        return if (screen != null && screens != null && screen > 0 && screens >= screen) {
+            screen to screens
+        } else {
+            null
+        }
+    }
+
+    /**
      * A fingerprint of the page's laid-out size.
      *
      * The value itself means nothing; what matters is whether two
