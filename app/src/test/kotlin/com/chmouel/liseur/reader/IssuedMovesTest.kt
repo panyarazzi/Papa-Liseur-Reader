@@ -16,7 +16,7 @@ class IssuedMovesTest {
         IssuedMoves.Destination(href = href, progression = progression, fragment = fragment)
 
     private val cover = at("EPUB/cover.xhtml", 0.0)
-    private val bodyTop = at("EPUB/body.xhtml", 0.05)
+    private val bodyTop = at("EPUB/body.xhtml", 0.0)
     private val bodySection = at("EPUB/body.xhtml", 0.60)
     private val section = to("EPUB/body.xhtml", progression = 0.60)
 
@@ -71,6 +71,20 @@ class IssuedMovesTest {
     fun `a move that landed lets a mark be taken`() {
         val moves = IssuedMoves()
         moves.issue(from = cover, to = section)
+        moves.onPosition(bodySection)
+        assertTrue(moves.unchangedSince(moves.mark()))
+    }
+
+    @Test
+    fun `a matching whole-book fraction cannot fake arrival within the resource`() {
+        // Whole-book progression can be nearly identical for adjacent
+        // pages in a long book. Arrival must instead compare the
+        // resource-relative progression: the top of this chapter is
+        // not the saved point at 60% of the same chapter.
+        val moves = IssuedMoves()
+        moves.issue(from = cover, to = section)
+        moves.onPosition(bodyTop)
+        assertEquals(IssuedMoves.NONE, moves.mark())
         moves.onPosition(bodySection)
         assertTrue(moves.unchangedSince(moves.mark()))
     }
