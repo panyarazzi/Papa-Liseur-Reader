@@ -1,6 +1,7 @@
 package com.chmouel.liseur.reader.progress
 
 import android.webkit.WebView
+import com.chmouel.liseur.reader.ResourceAddress
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONObject
@@ -237,12 +238,20 @@ object ExactLocatorAnchor {
     @OptIn(ExperimentalReadiumApi::class)
     suspend fun verify(navigator: EpubNavigatorFragment, locator: Locator): Boolean {
         if (!isExact(locator)) return false
+        // The pager can have a resource on screen before currentLocator
+        // publishes its arrival. Never accept a matching quote from the
+        // resource being left behind as proof that this target arrived.
+        if (!ResourceAddress.shows(
+                navigator.currentLocator.value.href.toString(),
+                locator.href.toString(),
+            )
+        ) return false
         return runCatching { navigator.evaluateJavascript(verificationScript(locator))?.trim() == "true" }
             .getOrDefault(false)
     }
 
     suspend fun verify(web: WebView, locator: Locator): Boolean {
-        if (!isExact(locator)) return false
+        if (!isExact(locator) || !ResourceAddress.shows(web.url, locator.href.toString())) return false
         return suspendCancellableCoroutine { continuation ->
             web.evaluateJavascript(verificationScript(locator)) { result ->
                 if (continuation.isActive) continuation.resume(result?.trim() == "true")
@@ -250,7 +259,7 @@ object ExactLocatorAnchor {
         }
     }
 
-    private fun verificationScript(locator: Locator): String {
+    internal fun verificationScript(locator: Locator): String {
         val selector = locator.locations.otherLocations[CSS_SELECTOR] as String
         return """
             (() => {
@@ -262,39 +271,48 @@ object ExactLocatorAnchor {
                       locator.text.highlight.orEmpty() +
                       locator.text.after.orEmpty(),
               )};
-              const quoteStart = text.indexOf(quote);
-              if (quoteStart < 0) return false;
-              const startOffset = quoteStart + ${locator.text.before.orEmpty().length};
-              const endOffset = startOffset + ${locator.text.highlight.orEmpty().length};
-              const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
-              let node;
-              let consumed = 0;
-              let startNode = null;
-              let endNode = null;
-              let startInNode = 0;
-              let endInNode = 0;
-              while ((node = walker.nextNode())) {
-                const next = consumed + node.data.length;
-                if (!startNode && startOffset >= consumed && startOffset <= next) {
-                  startNode = node;
-                  startInNode = startOffset - consumed;
+              const isVisibleAt = (startOffset, endOffset) => {
+                const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+                let node;
+                let consumed = 0;
+                let startNode = null;
+                let endNode = null;
+                let startInNode = 0;
+                let endInNode = 0;
+                while ((node = walker.nextNode())) {
+                  const next = consumed + node.data.length;
+                  if (!startNode && startOffset >= consumed && startOffset <= next) {
+                    startNode = node;
+                    startInNode = startOffset - consumed;
+                  }
+                  if (endOffset >= consumed && endOffset <= next) {
+                    endNode = node;
+                    endInNode = endOffset - consumed;
+                    break;
+                  }
+                  consumed = next;
                 }
-                if (endOffset >= consumed && endOffset <= next) {
-                  endNode = node;
-                  endInNode = endOffset - consumed;
-                  break;
-                }
-                consumed = next;
+                if (!startNode || !endNode) return false;
+                const range = document.createRange();
+                range.setStart(startNode, startInNode);
+                range.setEnd(endNode, endInNode);
+                return Array.from(range.getClientRects()).some(rect =>
+                  rect.width > 0 && rect.height > 0 &&
+                  rect.right > 0 && rect.bottom > 0 &&
+                  rect.left < window.innerWidth && rect.top < window.innerHeight
+                );
+              };
+              // The same short quote can occur more than once in a
+              // paragraph. Check every occurrence: indexOf's first match
+              // may be above the viewport while the captured one is on it.
+              let quoteStart = text.indexOf(quote);
+              while (quoteStart >= 0) {
+                const startOffset = quoteStart + ${locator.text.before.orEmpty().length};
+                const endOffset = startOffset + ${locator.text.highlight.orEmpty().length};
+                if (isVisibleAt(startOffset, endOffset)) return true;
+                quoteStart = text.indexOf(quote, quoteStart + 1);
               }
-              if (!startNode || !endNode) return false;
-              const range = document.createRange();
-              range.setStart(startNode, startInNode);
-              range.setEnd(endNode, endInNode);
-              return Array.from(range.getClientRects()).some(rect =>
-                rect.width > 0 && rect.height > 0 &&
-                rect.right > 0 && rect.bottom > 0 &&
-                rect.left < window.innerWidth && rect.top < window.innerHeight
-              );
+              return false;
             })()
         """.trimIndent()
     }
