@@ -148,6 +148,9 @@ class IssuedMoves(
      */
     fun scrolled(nowMs: Long = 0L) {
         issued++
+        trace?.invoke(
+            "scrolled generation=$issued nowMs=$nowMs target=${target.traceDestination()} restless=$restless"
+        )
         attributable = false
         restlessFrom = null
         restless = true
