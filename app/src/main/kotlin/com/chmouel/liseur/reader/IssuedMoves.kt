@@ -81,7 +81,7 @@ class IssuedMoves(
      */
     data class Destination(
         val href: String,
-        /** Whole-book, as `Locator.locations.totalProgression`. */
+        /** Resource-relative, as `Locator.locations.progression`. */
         val progression: Double?,
         /** The `#fragment` a link asked for, if it named one. */
         val fragment: String?,
