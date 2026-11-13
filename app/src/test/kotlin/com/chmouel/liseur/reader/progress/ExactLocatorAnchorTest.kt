@@ -131,6 +131,19 @@ class ExactLocatorAnchorTest {
     }
 
     @Test
+    fun `verification checks every occurrence of a repeated quote`() {
+        val exact = ExactLocatorAnchor.mark(
+            locator(),
+            ViewportTextAnchor("#chapter", "before ", "visible", " after"),
+        )
+        val script = ExactLocatorAnchor.verificationScript(exact)
+
+        assertTrue(script.contains("while (quoteStart >= 0)"))
+        assertTrue(script.contains("text.indexOf(quote, quoteStart + 1)"))
+        assertTrue(script.contains("isVisibleAt(startOffset, endOffset)"))
+    }
+
+    @Test
     fun `capture script names elements without asking about case`() {
         val script = ExactLocatorAnchor.CAPTURE_SCRIPT
 
