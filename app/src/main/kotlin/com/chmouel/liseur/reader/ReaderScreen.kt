@@ -1850,8 +1850,17 @@ internal fun ReaderScreen(
         // viewModel.lastLocator: onLocatorChanged assigns that before it
         // decides whether a position persists, so the navigator's own
         // opening emissions move it out from under this check.
-        val requested = restoreTarget ?: return@LaunchedEffect
-        if (!ExactLocatorAnchor.isExact(requested)) return@LaunchedEffect
+        val requested = restoreTarget ?: run {
+            Log.i("ReaderOpenTrace", "open-target absent")
+            return@LaunchedEffect
+        }
+        val requestedIsExact = ExactLocatorAnchor.isExact(requested)
+        Log.i(
+            "ReaderOpenTrace",
+            "open-target exact=$requestedIsExact href=${requested.href} " +
+                "progression=${requested.locations.progression} total=${requested.locations.totalProgression}",
+        )
+        if (!requestedIsExact) return@LaunchedEffect
         val exactArrived = openingExactAnchorArrived(nav, requested)
         Log.i(
             "ReaderOpenTrace",
