@@ -2219,16 +2219,15 @@ internal fun ReaderScreen(
                 web === visibleWebView(root) &&
                     ResourceAddress.shows(web.url, nav.currentLocator.value.href.toString()) &&
                     moves.unchangedSince(since)
-            // While an approximate opening is still landing, Readium has
-            // named the resource but may not have scrolled to the place
-            // yet, so a capture reads the chapter's first screen and the
-            // restore below would send the reader there. Come back to
-            // where the opening is heading instead. An exact opening
-            // scrolls by its quote before this runs and is checked on
-            // its own, so it keeps the capture.
+            // While any opening restoration is still gated, Readium may
+            // have named the resource before it has reached the saved place.
+            // Capturing the visible first screen here would make startup
+            // repair restore that transient position over the saved target.
+            // Keep the original opening locator for both exact and
+            // resource-relative targets; Exact Anchor verification may
+            // still fail and fall back to the resource position afterwards.
             val opening = gateAnchor?.takeIf {
-                gate.isGated && !ExactLocatorAnchor.isExact(it) &&
-                    ResourceAddress.shows(web.url, it.href.toString())
+                gate.isGated && ResourceAddress.shows(web.url, it.href.toString())
             }
             reflow.within {
                 val anchor = here?.takeIf { stillFitting() }?.let { opening ?: capture(nav, it) }
@@ -6136,13 +6135,13 @@ internal fun settleCapture(
  */
 internal fun Locator.destination() = IssuedMoves.Destination(
     href = href.toString(),
-    progression = locations.totalProgression,
+    progression = locations.progression,
     fragment = locations.fragments.firstOrNull(),
 )
 
 internal fun Locator.restorePoint(exact: Boolean = false) = RestorePoint(
     href = href.toString(),
-    progression = locations.totalProgression,
+    progression = locations.progression,
     exact = exact,
 )
 
