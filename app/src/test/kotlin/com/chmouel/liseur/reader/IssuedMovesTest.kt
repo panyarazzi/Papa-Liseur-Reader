@@ -76,21 +76,7 @@ class IssuedMovesTest {
     }
 
     @Test
-    fun `a matching whole-book fraction cannot fake arrival within the resource`() {
-        // Whole-book progression can be nearly identical for adjacent
-        // pages in a long book. Arrival must instead compare the
-        // resource-relative progression: the top of this chapter is
-        // not the saved point at 60% of the same chapter.
-        val moves = IssuedMoves()
-        moves.issue(from = cover, to = section)
-        moves.onPosition(bodyTop)
-        assertEquals(IssuedMoves.NONE, moves.mark())
-        moves.onPosition(bodySection)
-        assertTrue(moves.unchangedSince(moves.mark()))
-    }
-
-    @Test
-    fun `the position published as a resource loads is not the arrival`() {
+    fun `the resource start cannot fake arrival at the saved position`() {
         val moves = IssuedMoves()
         moves.issue(from = cover, to = section)
         moves.onPosition(bodyTop)
