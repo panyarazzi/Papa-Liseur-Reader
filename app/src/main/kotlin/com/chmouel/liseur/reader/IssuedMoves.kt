@@ -67,10 +67,10 @@ class IssuedMoves(
     private val trace: ((String) -> Unit)? = null,
 ) {
     private fun RestorePoint?.tracePlace(): String =
-        this?.let { "${it.href}@${it.progression} exact=${it.exact}" } ?: "null"
+        this?.let { "${it.href}@${it.resourceProgression} exact=${it.exact}" } ?: "null"
 
     private fun Destination?.traceDestination(): String =
-        this?.let { "${it.href}@${it.progression} fragment=${it.fragment}" } ?: "null"
+        this?.let { "${it.href}@${it.resourceProgression} fragment=${it.fragment}" } ?: "null"
 
     /**
      * Where a move is going, in the terms that can be checked against
@@ -82,7 +82,7 @@ class IssuedMoves(
     data class Destination(
         val href: String,
         /** Resource-relative, as `Locator.locations.progression`. */
-        val progression: Double?,
+        val resourceProgression: Double?,
         /** The `#fragment` a link asked for, if it named one. */
         val fragment: String?,
     )
@@ -272,7 +272,7 @@ class IssuedMoves(
         // restore puts them back at the start of the file it lives in.
         if (fragment != null) return false
         if (here.href != href) return false
-        val wanted = progression ?: return true
+        val wanted = resourceProgression ?: return true
         val reached = here.progression ?: return false
         return abs(reached - wanted) <= TOLERANCE
     }
