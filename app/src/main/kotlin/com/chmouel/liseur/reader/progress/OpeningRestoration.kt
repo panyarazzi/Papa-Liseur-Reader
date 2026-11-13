@@ -14,7 +14,7 @@ data class RestorePoint(
      * Resource-relative progression within [href], stable across fonts
      * and columns. Null when unknown.
      */
-    val progression: Double?,
+    val resourceProgression: Double?,
     /** Whether the point carries an app-owned text anchor. */
     val exact: Boolean,
 )
@@ -130,8 +130,8 @@ class OpeningRestoration(
     private fun arrived(want: RestorePoint, here: RestorePoint, anchorVerified: Boolean): Boolean {
         if (want.exact) return anchorVerified
         if (here.href != want.href) return false
-        val wanted = want.progression ?: return true
-        val reached = here.progression ?: return false
+        val wanted = want.resourceProgression ?: return true
+        val reached = here.resourceProgression ?: return false
         return abs(reached - wanted) <= TOLERANCE
     }
 
