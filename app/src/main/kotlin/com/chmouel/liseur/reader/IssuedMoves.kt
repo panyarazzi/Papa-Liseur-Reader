@@ -64,7 +64,13 @@ import kotlin.math.abs
 class IssuedMoves(
     private val settleTimeoutMs: Long = SETTLE_TIMEOUT_MS,
     private val restlessMs: Long = RESTLESS_MS,
+    private val trace: ((String) -> Unit)? = null,
 ) {
+    private fun RestorePoint?.tracePlace(): String =
+        this?.let { "${it.href}@${it.progression} exact=${it.exact}" } ?: "null"
+
+    private fun Destination?.traceDestination(): String =
+        this?.let { "${it.href}@${it.progression} fragment=${it.fragment}" } ?: "null"
 
     /**
      * Where a move is going, in the terms that can be checked against
@@ -107,6 +113,10 @@ class IssuedMoves(
      */
     fun issue(from: RestorePoint? = null, to: Destination? = null, nowMs: Long = 0L): Int {
         issued++
+        trace?.invoke(
+            "issue token=$issued from=${from.tracePlace()} to=${to.traceDestination()} " +
+                "targetBefore=${target.traceDestination()} restless=$restless"
+        )
         if (to != null) {
             // The newest destination is what the reader asked for last,
             // and reaching it accounts for whatever was asked before.
@@ -164,6 +174,10 @@ class IssuedMoves(
      */
     fun cancel(token: Int) {
         if (token == NONE) return
+        trace?.invoke(
+            "cancel token=$token targetToken=$targetToken restlessToken=$restlessToken " +
+                "target=${target.traceDestination()} restless=$restless"
+        )
         if (token == targetToken) {
             target = null
             targetToken = NONE
@@ -175,13 +189,20 @@ class IssuedMoves(
     /** A position the navigator reported. */
     fun onPosition(here: RestorePoint, nowMs: Long = 0L) {
         expire(nowMs)
-        target?.let {
-            if (it.arrived(here)) {
-                target = null
-                targetToken = NONE
-            }
+        val targetBefore = target
+        val targetArrived = targetBefore?.arrived(here) == true
+        if (targetArrived) {
+            target = null
+            targetToken = NONE
         }
-        if (restless && attributable && here != restlessFrom) stopRestless()
+        val restlessArrived = restless && attributable && here != restlessFrom
+        if (restlessArrived) stopRestless()
+        trace?.invoke(
+            "position here=${here.tracePlace()} targetBefore=${targetBefore.traceDestination()} " +
+                "targetArrived=$targetArrived targetAfter=${target.traceDestination()} " +
+                "targetToken=$targetToken restless=$restless restlessArrived=$restlessArrived " +
+                "restlessFrom=${restlessFrom.tracePlace()} nowMs=$nowMs"
+        )
     }
 
     /**
@@ -228,10 +249,16 @@ class IssuedMoves(
      */
     private fun expire(nowMs: Long) {
         if (target != null && nowMs - targetDeadline >= 0) {
+            trace?.invoke(
+                "expire-target token=$targetToken target=${target.traceDestination()} nowMs=$nowMs"
+            )
             target = null
             targetToken = NONE
         }
-        if (restless && nowMs - restlessDeadline >= 0) stopRestless()
+        if (restless && nowMs - restlessDeadline >= 0) {
+            trace?.invoke("expire-restless token=$restlessToken nowMs=$nowMs")
+            stopRestless()
+        }
     }
 
     private fun Destination.arrived(here: RestorePoint): Boolean {
