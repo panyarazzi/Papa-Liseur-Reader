@@ -1182,7 +1182,23 @@ internal fun ReaderScreen(
             to = locator.destination(),
             nowMs = SystemClock.elapsedRealtime(),
         )
+        val before = nav.currentLocator.value
+        Log.i(
+            "ReaderMoveTrace",
+            "go-request event=$event nav=${System.identityHashCode(nav)} " +
+                "from=${before.href}@${before.locations.totalProgression} " +
+                "to=${locator.href}@${locator.locations.totalProgression} " +
+                "fragment=${locator.locations.fragments.firstOrNull()} " +
+                "movesGeneration=${moves.generation()} pending=$pendingPositionEvent reflow=${reflow.active}",
+        )
         val went = nav.go(locator, animated = false)
+        val immediatelyAfter = nav.currentLocator.value
+        Log.i(
+            "ReaderMoveTrace",
+            "go-return event=$event went=$went nav=${System.identityHashCode(nav)} " +
+                "current=${immediatelyAfter.href}@${immediatelyAfter.locations.totalProgression} " +
+                "sameAsBefore=${immediatelyAfter == before} movesGeneration=${moves.generation()}",
+        )
         if (!went) {
             moves.cancel(token)
             pendingPositionEvent = null
@@ -1242,9 +1258,24 @@ internal fun ReaderScreen(
     // be taken for the reflow and not saved. Anything reported before
     // the scope closes is a reflow whether or not it claims the marker.
     suspend fun restoreAfterReflow(nav: EpubNavigatorFragment, anchor: Locator) {
+        Log.i(
+            "ReaderMoveTrace",
+            "reflow-restore-start nav=${System.identityHashCode(nav)} " +
+                "anchor=${anchor.href}@${anchor.locations.totalProgression} " +
+                "fragment=${anchor.locations.fragments.firstOrNull()} current=${nav.currentLocator.value.href} " +
+                "generation=${moves.generation()} pending=$pendingPositionEvent active=${reflow.active}",
+        )
         navigate(nav, anchor, NavigatorPositionEvent.PREFERENCE_REFLOW, verify = true)
         settleLayout()
+        val pendingBeforeClear = pendingPositionEvent
         if (pendingPositionEvent == NavigatorPositionEvent.PREFERENCE_REFLOW) pendingPositionEvent = null
+        Log.i(
+            "ReaderMoveTrace",
+            "reflow-restore-end nav=${System.identityHashCode(nav)} " +
+                "current=${nav.currentLocator.value.href}@${nav.currentLocator.value.locations.totalProgression} " +
+                "generation=${moves.generation()} pendingBeforeClear=$pendingBeforeClear " +
+                "pendingAfter=$pendingPositionEvent active=${reflow.active}",
+        )
     }
 
     suspend fun openingExactAnchorArrived(nav: EpubNavigatorFragment, locator: Locator): Boolean {
@@ -1526,6 +1557,15 @@ internal fun ReaderScreen(
                     suppressed = suppressed,
                     landed = landed,
                     reflowActive = reflow.active,
+                )
+                Log.i(
+                    "ReaderMoveTrace",
+                    "classify nav=${System.identityHashCode(nav)} " +
+                        "here=${native.href}@${native.locations.totalProgression} " +
+                        "requested=$requested classified=${emission.event} suppressed=$suppressed " +
+                        "landed=$landed gated=$wasGated reflow=${reflow.active} " +
+                        "markerSurvives=${emission.markerSurvives} pendingBefore=$pendingPositionEvent " +
+                        "movesGeneration=${moves.generation()}",
                 )
                 if (!emission.markerSurvives) pendingPositionEvent = null
                 // OPENING_RESTORATION here is the navigator reporting
