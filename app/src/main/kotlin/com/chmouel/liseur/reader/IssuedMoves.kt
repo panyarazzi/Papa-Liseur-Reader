@@ -273,7 +273,7 @@ class IssuedMoves(
         if (fragment != null) return false
         if (here.href != href) return false
         val wanted = resourceProgression ?: return true
-        val reached = here.progression ?: return false
+        val reached = here.resourceProgression ?: return false
         return abs(reached - wanted) <= TOLERANCE
     }
 
