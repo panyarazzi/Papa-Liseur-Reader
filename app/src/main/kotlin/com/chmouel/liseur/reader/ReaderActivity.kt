@@ -357,7 +357,7 @@ class ReaderActivity : FragmentActivity() {
                                 // like any other, and a layout change settling
                                 // over it takes the reader back off the page
                                 // they asked for. See IssuedMoves.
-                                val moves = remember { IssuedMoves() }
+                                val moves = remember { IssuedMoves(trace = { message -> Log.i("ReaderMoveTrace", message) }) }
                                 // Every tapped link, whichever door it
                                 // came in by, becomes its effect here: the
                                 // navigator listener hands over what
