@@ -283,7 +283,7 @@ class IssuedMovesTest {
     @Test
     fun `a second move in a run is outstanding again`() {
         val moves = IssuedMoves()
-        moves.issue(from = cover, to = to("EPUB/body.xhtml", progression = 0.05))
+        moves.issue(from = cover, to = to("EPUB/body.xhtml", progression = 0.0))
         moves.onPosition(bodyTop)
         assertTrue(moves.unchangedSince(moves.mark()))
         moves.issue(from = bodyTop, to = section)
