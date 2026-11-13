@@ -6136,13 +6136,13 @@ internal fun settleCapture(
  */
 internal fun Locator.destination() = IssuedMoves.Destination(
     href = href.toString(),
-    progression = locations.progression,
+    resourceProgression = locations.progression,
     fragment = locations.fragments.firstOrNull(),
 )
 
 internal fun Locator.restorePoint(exact: Boolean = false) = RestorePoint(
     href = href.toString(),
-    progression = locations.progression,
+    resourceProgression = locations.progression,
     exact = exact,
 )
 
