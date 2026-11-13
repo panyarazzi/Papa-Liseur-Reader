@@ -10,7 +10,7 @@ import kotlin.math.abs
  */
 data class RestorePoint(
     val href: String,
-    /** Whole-book, stable across fonts and columns. Null when unknown. */
+    /** Resource-relative progression within [href], stable across fonts and columns. Null when unknown. */
     val progression: Double?,
     /** Whether the point carries an app-owned text anchor. */
     val exact: Boolean,
