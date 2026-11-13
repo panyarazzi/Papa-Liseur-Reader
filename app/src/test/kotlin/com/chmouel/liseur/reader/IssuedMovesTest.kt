@@ -10,10 +10,10 @@ import org.junit.Test
 class IssuedMovesTest {
 
     private fun at(href: String, progression: Double?) =
-        RestorePoint(href = href, progression = progression, exact = false)
+        RestorePoint(href = href, resourceProgression = progression, exact = false)
 
     private fun to(href: String, progression: Double? = null, fragment: String? = null) =
-        IssuedMoves.Destination(href = href, progression = progression, fragment = fragment)
+        IssuedMoves.Destination(href = href, resourceProgression = progression, fragment = fragment)
 
     private val cover = at("EPUB/cover.xhtml", 0.0)
     private val bodyTop = at("EPUB/body.xhtml", 0.0)
