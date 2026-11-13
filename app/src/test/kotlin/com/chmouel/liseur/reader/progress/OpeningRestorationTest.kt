@@ -17,7 +17,7 @@ class OpeningRestorationTest {
     private val timeout = 5_000L
 
     private fun at(href: String, progression: Double?, exact: Boolean = false) =
-        RestorePoint(href = href, progression = progression, exact = exact)
+        RestorePoint(href = href, resourceProgression = progression, exact = exact)
 
     private fun OpeningRestoration.emit(
         here: RestorePoint,
