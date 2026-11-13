@@ -1186,8 +1186,8 @@ internal fun ReaderScreen(
         Log.i(
             "ReaderMoveTrace",
             "go-request event=$event nav=${System.identityHashCode(nav)} " +
-                "from=${before.href}@${before.locations.totalProgression} " +
-                "to=${locator.href}@${locator.locations.totalProgression} " +
+                "from=${before.href}@${before.locations.progression} total=${before.locations.totalProgression} " +
+                "to=${locator.href}@${locator.locations.progression} total=${locator.locations.totalProgression} " +
                 "fragment=${locator.locations.fragments.firstOrNull()} " +
                 "movesGeneration=${moves.generation()} pending=$pendingPositionEvent reflow=${reflow.active}",
         )
@@ -1196,7 +1196,8 @@ internal fun ReaderScreen(
         Log.i(
             "ReaderMoveTrace",
             "go-return event=$event went=$went nav=${System.identityHashCode(nav)} " +
-                "current=${immediatelyAfter.href}@${immediatelyAfter.locations.totalProgression} " +
+                "current=${immediatelyAfter.href}@${immediatelyAfter.locations.progression} " +
+                "total=${immediatelyAfter.locations.totalProgression} " +
                 "sameAsBefore=${immediatelyAfter == before} movesGeneration=${moves.generation()}",
         )
         if (!went) {
