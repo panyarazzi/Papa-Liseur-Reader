@@ -1027,6 +1027,12 @@ internal fun ReaderScreen(
         event: NavigatorPositionEvent,
         expectedNative: Locator? = null,
     ) {
+        Log.i(
+            "ReaderOpenTrace",
+            "publish event=$event persists=${event.persists} href=${locator.href} " +
+                "progression=${locator.locations.progression} total=${locator.locations.totalProgression} " +
+                "exact=${ExactLocatorAnchor.isExact(locator)}",
+        )
         val candidate = if (event.persists) candidateFor(nav, locator, expectedNative) else null
         if (candidate != null) {
             cachedBookOrbitCfi = candidate
@@ -1527,6 +1533,12 @@ internal fun ReaderScreen(
                 // go. Persisting that sends the reader's other devices
                 // to the top of the chapter.
                 val event = emission.event
+                Log.i(
+                    "ReaderOpenTrace",
+                    "navigator-emission href=${native.href} progression=${native.locations.progression} " +
+                        "total=${native.locations.totalProgression} event=$event requested=$requested " +
+                        "suppressed=$suppressed landed=$landed gated=$wasGated",
+                )
                 // Anywhere the reader actually goes ends the run of
                 // preference changes the held anchor was covering.
                 if (event != NavigatorPositionEvent.PREFERENCE_REFLOW) reflowAnchor = null
@@ -1708,6 +1720,11 @@ internal fun ReaderScreen(
             }
             if (measured != null && measured == previous) {
                 sectionScreens = measured
+                Log.i(
+                    "ReaderOpenTrace",
+                    "section-screen href=$href screen=${measured.screen}/${measured.screens} " +
+                        "navigator=${nav.currentLocator.value.href}",
+                )
                 // The book's length follows from the resources that
                 // have been measured, and this is one of them. A
                 // resource that measures differently from last time
@@ -1835,7 +1852,15 @@ internal fun ReaderScreen(
         // opening emissions move it out from under this check.
         val requested = restoreTarget ?: return@LaunchedEffect
         if (!ExactLocatorAnchor.isExact(requested)) return@LaunchedEffect
-        if (openingExactAnchorArrived(nav, requested)) {
+        val exactArrived = openingExactAnchorArrived(nav, requested)
+        Log.i(
+            "ReaderOpenTrace",
+            "open-verify result=$exactArrived elapsedMs=${SystemClock.elapsedRealtime() - gateOpenedAt} " +
+                "requestedHref=${requested.href} progression=${requested.locations.progression} " +
+                "total=${requested.locations.totalProgression} currentHref=${nav.currentLocator.value.href} " +
+                "currentProgression=${nav.currentLocator.value.locations.progression}",
+        )
+        if (exactArrived) {
             if (bookOrbitFallback != null) onBookOrbitOpeningVerified(requested)
             return@LaunchedEffect
         }
@@ -1843,12 +1868,26 @@ internal fun ReaderScreen(
         // The chapter before the percentage, for the reason given in
         // navigate(): the whole-book fraction is the only rung that can
         // land in the wrong chapter.
-        val fallback = bookOrbitFallback
-            ?: onProgressAction.resourceTargetFor(requested)
-            ?: requested.locations.totalProgression
+        val resourceFallback = bookOrbitFallback ?: onProgressAction.resourceTargetFor(requested)
+        val progressionFallback = if (resourceFallback == null) {
+            requested.locations.totalProgression
                 ?.takeIf(ResourceAnchor::isFraction)
                 ?.let(onProgressAction.locatorAtOrBeforeProgression)
-            ?: return@LaunchedEffect
+        } else null
+        val fallback = resourceFallback ?: progressionFallback ?: return@LaunchedEffect
+        val fallbackSource = when {
+            bookOrbitFallback != null -> "book-orbit"
+            resourceFallback != null -> "resource-anchor"
+            else -> "whole-book-progression"
+        }
+        Log.w(
+            "ReaderOpenTrace",
+            "open-fallback source=$fallbackSource requestedHref=${requested.href} " +
+                "requestedProgression=${requested.locations.progression} " +
+                "requestedTotal=${requested.locations.totalProgression} " +
+                "fallbackHref=${fallback.href} fallbackProgression=${fallback.locations.progression} " +
+                "fallbackTotal=${fallback.locations.totalProgression}",
+        )
         markPendingPositionEvent(NavigatorPositionEvent.FRAGMENT_RECREATION)
         // Retarget rather than release. This navigation is asynchronous
         // and pendingPositionEvent is single-use, so an emission landing
@@ -1862,7 +1901,13 @@ internal fun ReaderScreen(
             to = fallback.destination(),
             nowMs = SystemClock.elapsedRealtime(),
         )
-        if (!nav.go(fallback, animated = false)) {
+        val fallbackIssued = nav.go(fallback, animated = false)
+        Log.w(
+            "ReaderOpenTrace",
+            "open-fallback-issued result=$fallbackIssued currentHref=${nav.currentLocator.value.href} " +
+                "currentProgression=${nav.currentLocator.value.locations.progression}",
+        )
+        if (!fallbackIssued) {
             moves.cancel(fallbackToken)
             pendingPositionEvent = null
         }
