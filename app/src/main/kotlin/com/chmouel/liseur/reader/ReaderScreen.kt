@@ -1303,6 +1303,18 @@ internal fun ReaderScreen(
             repeat(OpeningRestoration.EXACT_OPEN_VERIFY_ATTEMPTS) {
                 settleLayout()
                 if (verifyOpeningTarget(nav, locator)) return@withTimeoutOrNull true
+                // The factory's initial Locator carries progression and text
+                // context, but Readium does not interpret our app-owned CSS
+                // selector as a navigation destination. Reveal the saved
+                // quote in the live document, then verify its actual viewport.
+                val revealed = ExactLocatorAnchor.reveal(nav, locator)
+                if (revealed) {
+                    settleLayout()
+                    if (verifyOpeningTarget(nav, locator)) {
+                        Log.i("ReaderOpenTrace", "open-anchor-reveal result=true href=${locator.href}")
+                        return@withTimeoutOrNull true
+                    }
+                }
             }
             false
         } == true
