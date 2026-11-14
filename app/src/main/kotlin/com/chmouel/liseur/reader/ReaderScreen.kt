@@ -854,6 +854,12 @@ internal fun ReaderScreen(
         mutableStateOf(restoreTarget == null)
     }
     val startupFontsSettledNow by rememberUpdatedState(startupFontsSettled)
+    // Keep page-turn input and page-count publication closed until the
+    // restored position has also been accepted (or the bounded gate expires).
+    var startupReady by remember(navigator, restoreTarget) {
+        mutableStateOf(restoreTarget == null)
+    }
+    val startupReadyNow by rememberUpdatedState(startupReady)
 
     // The Readium locator behind the gate's current target. The gate
     // speaks in RestorePoints, which carry no text anchor, so confirming
@@ -898,6 +904,7 @@ internal fun ReaderScreen(
     LaunchedEffect(navigator) {
         delay(OpeningRestoration.DEFAULT_TIMEOUT_MS)
         gate.onDeadline()
+        startupReady = true
     }
 
     // Open for as long as the page is being rebuilt underneath the reader.
@@ -1414,7 +1421,9 @@ internal fun ReaderScreen(
             showingEnd = { showingEndNow },
             // A picture over the page takes the book out of reach of
             // every way of turning it, keys and volume included.
-            isSuspended = { viewedImageNow != null || openingImageNow },
+            isSuspended = {
+                viewedImageNow != null || openingImageNow || !startupReadyNow
+            },
             onReachedEnd = {
                 endpaperRtl = navigatorNow?.overflow?.value?.readingProgression ==
                     ReadingProgression.RTL
@@ -1603,6 +1612,7 @@ internal fun ReaderScreen(
                 // Whether this emission is the one that ended the
                 // restoration, rather than more of the opening noise.
                 val landed = wasGated && !gate.isGated
+                if (landed) startupReady = true
                 val emission = classifyNavigatorEmission(
                     requested = requested,
                     suppressed = suppressed,
@@ -1872,6 +1882,10 @@ internal fun ReaderScreen(
                 nav.currentLocator.map { },
                 layoutPasses(root),
                 snapshotFlow { pageCurl.isRunning }.map { },
+                // Startup readiness is separate from the navigator's
+                // emissions: the final accepted restore may be the last
+                // event before the reader starts turning pages.
+                snapshotFlow { startupReadyNow }.map { },
                 // The progress is published on its own path, a little
                 // behind the navigator, and it is what says which
                 // stretch of the book the resource on screen is. A
@@ -1884,6 +1898,10 @@ internal fun ReaderScreen(
                 snapshotFlow { layoutGeneration }.map { },
             ).collect {
                 webViews.invalidate()
+                if (!startupReadyNow) {
+                    sectionScreens = null
+                    return@collect
+                }
                 // A turn held in the hand has already moved the
                 // navigator, while what the reader is looking at is a
                 // photograph of the page they are leaving. The number
@@ -1943,6 +1961,7 @@ internal fun ReaderScreen(
         // opening emissions move it out from under this check.
         val requested = restoreTarget ?: run {
             startupFontsSettled = true
+            startupReady = true
             Log.i("ReaderOpenTrace", "open-target absent")
             return@LaunchedEffect
         }
@@ -1991,6 +2010,7 @@ internal fun ReaderScreen(
                 "open-font-gate-release exact=false verdict=$verdict " +
                     "currentHref=${current.href} currentProgression=${current.locations.progression}",
             )
+            if (!gate.isGated) startupReady = true
             return@LaunchedEffect
         }
 
@@ -2013,6 +2033,7 @@ internal fun ReaderScreen(
                 elapsedMs = SystemClock.elapsedRealtime() - gateOpenedAt,
             )
             Log.i("ReaderOpenTrace", "open-font-gate-release exact=true verdict=$verdict")
+            if (!gate.isGated) startupReady = true
             if (bookOrbitFallback != null) onBookOrbitOpeningVerified(requested)
             return@LaunchedEffect
         }
