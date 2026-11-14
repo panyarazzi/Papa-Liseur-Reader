@@ -146,6 +146,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import coil3.compose.AsyncImage
 import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
@@ -1517,7 +1518,20 @@ private fun BookGrid(
                         text = selectedBooks.size.toString(),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 8.dp, end = 8.dp),
                     )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            onClick = { bookViewMode = "grid" },
+                            enabled = bookViewMode != "grid",
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        ) { Text("Grid") }
+                        TextButton(
+                            onClick = { bookViewMode = "list" },
+                            enabled = bookViewMode != "list",
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        ) { Text("List") }
+                    }
                 }
             }
         }
@@ -1598,16 +1612,6 @@ private fun BookGrid(
                 // Pinned to the far end of the row and laid out last, so
                 // it is never squeezed: the filter summary gives way to
                 // it rather than the other way round.
-                if (selectedFolder != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { bookViewMode = "grid" }, enabled = bookViewMode != "grid") {
-                            Text("Grid")
-                        }
-                        TextButton(onClick = { bookViewMode = "list" }, enabled = bookViewMode != "list") {
-                            Text("List")
-                        }
-                    }
-                }
                 SortRow(
                     sort = state.sort,
                     reversed = state.sortReversed,
@@ -1634,6 +1638,7 @@ private fun BookGrid(
                         book = book,
                         progress = state.downloads[book.url],
                         readingProgress = state.readingProgress[book.url],
+                        showProgressOnCover = true,
                         inASeries = seriesKey(book.seriesName) in state.shownSeries,
                         onClick = { onBookSelected(book) },
                         onLongClick = { onBookLongPress(book) },
@@ -1702,6 +1707,10 @@ private fun BookGrid(
 }
  
 @OptIn(ExperimentalFoundationApi::class)
+/** Formats reading progress consistently across locales. */
+private fun formatReadingProgress(progress: Double): String =
+    String.format(Locale.US, "%.2f%%", progress.coerceIn(0.0, 1.0) * 100.0)
+
 @Composable
 private fun BookListRow(
     book: Book,
@@ -1733,7 +1742,7 @@ private fun BookListRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = if (readingProgress != null) {
-                    "${book.displayTitle} · ${(readingProgress * 100).toInt()}%"
+                    "${book.displayTitle} · ${formatReadingProgress(readingProgress)}"
                 } else {
                     book.displayTitle
                 },
@@ -1880,20 +1889,31 @@ private fun ContinueReadingSection(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         entries.take(4).forEach { entry ->
-                            Box(
-                                modifier = Modifier.weight(1f).aspectRatio(2f / 3f),
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
-                                BookCover(
-                                    book = entry.book,
-                                    modifier = Modifier.fillMaxSize().clickable { onBookSelected(entry.book) },
-                                )
-                                IconButton(
-                                    onClick = { onDismissBook(entry.book) },
-                                    modifier = Modifier.align(Alignment.TopEnd).size(32.dp)
-                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), CircleShape),
-                                ) {
-                                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.remove_from_continue_reading))
+                                Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f)) {
+                                    BookCover(
+                                        book = entry.book,
+                                        modifier = Modifier.fillMaxSize().clickable { onBookSelected(entry.book) },
+                                    )
+                                    IconButton(
+                                        onClick = { onDismissBook(entry.book) },
+                                        modifier = Modifier.align(Alignment.TopEnd).size(32.dp)
+                                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f), CircleShape),
+                                    ) {
+                                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.remove_from_continue_reading))
+                                    }
                                 }
+                                Text(
+                                    text = formatReadingProgress(entry.progression ?: 0.0),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    maxLines = 1,
+                                )
                             }
                         }
                     }
@@ -1955,13 +1975,13 @@ private fun ContinueReadingSection(
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            entry.progression?.let { progression ->
-                                Text(
-                                    text = "${(progression * 100).toInt()}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            Text(
+                                text = formatReadingProgress(entry.progression ?: 0.0),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
                     }
                 }
@@ -2021,7 +2041,7 @@ private fun ContinueReadingDialog(
                             }
                             entry.progression?.let { progression ->
                                 Text(
-                                    text = "${(progression * 100).toInt()}%",
+                                    text = formatReadingProgress(progression),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -2060,6 +2080,7 @@ private fun BookCard(
     /** What was searched for, to embolden where it matched; null on the shelf. */
     highlight: String? = null,
     readingProgress: Double? = null,
+    showProgressOnCover: Boolean = false,
 ) {
     val haptics = LocalHapticFeedback.current
     // The whole card is one thing to a screen reader: the cover, the badges
@@ -2112,6 +2133,21 @@ private fun BookCard(
                     modifier = Modifier.align(Alignment.TopStart),
                 )
             }
+            if (showProgressOnCover && readingProgress != null) {
+                Surface(
+                    color = CoverBadgeScrim,
+                    contentColor = CoverBadgeContent,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                ) {
+                    Text(
+                        text = formatReadingProgress(readingProgress),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
         }
         Column(
             modifier = Modifier
@@ -2121,7 +2157,9 @@ private fun BookCard(
             Text(
                 text = buildAnnotatedString {
                     append(searchHighlighted(book.displayTitle, highlight))
-                    readingProgress?.let { append(" · ${(it * 100).toInt()}%") }
+                    if (!showProgressOnCover) {
+                        readingProgress?.let { append(" · ${formatReadingProgress(it)}") }
+                    }
                 },
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
