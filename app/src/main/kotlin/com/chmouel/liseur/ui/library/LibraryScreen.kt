@@ -1708,7 +1708,7 @@ private fun BookGrid(
  
 @OptIn(ExperimentalFoundationApi::class)
 /** Formats reading progress consistently across locales. */
-private fun formatReadingProgress(progress: Double): String =
+internal fun formatReadingProgress(progress: Double): String =
     String.format(Locale.US, "%.2f%%", progress.coerceIn(0.0, 1.0) * 100.0)
 
 @Composable
