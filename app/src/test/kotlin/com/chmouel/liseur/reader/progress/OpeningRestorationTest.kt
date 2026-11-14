@@ -14,7 +14,7 @@ import org.junit.Test
  */
 class OpeningRestorationTest {
 
-    private val timeout = 5_000L
+    private val timeout = OpeningRestoration.DEFAULT_TIMEOUT_MS
 
     private fun at(href: String, progression: Double?, exact: Boolean = false) =
         RestorePoint(href = href, resourceProgression = progression, exact = exact)
