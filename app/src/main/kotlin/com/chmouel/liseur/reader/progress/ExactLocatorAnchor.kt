@@ -259,6 +259,92 @@ object ExactLocatorAnchor {
         }
     }
 
+    /**
+     * Finds the saved text quote in the current resource and scrolls its
+     * first highlighted text rectangle into the viewport. The locator's
+     * progression is only the navigator's initial approximation; this
+     * DOM range is the position the reader actually saved.
+     */
+    @OptIn(ExperimentalReadiumApi::class)
+    suspend fun reveal(navigator: EpubNavigatorFragment, locator: Locator): Boolean {
+        if (!isExact(locator)) return false
+        if (!ResourceAddress.shows(
+                navigator.currentLocator.value.href.toString(),
+                locator.href.toString(),
+            )
+        ) return false
+        return runCatching {
+            navigator.evaluateJavascript(revealScript(locator))?.trim() == "true"
+        }.getOrDefault(false)
+    }
+
+    internal fun revealScript(locator: Locator): String {
+        val selector = locator.locations.otherLocations[CSS_SELECTOR] as String
+        val quote = locator.text.before.orEmpty() +
+            locator.text.highlight.orEmpty() +
+            locator.text.after.orEmpty()
+        return """
+            (() => {
+              const block = document.querySelector(${JSONObject.quote(selector)});
+              if (!block) return false;
+              const text = block.textContent || "";
+              const quote = ${JSONObject.quote(quote)};
+              const beforeLength = ${locator.text.before.orEmpty().length};
+              const highlightLength = ${locator.text.highlight.orEmpty().length};
+              const walkerRange = (startOffset, endOffset) => {
+                const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+                let node, consumed = 0, startNode = null, endNode = null;
+                let startInNode = 0, endInNode = 0;
+                while ((node = walker.nextNode())) {
+                  const next = consumed + node.data.length;
+                  if (!startNode && startOffset >= consumed && startOffset <= next) {
+                    startNode = node;
+                    startInNode = startOffset - consumed;
+                  }
+                  if (endOffset >= consumed && endOffset <= next) {
+                    endNode = node;
+                    endInNode = endOffset - consumed;
+                    break;
+                  }
+                  consumed = next;
+                }
+                if (!startNode || !endNode) return null;
+                const range = document.createRange();
+                range.setStart(startNode, startInNode);
+                range.setEnd(endNode, endInNode);
+                return range;
+              };
+              let quoteStart = text.indexOf(quote);
+              while (quoteStart >= 0) {
+                const range = walkerRange(
+                  quoteStart + beforeLength,
+                  quoteStart + beforeLength + highlightLength
+                );
+                if (range) {
+                  const rect = range.getClientRects()[0];
+                  if (rect && rect.width > 0 && rect.height > 0) {
+                    const root = document.scrollingElement || document.documentElement;
+                    const horizontal = root.scrollWidth > root.clientWidth + 1;
+                    const start = horizontal ? rect.left : rect.top;
+                    const end = horizontal ? rect.right : rect.bottom;
+                    const extent = horizontal ? window.innerWidth : window.innerHeight;
+                    let delta = 0;
+                    if (start < 16) delta = start - 16;
+                    else if (end > extent - 16) delta = start - 16;
+                    if (delta !== 0) {
+                      if (horizontal) window.scrollBy(delta, 0);
+                      else window.scrollBy(0, delta);
+                    }
+                    return true;
+                  }
+                }
+                quoteStart = text.indexOf(quote, quoteStart + 1);
+              }
+              return false;
+            })()
+        """.trimIndent()
+    }
+
     internal fun verificationScript(locator: Locator): String {
         val selector = locator.locations.otherLocations[CSS_SELECTOR] as String
         return """
