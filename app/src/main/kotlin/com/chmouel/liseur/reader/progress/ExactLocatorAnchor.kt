@@ -239,17 +239,41 @@ object ExactLocatorAnchor {
 
     @OptIn(ExperimentalReadiumApi::class)
     suspend fun verify(navigator: EpubNavigatorFragment, locator: Locator): Boolean {
-        if (!isExact(locator)) return false
+        if (!isExact(locator)) {
+            Log.i("ReaderOpenTrace", "open-anchor-verify-detail result=false reason=locator-not-exact href=${locator.href}")
+            return false
+        }
         // The pager can have a resource on screen before currentLocator
         // publishes its arrival. Never accept a matching quote from the
         // resource being left behind as proof that this target arrived.
-        if (!ResourceAddress.shows(
-                navigator.currentLocator.value.href.toString(),
-                locator.href.toString(),
+        val currentHref = navigator.currentLocator.value.href.toString()
+        if (!ResourceAddress.shows(currentHref, locator.href.toString())) {
+            Log.i(
+                "ReaderOpenTrace",
+                "open-anchor-verify-detail result=false reason=resource-mismatch " +
+                    "targetHref=${locator.href} currentHref=$currentHref",
             )
-        ) return false
-        return runCatching { navigator.evaluateJavascript(verificationScript(locator))?.trim() == "true" }
-            .getOrDefault(false)
+            return false
+        }
+        return try {
+            val jsResult = navigator.evaluateJavascript(verificationScript(locator))?.trim()
+            val result = jsResult == "true"
+            Log.i(
+                "ReaderOpenTrace",
+                "open-anchor-verify-detail result=$result reason=${if (result) "quote-visible" else "quote-not-visible"} " +
+                    "href=${locator.href} jsResult=${jsResult ?: "null"}",
+            )
+            result
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(
+                "ReaderOpenTrace",
+                "open-anchor-verify-detail result=false reason=javascript-exception " +
+                    "href=${locator.href} exception=${error.javaClass.simpleName}",
+            )
+            false
+        }
     }
 
     suspend fun verify(web: WebView, locator: Locator): Boolean {
