@@ -655,9 +655,11 @@ class LibraryViewModel(
             val readAt = readAtList.associate { it.bookUrl to it.readAt }
             @Suppress("UNCHECKED_CAST")
             val progressionList = baseValues[8] as List<BookProgression>
+            // A row exists only after the book has been opened. Keep it in the
+            // map even when the locator has no measurable total progression yet:
+            // the shelf can then show 0.00% without mistaking untouched books for opened ones.
             val progressions = progressionList
-                .mapNotNull { row -> row.totalProgression?.let { row.bookUrl to it } }
-                .toMap()
+                .associate { row -> row.bookUrl to (row.totalProgression ?: 0.0) }
             @Suppress("UNCHECKED_CAST")
             val uploading = baseValues[9] as Set<String>
             @Suppress("UNCHECKED_CAST")
