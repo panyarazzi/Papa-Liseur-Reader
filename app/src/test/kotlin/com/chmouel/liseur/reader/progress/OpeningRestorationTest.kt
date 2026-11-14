@@ -256,9 +256,11 @@ class OpeningRestorationTest {
     @Test
     fun `exact opening verification budget leaves room before fail open`() {
         assertEquals(3_000L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 0))
-        assertEquals(2_500L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 1_500))
-        assertEquals(1L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 3_999))
-        assertEquals(0L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 4_000))
+        assertEquals(3_000L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 1_500))
+        assertEquals(3_000L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 7_999))
+        assertEquals(2_001L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 8_999))
+        assertEquals(1L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 10_999))
+        assertEquals(0L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = 11_000))
         assertEquals(0L, OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs = timeout))
 
         assertTrue(
