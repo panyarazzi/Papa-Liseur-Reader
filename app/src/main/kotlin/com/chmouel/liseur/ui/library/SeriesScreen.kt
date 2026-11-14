@@ -79,7 +79,6 @@ import com.chmouel.liseur.domain.SeriesExtras
 import com.chmouel.liseur.domain.SeriesShelf
 import com.chmouel.liseur.domain.SeriesVolume
 import com.chmouel.liseur.domain.displayTitle
-import com.chmouel.liseur.ui.library.formatReadingProgress
 import com.chmouel.liseur.domain.seriesCompletion
 import com.chmouel.liseur.domain.seriesIndexLabel
 import com.chmouel.liseur.ui.LocalEInk
