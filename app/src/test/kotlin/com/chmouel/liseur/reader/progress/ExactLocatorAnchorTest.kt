@@ -23,8 +23,8 @@ class ExactLocatorAnchorTest {
 
         assertTrue(script.contains("fontSet.ready"))
         assertTrue(script.contains("fontSet.status === \"loaded\""))
-        assertTrue(script.contains('link.sheet'))
-        assertTrue(script.contains('face.status === "loading"'))
+        assertTrue(script.contains("link.sheet"))
+        assertTrue(script.contains("face.status === \"loading\""))
         assertTrue(script.contains("pendingStylesheets"))
     }
 
