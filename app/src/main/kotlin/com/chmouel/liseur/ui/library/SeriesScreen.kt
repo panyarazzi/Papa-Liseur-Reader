@@ -79,6 +79,7 @@ import com.chmouel.liseur.domain.SeriesExtras
 import com.chmouel.liseur.domain.SeriesShelf
 import com.chmouel.liseur.domain.SeriesVolume
 import com.chmouel.liseur.domain.displayTitle
+import com.chmouel.liseur.ui.library.formatReadingProgress
 import com.chmouel.liseur.domain.seriesCompletion
 import com.chmouel.liseur.domain.seriesIndexLabel
 import com.chmouel.liseur.ui.LocalEInk
@@ -855,7 +856,7 @@ private fun SeriesVolumeRow(
                 overflow = TextOverflow.Ellipsis,
             )
             val progression = volume.progression
-            if (progression != null && progression > 0.0 && !volume.finished) {
+            if (progression != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 6.dp),
@@ -866,7 +867,7 @@ private fun SeriesVolumeRow(
                         modifier = Modifier.weight(1f).height(4.dp),
                     )
                     Text(
-                        text = "${(progression * 100).toInt()}%",
+                        text = formatReadingProgress(progression),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 8.dp),
