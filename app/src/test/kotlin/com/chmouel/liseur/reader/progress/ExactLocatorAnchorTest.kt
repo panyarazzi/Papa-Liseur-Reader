@@ -144,6 +144,22 @@ class ExactLocatorAnchorTest {
     }
 
     @Test
+    fun `reveal script finds the saved quote and scrolls its range into view`() {
+        val exact = ExactLocatorAnchor.mark(
+            locator(),
+            ViewportTextAnchor("#chapter > p:nth-of-type(2)", "before ", "visible", " after"),
+        )
+        val script = ExactLocatorAnchor.revealScript(exact)
+
+        assertTrue(script.contains("document.querySelector"))
+        assertTrue(script.contains("text.indexOf(quote"))
+        assertTrue(script.contains("range.getClientRects()[0]"))
+        assertTrue(script.contains("window.scrollBy"))
+        assertTrue(script.contains("beforeLength"))
+        assertTrue(script.contains("highlightLength"))
+    }
+
+    @Test
     fun `capture script names elements without asking about case`() {
         val script = ExactLocatorAnchor.CAPTURE_SCRIPT
 
