@@ -1331,11 +1331,9 @@ internal fun ReaderScreen(
         // This is the same asynchronous WebView race as navigate(), but
         // a cold open is the slowest layout the reader asks for. Poll
         // for a bounded stretch before degrading to the approximate
-        // locator. The budget helper keeps this below the opening
-        // gate's fail-open deadline: with the current constants it caps
-        // polling at 3000ms and never past 4000ms from gate creation,
-        // leaving at least 1000ms of the 5000ms gate for the fallback
-        // navigation to be issued while the gate is still closed.
+        // locator. The font gate has already used up to 8000ms; this
+        // budget caps exact verification at 3000ms and reserves the
+        // final 1000ms of the 12000ms opening gate for fallback navigation.
         return withTimeoutOrNull(budgetMs) {
             repeat(OpeningRestoration.EXACT_OPEN_VERIFY_ATTEMPTS) { attempt ->
                 settleLayout()

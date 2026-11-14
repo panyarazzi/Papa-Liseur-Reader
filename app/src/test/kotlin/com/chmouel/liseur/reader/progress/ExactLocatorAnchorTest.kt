@@ -21,8 +21,8 @@ class ExactLocatorAnchorTest {
     fun `publisher font readiness script waits for font set and stylesheets`() {
         val script = PublisherFontReadiness.script()
 
-        assertTrue(script.contains("document.fonts.ready"))
-        assertTrue(script.contains('fontSet.status === "loaded"'))
+        assertTrue(script.contains("fontSet.ready"))
+        assertTrue(script.contains("fontSet.status === \"loaded\""))
         assertTrue(script.contains('link.sheet'))
         assertTrue(script.contains('face.status === "loading"'))
         assertTrue(script.contains("pendingStylesheets"))
