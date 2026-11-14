@@ -52,9 +52,10 @@ internal object PublisherFontReadiness {
         var lastSnapshot: Snapshot? = null
         var previousSignature: String? = null
         var stableReads = 0
+        var outcome: Snapshot? = null
 
         val settled = withTimeoutOrNull(timeoutMs.coerceAtLeast(1L)) {
-            while (true) {
+            while (outcome == null) {
                 val currentHref = navigator.currentLocator.value.href.toString()
                 if (!ResourceAddress.shows(currentHref, locator.href.toString())) {
                     delay(POLL_INTERVAL_MS)
@@ -80,7 +81,8 @@ internal object PublisherFontReadiness {
                 }
                 lastSnapshot = snapshot
                 if (!snapshot.supported) {
-                    return@withTimeoutOrNull snapshot.copy(status = "UNSUPPORTED")
+                    outcome = snapshot.copy(status = "UNSUPPORTED")
+                    continue
                 }
 
                 if (snapshot.ready) {
@@ -92,7 +94,7 @@ internal object PublisherFontReadiness {
                     }
                     previousSignature = signature
                     if (stableReads >= REQUIRED_STABLE_READS) {
-                        return@withTimeoutOrNull snapshot.copy(
+                        outcome = snapshot.copy(
                             layoutSignature = signature,
                             status = if (snapshot.failedFaces > 0) "READY_WITH_FONT_ERRORS" else "READY",
                         )
@@ -101,10 +103,9 @@ internal object PublisherFontReadiness {
                     previousSignature = null
                     stableReads = 0
                 }
-                delay(POLL_INTERVAL_MS)
+                if (outcome == null) delay(POLL_INTERVAL_MS)
             }
-            @Suppress("UNREACHABLE_CODE")
-            lastSnapshot
+            outcome
         }
 
         return settled ?: (lastSnapshot ?: Snapshot(
