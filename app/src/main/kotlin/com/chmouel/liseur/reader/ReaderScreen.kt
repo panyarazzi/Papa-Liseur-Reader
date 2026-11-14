@@ -257,6 +257,7 @@ import com.chmouel.liseur.companion.CompanionPeekBar
 import com.chmouel.liseur.reader.progress.ExactLocatorAnchor
 import com.chmouel.liseur.reader.progress.OpeningRestoration
 import com.chmouel.liseur.reader.progress.OpeningRestorationVerdict
+import com.chmouel.liseur.reader.progress.PublisherFontReadiness
 import com.chmouel.liseur.reader.progress.RestorePoint
 import com.chmouel.liseur.reader.progress.ScrollProgression
 import com.chmouel.liseur.reader.search.SearchScreen
@@ -846,6 +847,13 @@ internal fun ReaderScreen(
         )
     }
     val gateOpenedAt = remember(navigator) { SystemClock.elapsedRealtime() }
+
+    // Opening positions are not accepted until the active EPUB document's
+    // stylesheet/font set has settled and its layout signature is stable.
+    var startupFontsSettled by remember(navigator, restoreTarget) {
+        mutableStateOf(restoreTarget == null)
+    }
+    val startupFontsSettledNow by rememberUpdatedState(startupFontsSettled)
 
     // The Readium locator behind the gate's current target. The gate
     // speaks in RestorePoints, which carry no text anchor, so confirming
@@ -1576,14 +1584,24 @@ internal fun ReaderScreen(
                 // Only paid for while the gate is closed, which is a
                 // handful of emissions at the start of a session.
                 val wasGated = gate.isGated
-                val suppressed = wasGated && gate.onEmission(
-                    here = native.restorePoint(),
-                    anchorVerified = gateAnchor.let {
-                        it != null && (bookOrbitFallback == null || native.href == it.href) &&
-                            ExactLocatorAnchor.isExact(it) && verifyOpeningTarget(nav, it)
-                    },
-                    elapsedMs = SystemClock.elapsedRealtime() - gateOpenedAt,
-                ) == OpeningRestorationVerdict.SUPPRESS
+                // Ignore every opening emission while publisher fonts and
+                // the resulting document layout are still settling. In
+                // particular, a transient fallback-font progression must
+                // never release the restoration gate.
+                val suppressed = if (!wasGated) {
+                    false
+                } else if (!startupFontsSettledNow) {
+                    true
+                } else {
+                    gate.onEmission(
+                        here = native.restorePoint(),
+                        anchorVerified = gateAnchor.let {
+                            it != null && (bookOrbitFallback == null || native.href == it.href) &&
+                                ExactLocatorAnchor.isExact(it) && verifyOpeningTarget(nav, it)
+                        },
+                        elapsedMs = SystemClock.elapsedRealtime() - gateOpenedAt,
+                    ) == OpeningRestorationVerdict.SUPPRESS
+                }
                 // Whether this emission is the one that ended the
                 // restoration, rather than more of the opening noise.
                 val landed = wasGated && !gate.isGated
@@ -1919,13 +1937,14 @@ internal fun ReaderScreen(
         }
     }
 
-    LaunchedEffect(navigator) {
+    LaunchedEffect(navigator, restoreTarget) {
         val nav = navigator ?: return@LaunchedEffect
         // The snapshot this navigator was built with, not
         // viewModel.lastLocator: onLocatorChanged assigns that before it
-        // decides whether a position persists, so the navigator's own
+        // decides whether the position persists, so the navigator's own
         // opening emissions move it out from under this check.
         val requested = restoreTarget ?: run {
+            startupFontsSettled = true
             Log.i("ReaderOpenTrace", "open-target absent")
             return@LaunchedEffect
         }
@@ -1935,7 +1954,48 @@ internal fun ReaderScreen(
             "open-target exact=$requestedIsExact href=${requested.href} " +
                 "progression=${requested.locations.progression} total=${requested.locations.totalProgression}",
         )
-        if (!requestedIsExact) return@LaunchedEffect
+
+        // Readium creates its first document before the embedded publisher
+        // fonts have necessarily finished loading. Do not let that
+        // provisional layout decide whether the saved position arrived.
+        // Wait on the document's actual FontFaceSet readiness and require
+        // a stable layout signature before allowing restoration checks.
+        val fontReadiness = PublisherFontReadiness.await(
+            navigator = nav,
+            locator = requested,
+            timeoutMs = PublisherFontReadiness.DEFAULT_TIMEOUT_MS,
+        )
+        startupFontsSettled = true
+        Log.i(
+            "ReaderOpenTrace",
+            "open-font-gate status=${fontReadiness.status} supported=${fontReadiness.supported} " +
+                "ready=${fontReadiness.ready} fontSet=${fontReadiness.fontSetStatus} " +
+                "pendingStylesheets=${fontReadiness.pendingStylesheets} " +
+                "fontFaces=${fontReadiness.fontFaces} loaded=${fontReadiness.loadedFaces} " +
+                "loading=${fontReadiness.loadingFaces} failed=${fontReadiness.failedFaces} " +
+                "layout=${fontReadiness.layoutSignature ?: "unknown"}",
+        )
+        // FontFaceSet.ready resolves after the browser has completed the
+        // corresponding font loads and layout work. Readium's pagination
+        // is a separate layer, so wait for its document dimensions to stop
+        // changing as well before checking or revealing the exact anchor.
+        awaitReflowSettled(nav, null)
+
+        if (!requestedIsExact) {
+            val current = nav.currentLocator.value
+            val verdict = gate.onEmission(
+                here = current.restorePoint(),
+                anchorVerified = false,
+                elapsedMs = SystemClock.elapsedRealtime() - gateOpenedAt,
+            )
+            Log.i(
+                "ReaderOpenTrace",
+                "open-font-gate-release exact=false verdict=$verdict " +
+                    "currentHref=${current.href} currentProgression=${current.locations.progression}",
+            )
+            return@LaunchedEffect
+        }
+
         val exactArrived = openingExactAnchorArrived(nav, requested)
         Log.i(
             "ReaderOpenTrace",
@@ -1945,6 +2005,16 @@ internal fun ReaderScreen(
                 "currentProgression=${nav.currentLocator.value.locations.progression}",
         )
         if (exactArrived) {
+            // The position emission may have happened while the font gate
+            // was closed. Re-evaluate the current locator now that the
+            // exact text anchor has been checked against the settled layout.
+            val current = nav.currentLocator.value
+            val verdict = gate.onEmission(
+                here = current.restorePoint(),
+                anchorVerified = true,
+                elapsedMs = SystemClock.elapsedRealtime() - gateOpenedAt,
+            )
+            Log.i("ReaderOpenTrace", "open-font-gate-release exact=true verdict=$verdict")
             if (bookOrbitFallback != null) onBookOrbitOpeningVerified(requested)
             return@LaunchedEffect
         }
@@ -1975,7 +2045,7 @@ internal fun ReaderScreen(
         markPendingPositionEvent(NavigatorPositionEvent.FRAGMENT_RECREATION)
         // Retarget rather than release. This navigation is asynchronous
         // and pendingPositionEvent is single-use, so an emission landing
-        // in between takes the marker and the real arrival is left
+        // in between takes that marker and the real arrival is left
         // looking like a page turn. Telling the gate where the reader is
         // now being sent keeps it closed until they get there.
         retargetGate(fallback)

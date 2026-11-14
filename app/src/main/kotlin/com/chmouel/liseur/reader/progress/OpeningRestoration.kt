@@ -145,8 +145,12 @@ class OpeningRestoration(
          */
         const val TOLERANCE = 0.01
 
-        /** Long enough for a slow first layout, short enough to notice. */
-        const val DEFAULT_TIMEOUT_MS = 5_000L
+        /**
+         * Covers cold publisher-font loading, the resulting pagination
+         * reflow, exact-anchor verification, and a final fallback attempt.
+         * The font wait is bounded separately; this is the outer gate.
+         */
+        const val DEFAULT_TIMEOUT_MS = 12_000L
 
         /**
          * A cold open gets longer than an in-book jump to let the WebView

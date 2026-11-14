@@ -18,6 +18,41 @@ import org.robolectric.annotation.Config
 class ExactLocatorAnchorTest {
 
     @Test
+    fun `publisher font readiness script waits for font set and stylesheets`() {
+        val script = PublisherFontReadiness.script()
+
+        assertTrue(script.contains("document.fonts.ready"))
+        assertTrue(script.contains('fontSet.status === "loaded"'))
+        assertTrue(script.contains('link.sheet'))
+        assertTrue(script.contains('face.status === "loading"'))
+        assertTrue(script.contains("pendingStylesheets"))
+    }
+
+    @Test
+    fun `publisher font readiness parses loaded and failed face counts`() {
+        val result = JSONObject.quote(
+            JSONObject()
+                .put("supported", true)
+                .put("ready", true)
+                .put("fontSetStatus", "loaded")
+                .put("pendingStylesheets", 0)
+                .put("fontFaces", 2)
+                .put("loadedFaces", 1)
+                .put("loadingFaces", 0)
+                .put("failedFaces", 1)
+                .toString(),
+        )
+
+        val parsed = PublisherFontReadiness.parse(result)
+
+        assertTrue(parsed?.supported == true)
+        assertTrue(parsed?.ready == true)
+        assertEquals(1, parsed?.loadedFaces)
+        assertEquals(1, parsed?.failedFaces)
+        assertEquals("loaded", parsed?.fontSetStatus)
+    }
+
+    @Test
     fun `javascript anchor keeps exact unicode context lengths`() {
         val before = "🙂".repeat(40)
         val highlight = "界".repeat(70)
