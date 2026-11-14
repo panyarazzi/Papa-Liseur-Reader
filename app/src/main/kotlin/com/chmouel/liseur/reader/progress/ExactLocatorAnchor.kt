@@ -4,6 +4,7 @@ import android.webkit.WebView
 import com.chmouel.liseur.reader.ResourceAddress
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 import org.json.JSONTokener
 import android.util.Log
@@ -290,6 +291,8 @@ object ExactLocatorAnchor {
                     "href=${locator.href} jsResult=${jsResult ?: "null"}",
             )
             result
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
             Log.w(
                 "ReaderOpenTrace",
