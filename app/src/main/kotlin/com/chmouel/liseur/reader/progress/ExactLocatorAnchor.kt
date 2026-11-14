@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONObject
 import org.json.JSONTokener
+import android.util.Log
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
@@ -267,15 +268,36 @@ object ExactLocatorAnchor {
      */
     @OptIn(ExperimentalReadiumApi::class)
     suspend fun reveal(navigator: EpubNavigatorFragment, locator: Locator): Boolean {
-        if (!isExact(locator)) return false
-        if (!ResourceAddress.shows(
-                navigator.currentLocator.value.href.toString(),
-                locator.href.toString(),
+        if (!isExact(locator)) {
+            Log.i("ReaderOpenTrace", "open-anchor-reveal-detail result=false reason=locator-not-exact href=${locator.href}")
+            return false
+        }
+        val currentHref = navigator.currentLocator.value.href.toString()
+        if (!ResourceAddress.shows(currentHref, locator.href.toString())) {
+            Log.i(
+                "ReaderOpenTrace",
+                "open-anchor-reveal-detail result=false reason=resource-mismatch " +
+                    "targetHref=${locator.href} currentHref=$currentHref",
             )
-        ) return false
-        return runCatching {
-            navigator.evaluateJavascript(revealScript(locator))?.trim() == "true"
-        }.getOrDefault(false)
+            return false
+        }
+        return try {
+            val jsResult = navigator.evaluateJavascript(revealScript(locator))?.trim()
+            val result = jsResult == "true"
+            Log.i(
+                "ReaderOpenTrace",
+                "open-anchor-reveal-detail result=$result reason=${if (result) "range-revealed" else "script-did-not-reveal"} " +
+                    "href=${locator.href} jsResult=${jsResult ?: "null"}",
+            )
+            result
+        } catch (error: Exception) {
+            Log.w(
+                "ReaderOpenTrace",
+                "open-anchor-reveal-detail result=false reason=javascript-exception " +
+                    "href=${locator.href} exception=${error.javaClass.simpleName}",
+            )
+            false
+        }
     }
 
     internal fun revealScript(locator: Locator): String {

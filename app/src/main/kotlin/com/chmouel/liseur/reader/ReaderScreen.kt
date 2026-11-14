@@ -1282,6 +1282,34 @@ internal fun ReaderScreen(
     suspend fun openingExactAnchorArrived(nav: EpubNavigatorFragment, locator: Locator): Boolean {
         val elapsedMs = SystemClock.elapsedRealtime() - gateOpenedAt
         val budgetMs = OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs)
+
+        // Keep the three answers separate in Logcat. A false verify does
+        // not tell us whether reveal failed, or whether it moved the page
+        // but the viewport check still could not see the saved quote.
+        suspend fun verify(stage: String): Boolean {
+            val result = verifyOpeningTarget(nav, locator)
+            val current = nav.currentLocator.value
+            Log.i(
+                "ReaderOpenTrace",
+                "open-anchor-verify stage=$stage result=$result " +
+                    "targetHref=${locator.href} currentHref=${current.href} " +
+                    "targetResourceProgression=${locator.locations.progression} " +
+                    "currentResourceProgression=${current.locations.progression}",
+            )
+            return result
+        }
+
+        suspend fun revealAndVerify(stage: String): Boolean {
+            val revealed = ExactLocatorAnchor.reveal(nav, locator)
+            Log.i(
+                "ReaderOpenTrace",
+                "open-anchor-reveal stage=$stage result=$revealed href=${locator.href}",
+            )
+            if (!revealed) return false
+            settleLayout()
+            return verify("after-reveal-$stage")
+        }
+
         // A budget already spent still buys one look. Two frames cost
         // nothing against the gate's remaining second, and degrading the
         // reader to an approximate page without ever asking whether the
@@ -1289,16 +1317,8 @@ internal fun ReaderScreen(
         // this replaced.
         if (budgetMs <= 0L) {
             settleLayout()
-            if (verifyOpeningTarget(nav, locator)) return true
-            val revealed = ExactLocatorAnchor.reveal(nav, locator)
-            if (revealed) {
-                settleLayout()
-                if (verifyOpeningTarget(nav, locator)) {
-                    Log.i("ReaderOpenTrace", "open-anchor-reveal result=true href=${locator.href}")
-                    return true
-                }
-            }
-            return false
+            if (verify("deadline-initial")) return true
+            return revealAndVerify("deadline")
         }
         // This is the same asynchronous WebView race as navigate(), but
         // a cold open is the slowest layout the reader asks for. Poll
@@ -1309,21 +1329,14 @@ internal fun ReaderScreen(
         // leaving at least 1000ms of the 5000ms gate for the fallback
         // navigation to be issued while the gate is still closed.
         return withTimeoutOrNull(budgetMs) {
-            repeat(OpeningRestoration.EXACT_OPEN_VERIFY_ATTEMPTS) {
+            repeat(OpeningRestoration.EXACT_OPEN_VERIFY_ATTEMPTS) { attempt ->
                 settleLayout()
-                if (verifyOpeningTarget(nav, locator)) return@withTimeoutOrNull true
+                if (verify("attempt-$attempt-initial")) return@withTimeoutOrNull true
                 // The factory's initial Locator carries progression and text
                 // context, but Readium does not interpret our app-owned CSS
                 // selector as a navigation destination. Reveal the saved
                 // quote in the live document, then verify its actual viewport.
-                val revealed = ExactLocatorAnchor.reveal(nav, locator)
-                if (revealed) {
-                    settleLayout()
-                    if (verifyOpeningTarget(nav, locator)) {
-                        Log.i("ReaderOpenTrace", "open-anchor-reveal result=true href=${locator.href}")
-                        return@withTimeoutOrNull true
-                    }
-                }
+                if (revealAndVerify("attempt-$attempt")) return@withTimeoutOrNull true
             }
             false
         } == true
