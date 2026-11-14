@@ -1289,7 +1289,16 @@ internal fun ReaderScreen(
         // this replaced.
         if (budgetMs <= 0L) {
             settleLayout()
-            return verifyOpeningTarget(nav, locator)
+            if (verifyOpeningTarget(nav, locator)) return true
+            val revealed = ExactLocatorAnchor.reveal(nav, locator)
+            if (revealed) {
+                settleLayout()
+                if (verifyOpeningTarget(nav, locator)) {
+                    Log.i("ReaderOpenTrace", "open-anchor-reveal result=true href=${locator.href}")
+                    return true
+                }
+            }
+            return false
         }
         // This is the same asynchronous WebView race as navigate(), but
         // a cold open is the slowest layout the reader asks for. Poll
