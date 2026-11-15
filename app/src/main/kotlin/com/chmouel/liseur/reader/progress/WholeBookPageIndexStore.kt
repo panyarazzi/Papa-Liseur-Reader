@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import java.util.concurrent.atomic.AtomicLong
 
@@ -35,6 +36,14 @@ class WholeBookPageIndexStore(
     @Volatile
     var generation: Int = 0
         private set
+
+    private val _generationFlow = MutableStateFlow(0)
+    val generationFlow: StateFlow<Int> = _generationFlow.asStateFlow()
+
+    // A replacement host waits for the previous host's cancelled scan to
+    // release this lock. Two measurement navigators must never race over
+    // the store's single expectedMeasurement slot.
+    internal val scannerMutex = Mutex()
 
     private val measurementSequence = AtomicLong(0)
     @Volatile
@@ -107,6 +116,9 @@ class WholeBookPageIndexStore(
         onDiagnostic(event, attributes + ("generation" to generation.toString()))
     }
 
+    /** Latest emitted measurement sequence, used to reject replayed callbacks. */
+    fun latestMeasurementSequence(): Long = measurementSequence.get()
+
     /** The resource the isolated navigator is currently being asked to measure. */
     @Synchronized
     fun expectMeasurement(resourceIndex: Int, href: String) {
@@ -128,9 +140,26 @@ class WholeBookPageIndexStore(
      * XHTML href more than once in its Reading Order.
      */
     @Synchronized
-    fun publishMeasurement(resourceIndex: Int?, href: String, totalPages: Int) {
+    fun publishMeasurement(
+        resourceIndex: Int?,
+        href: String,
+        totalPages: Int,
+        callbackGeneration: Int = generation,
+    ) {
         val normalizedHref = href.substringBefore('#')
         if (normalizedHref.isBlank() || totalPages <= 0) return
+        if (callbackGeneration != generation) {
+            onDiagnostic(
+                "pagination.measurement_callback_rejected",
+                mapOf(
+                    "reason" to "stale_generation",
+                    "callbackGeneration" to callbackGeneration.toString(),
+                    "activeGeneration" to generation.toString(),
+                    "href" to normalizedHref,
+                ),
+            )
+            return
+        }
         val expected = expectedMeasurement
         val targetIndex = when {
             expected != null && normalizedHref == expected.second -> expected.first
@@ -143,7 +172,7 @@ class WholeBookPageIndexStore(
                 resourceIndex = targetIndex,
                 href = normalizedHref,
                 totalPages = totalPages,
-                generation = generation,
+                generation = callbackGeneration,
                 sequence = measurementSequence.incrementAndGet(),
             ),
         )
@@ -152,6 +181,7 @@ class WholeBookPageIndexStore(
     @Synchronized
     fun reset() {
         generation += 1
+        _generationFlow.value = generation
         expectedMeasurement = null
         _index.value = WholeBookPageIndex.empty(resourceCount)
         _currentPage.value = null
