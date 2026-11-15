@@ -10,10 +10,13 @@ import androidx.fragment.app.FragmentFactory
 import androidx.fragment.app.commitNow
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.shared.publication.Publication
 
 /**
@@ -27,6 +30,7 @@ import org.readium.r2.shared.publication.Publication
 class PaginationMeasurementHostFragment(
     private val publication: Publication,
     private val navigatorFactory: FragmentFactory,
+    private val measurementPreferences: StateFlow<EpubPreferences>,
     private val pageIndexStore: WholeBookPageIndexStore,
     private val enabled: Boolean,
 ) : Fragment() {
@@ -50,9 +54,6 @@ class PaginationMeasurementHostFragment(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        // A new host means a new viewport/layout identity. Clear any old
-        // counts before its child navigator can publish the first callback.
-        pageIndexStore.reset()
         childFragmentManager.fragmentFactory = navigatorFactory
         if (childFragmentManager.findFragmentByTag(NAVIGATOR_TAG) == null) {
             childFragmentManager.commitNow {
@@ -68,7 +69,15 @@ class PaginationMeasurementHostFragment(
         scanJob = viewLifecycleOwner.lifecycleScope.launch {
             val navigator = childFragmentManager.findFragmentByTag(NAVIGATOR_TAG)
                 as? EpubNavigatorFragment ?: return@launch
-            scanReadingOrder(navigator)
+            var previousPreferences: EpubPreferences? = null
+            measurementPreferences.collectLatest { preferences ->
+                if (previousPreferences != null && previousPreferences != preferences) {
+                    pageIndexStore.reset()
+                }
+                previousPreferences = preferences
+                navigator.submitPreferences(preferences)
+                scanReadingOrder(navigator)
+            }
         }
     }
 
