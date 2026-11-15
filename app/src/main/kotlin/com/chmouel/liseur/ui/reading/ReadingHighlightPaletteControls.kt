@@ -38,6 +38,7 @@ import com.chmouel.liseur.R
 import kotlin.math.roundToInt
 import com.chmouel.liseur.reader.annotations.HighlightPalette
 import com.chmouel.liseur.reader.annotations.HighlightTint
+import com.chmouel.liseur.reader.annotations.highlightAlpha
 
 /**
  * Which colours the bar over a selected passage offers, and which one a
