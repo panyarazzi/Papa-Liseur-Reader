@@ -93,7 +93,9 @@ class PaginationMeasurementHostFragment(
                 return@forEachIndexed
             }
             val href = locator.href.toString().substringBefore('#')
+            pageIndexStore.expectMeasurement(index, href)
             if (!navigator.go(locator, animated = false)) {
+                pageIndexStore.clearExpectedMeasurement(index)
                 pageIndexStore.recordScannerEvent(
                     "pagination.resource_navigation_failed",
                     mapOf("resourceIndex" to index.toString()),
@@ -111,12 +113,15 @@ class PaginationMeasurementHostFragment(
                         event.href.substringBefore('#') == href && event.totalPages > 0
                 }
             } ?: run {
+                pageIndexStore.clearExpectedMeasurement(index)
                 pageIndexStore.recordScannerEvent(
                     "pagination.resource_callback_timeout",
                     mapOf("resourceIndex" to index.toString()),
                 )
                 return@forEachIndexed
             }
+
+            pageIndexStore.clearExpectedMeasurement(index)
 
             // Apply the same runtime typography and page repairs as the
             // visible reader before accepting a resource's final count.
@@ -137,7 +142,9 @@ class PaginationMeasurementHostFragment(
                 // Re-issue the same locator in the isolated navigator so
                 // Readium publishes a fresh page callback after DOM/CSS
                 // changes, even when the current page index did not move.
+                pageIndexStore.expectMeasurement(index, href)
                 if (!navigator.go(locator, animated = false)) {
+                    pageIndexStore.clearExpectedMeasurement(index)
                     pageIndexStore.recordScannerEvent(
                         "pagination.resource_reflow_navigation_failed",
                         mapOf("resourceIndex" to index.toString()),
@@ -153,6 +160,7 @@ class PaginationMeasurementHostFragment(
                             event.sequence > initialMeasurement.sequence
                     }
                 } ?: run {
+                    pageIndexStore.clearExpectedMeasurement(index)
                     pageIndexStore.recordScannerEvent(
                         "pagination.resource_reflow_timeout",
                         mapOf("resourceIndex" to index.toString()),
@@ -162,6 +170,7 @@ class PaginationMeasurementHostFragment(
             } else {
                 initialMeasurement
             }
+            pageIndexStore.clearExpectedMeasurement(index)
 
             pageIndexStore.recordResource(index, measured.totalPages)
         }
