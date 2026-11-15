@@ -701,6 +701,13 @@ internal fun ReaderScreen(
     // Identifies viewport rebuilds for page-curl snapshots and for
     // replacing the isolated whole-book measurement navigator.
     var layoutGeneration by remember { mutableIntStateOf(0) }
+    var indexedLayoutGeneration by remember(pageIndexStore) { mutableIntStateOf(0) }
+    SideEffect {
+        if (indexedLayoutGeneration != layoutGeneration) {
+            pageIndexStore.reset()
+            indexedLayoutGeneration = layoutGeneration
+        }
+    }
     val jumpBack by jumpBackFlow.collectAsStateWithLifecycle()
     val catchUp by catchUpFlow.collectAsStateWithLifecycle()
     val continuation by continuationFlow.collectAsStateWithLifecycle()
