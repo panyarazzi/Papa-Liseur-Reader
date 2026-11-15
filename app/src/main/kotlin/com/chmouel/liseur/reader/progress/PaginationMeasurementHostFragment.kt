@@ -101,12 +101,29 @@ class PaginationMeasurementHostFragment(
             // Readium emits this after the resource has loaded and its page
             // count has settled. The bounded wait prevents one malformed
             // resource from holding up the rest of the book indefinitely.
-            val measured = withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
+            val initialMeasurement = withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
                 pageIndexStore.measurements.first { event ->
                     event.generation == measurementGeneration &&
                         event.href.substringBefore('#') == href && event.totalPages > 0
                 }
             } ?: return@forEachIndexed
+
+            // Apply the same runtime typography and page repairs as the
+            // visible reader before accepting a resource's final count.
+            val layoutChanged = pageIndexStore.prepareResource(navigator)
+                ?: return@forEachIndexed
+            val measured = if (layoutChanged) {
+                withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
+                    pageIndexStore.measurements.first { event ->
+                        event.generation == measurementGeneration &&
+                            event.href.substringBefore('#') == href &&
+                            event.totalPages > 0 &&
+                            event.sequence > initialMeasurement.sequence
+                    }
+                } ?: return@forEachIndexed
+            } else {
+                initialMeasurement
+            }
 
             pageIndexStore.recordResource(index, measured.totalPages)
         }
