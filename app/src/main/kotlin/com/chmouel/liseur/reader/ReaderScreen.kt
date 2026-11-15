@@ -249,12 +249,10 @@ import com.chmouel.liseur.reader.chrome.GoToPercentDialog
 import com.chmouel.liseur.reader.chrome.TypographySheet
 import com.chmouel.liseur.reader.progress.GoToDestination
 import com.chmouel.liseur.reader.progress.GoToPagePrompt
-import com.chmouel.liseur.reader.progress.BookScreenEstimate
 import com.chmouel.liseur.reader.progress.WholeBookPageIndexStore
 import com.chmouel.liseur.reader.progress.CurrentResourcePage
 import com.chmouel.liseur.reader.progress.PaginationMeasurementHostFragment
 import com.chmouel.liseur.reader.progress.ReaderProgress
-import com.chmouel.liseur.reader.progress.SectionScreenProgress
 import com.chmouel.liseur.reader.progress.SectionScreens
 import com.chmouel.liseur.companion.CharacterPane
 import com.chmouel.liseur.companion.CompanionPeekBar
@@ -700,13 +698,8 @@ internal fun ReaderScreen(
     val chapterResourceIndices = currentResourcePage
         ?.let { onChapterResourceIndices(it.resourceIndex) }
         .orEmpty()
-    // Which shape those measurements were taken at. Anything that
-    // rebuilds the page — a typography change, a rotation, a resize —
-    // moves it on, and the samples taken at the old shape are about a
-    // book with different pages. It is carried through the measurement
-    // rather than used to clear the estimate outright, so a reading
-    // that was already in the air when the page was rebuilt is refused
-    // instead of filed against the new shape.
+    // Identifies viewport rebuilds for page-curl snapshots and for
+    // replacing the isolated whole-book measurement navigator.
     var layoutGeneration by remember { mutableIntStateOf(0) }
     val jumpBack by jumpBackFlow.collectAsStateWithLifecycle()
     val catchUp by catchUpFlow.collectAsStateWithLifecycle()
