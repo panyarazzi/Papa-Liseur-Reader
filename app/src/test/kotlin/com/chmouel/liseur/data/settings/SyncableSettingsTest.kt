@@ -124,6 +124,7 @@ class SyncableSettingsTest {
                 "app.definition_target",
                 "app.highlight_tints",
                 "app.highlight_tint_default",
+                "app.highlight_strength",
                 "app.lock_footer_on"
             ),
             registry().map { it.key }.toSet(),
@@ -387,6 +388,22 @@ class SyncableSettingsTest {
             assertEquals(tint.name, setting.read())
         }
         assertFalse(setting.write("CHARTREUSE"))
+    }
+
+    @Test
+    fun `highlight strength is validated and round trips through sync`() = runTest {
+        val a = app()
+        val setting = syncableSettings(a, reader()).first { it.key == "app.highlight_strength" }
+
+        assertEquals("65", setting.read())
+        assertTrue(setting.write("82"))
+        assertEquals(82, a.current().highlightStrength)
+        assertEquals("82", setting.read())
+
+        assertFalse(setting.write("-1"))
+        assertFalse(setting.write("101"))
+        assertFalse(setting.write("not-a-number"))
+        assertEquals(82, a.current().highlightStrength)
     }
 
     @Test
