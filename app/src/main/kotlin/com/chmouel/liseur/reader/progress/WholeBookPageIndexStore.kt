@@ -58,6 +58,11 @@ class WholeBookPageIndexStore(resourceCount: Int) {
     fun recordMeasurement(href: String, resourceIndex: Int, totalPages: Int) {
         if (href.isBlank() || totalPages <= 0) return
         recordResource(resourceIndex, totalPages)
+        publishMeasurement(href, totalPages)
+    }
+
+    fun publishMeasurement(href: String, totalPages: Int) {
+        if (href.isBlank() || totalPages <= 0) return
         _measurements.tryEmit(ResourcePageMeasurement(href, totalPages))
     }
 
