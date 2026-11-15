@@ -1071,11 +1071,13 @@ changing reader behavior.
 - Bookmark identity is `samePage()` on the two locators, never the rounded
   page number. Duplicate reading-order entries resolve by occurrence;
   scrolled books use the stable Readium position.
-- The paginated reflowable footer is display-only
-  ([ADR 0036](docs/adr/0036-the-footer-counts-screens.md)):
-  `SectionScreenProgress` and `BookScreenEstimate`, keyed by reading-order
-  index. Reset on layout change, reject stale measurements, never store or
-  sync the page count.
+- Reflowable paginated page numbers use Readium's exact
+  `EpubNavigatorFragment.PaginationListener` callbacks and the whole-book
+  index in [ADR 0037](docs/adr/0037-whole-book-page-index.md). A separate
+  invisible navigator measures every reading-order resource at the same
+  viewport and effective preferences. No unmeasured resource is extrapolated;
+  incomplete whole-book or chapter totals remain blank. Page counts are
+  display-only and never replace stable Readium Positions.
 - `readingColorScheme()` themes the whole reader activity: no dynamic
   color, opaque mixes, transparent `surfaceTint`, black `scrim`. Only the
   loading indicator keeps the app accent (`loadingAccentOn()`) while it
