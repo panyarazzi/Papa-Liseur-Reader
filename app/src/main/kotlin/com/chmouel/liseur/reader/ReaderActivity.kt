@@ -480,6 +480,7 @@ class ReaderActivity : FragmentActivity() {
                                         css = readingCss,
                                     )
                                 }
+                                val measurementPreferencesValue by measurementPreferences.collectAsStateWithLifecycle()
                                 val epubConfiguration = remember(
                                     s.navigatorFactory,
                                     columnMode,
@@ -546,6 +547,7 @@ class ReaderActivity : FragmentActivity() {
                                 val measurementNavigatorFactory = remember(
                                     s.navigatorFactory,
                                     initialPreferences,
+                                    measurementPreferencesValue,
                                     epubConfiguration,
                                     pageIndexStore,
                                 ) {
@@ -553,7 +555,7 @@ class ReaderActivity : FragmentActivity() {
                                         ?.let(s.publication::locatorFromLink)
                                     s.navigatorFactory.createFragmentFactory(
                                         initialLocator = firstLocator,
-                                        initialPreferences = initialPreferences,
+                                        initialPreferences = measurementPreferencesValue,
                                         paginationListener = object : EpubNavigatorFragment.PaginationListener {
                                             override fun onPageChanged(
                                                 pageIndex: Int,
@@ -575,9 +577,7 @@ class ReaderActivity : FragmentActivity() {
                                             PaginationMeasurementHostFragment(
                                                 publication = s.publication,
                                                 navigatorFactory = measurementNavigatorFactory,
-                                                measurementPreferences = measurementPreferences,
                                                 pageIndexStore = pageIndexStore,
-                                                enabled = true,
                                             )
                                         },
                                         navigatorFactory = visibleNavigatorFactory,
@@ -628,6 +628,7 @@ class ReaderActivity : FragmentActivity() {
                                 ReaderScreen(
                                     publication = s.publication,
                                     pageIndexStore = pageIndexStore,
+                                    measurementPreferencesKey = measurementPreferencesValue,
                                     onChapterResourceIndices = viewModel::chapterResourceIndices,
                                     displayAuthors = s.displayAuthors,
                                     restoreTarget = restoreTarget,
