@@ -13,13 +13,12 @@ val papaBuildLabel = System.getenv("GITHUB_RUN_NUMBER")
     ?.let { "papa apk#$it" }
     ?: "papa local"
 
+// ProviderFactory.exec is compatible with Gradle's configuration cache.
 fun gitValue(vararg arguments: String): String? = runCatching {
-    val process = ProcessBuilder("git", *arguments)
-        .directory(rootProject.projectDir)
-        .redirectErrorStream(true)
-        .start()
-    val output = process.inputStream.bufferedReader().use { it.readText().trim() }
-    if (process.waitFor() == 0) output.takeIf { it.isNotBlank() } else null
+    providers.exec {
+        commandLine("git", *arguments)
+        workingDir(rootProject.projectDir)
+    }.standardOutput.asText.get().trim().takeIf { it.isNotBlank() }
 }.getOrNull()
 
 fun buildConfigString(value: String): String =
