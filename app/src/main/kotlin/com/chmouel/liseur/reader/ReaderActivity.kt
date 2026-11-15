@@ -610,6 +610,7 @@ class ReaderActivity : FragmentActivity() {
                                 }
                                 ReaderScreen(
                                     publication = s.publication,
+                                    pageIndexStore = pageIndexStore,
                                     displayAuthors = s.displayAuthors,
                                     restoreTarget = restoreTarget,
                                     fontKey = fontKey,
