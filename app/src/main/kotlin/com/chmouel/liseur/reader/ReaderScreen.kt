@@ -424,6 +424,8 @@ private enum class ReaderSheet { NONE, TYPOGRAPHY, ADVANCED }
 internal fun ReaderScreen(
     publication: Publication,
     pageIndexStore: WholeBookPageIndexStore,
+    measurementGeneration: Int,
+    onRestoreDiagnostic: (String, Map<String, String>) -> Unit = { _, _ -> },
     measurementPreferencesKey: EpubPreferences,
     onChapterResourceIndices: (Int) -> List<Int>,
     displayAuthors: List<String>,
@@ -1895,19 +1897,46 @@ internal fun ReaderScreen(
             return@LaunchedEffect
         }
         val requestedIsExact = ExactLocatorAnchor.isExact(requested)
+        val openingLocator = nav.currentLocator.value
         Log.i(
             "ReaderOpenTrace",
             "open-target exact=$requestedIsExact href=${requested.href} " +
                 "progression=${requested.locations.progression} total=${requested.locations.totalProgression}",
         )
-        if (!requestedIsExact) return@LaunchedEffect
+        if (!requestedIsExact) {
+            onRestoreDiagnostic(
+                "reader.restore_target_approximate",
+                mapOf(
+                    "targetHref" to requested.href.toString(),
+                    "targetProgression" to (requested.locations.progression?.toString() ?: "unknown"),
+                    "targetTotalProgression" to (requested.locations.totalProgression?.toString() ?: "unknown"),
+                    "currentHref" to openingLocator.href.toString(),
+                    "currentProgression" to (openingLocator.locations.progression?.toString() ?: "unknown"),
+                ),
+            )
+            return@LaunchedEffect
+        }
         val exactArrived = openingExactAnchorArrived(nav, requested)
+        val verifiedLocator = nav.currentLocator.value
+        onRestoreDiagnostic(
+            "reader.restore_verification",
+            mapOf(
+                "verified" to exactArrived.toString(),
+                "targetHref" to requested.href.toString(),
+                "targetProgression" to (requested.locations.progression?.toString() ?: "unknown"),
+                "targetTotalProgression" to (requested.locations.totalProgression?.toString() ?: "unknown"),
+                "currentHref" to verifiedLocator.href.toString(),
+                "currentProgression" to (verifiedLocator.locations.progression?.toString() ?: "unknown"),
+                "currentTotalProgression" to (verifiedLocator.locations.totalProgression?.toString() ?: "unknown"),
+                "elapsedMs" to (SystemClock.elapsedRealtime() - gateOpenedAt).toString(),
+            ),
+        )
         Log.i(
             "ReaderOpenTrace",
             "open-verify result=$exactArrived elapsedMs=${SystemClock.elapsedRealtime() - gateOpenedAt} " +
                 "requestedHref=${requested.href} progression=${requested.locations.progression} " +
-                "total=${requested.locations.totalProgression} currentHref=${nav.currentLocator.value.href} " +
-                "currentProgression=${nav.currentLocator.value.locations.progression}",
+                "total=${requested.locations.totalProgression} currentHref=${verifiedLocator.href} " +
+                "currentProgression=${verifiedLocator.locations.progression}",
         )
         if (exactArrived) {
             if (bookOrbitFallback != null) onBookOrbitOpeningVerified(requested)
@@ -1929,6 +1958,18 @@ internal fun ReaderScreen(
             resourceFallback != null -> "resource-anchor"
             else -> "whole-book-progression"
         }
+        onRestoreDiagnostic(
+            "reader.restore_fallback",
+            mapOf(
+                "source" to fallbackSource,
+                "targetHref" to requested.href.toString(),
+                "targetProgression" to (requested.locations.progression?.toString() ?: "unknown"),
+                "targetTotalProgression" to (requested.locations.totalProgression?.toString() ?: "unknown"),
+                "fallbackHref" to fallback.href.toString(),
+                "fallbackProgression" to (fallback.locations.progression?.toString() ?: "unknown"),
+                "fallbackTotalProgression" to (fallback.locations.totalProgression?.toString() ?: "unknown"),
+            ),
+        )
         Log.w(
             "ReaderOpenTrace",
             "open-fallback source=$fallbackSource requestedHref=${requested.href} " +
@@ -4090,7 +4131,7 @@ internal fun ReaderScreen(
             initialViewportMeasured &&
             customTypographyInitialized
         ) {
-            key(pageIndexStore, layoutGeneration, measurementPreferencesKey, fontKey) {
+            key(pageIndexStore, measurementGeneration, layoutGeneration, measurementPreferencesKey, fontKey) {
                 AndroidFragment<PaginationMeasurementHostFragment>(
                     modifier = navigatorViewportModifier,
                 )
