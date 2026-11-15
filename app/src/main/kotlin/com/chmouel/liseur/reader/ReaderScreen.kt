@@ -5436,6 +5436,8 @@ internal fun ReaderScreen(
             // runs rather than turns whatever the setting says, and a
             // fixed-layout book turns rather than runs whatever it says.
             scrolling = effectiveScrolling,
+            scrollMode = scrollMode,
+            onScrollModeChanged = onScrollModeChanged,
             autoScrollSpeed = prefs.autoScrollSpeed,
             typographyIsOwn = typographyIsOwn,
             readingCss = readingCss,
