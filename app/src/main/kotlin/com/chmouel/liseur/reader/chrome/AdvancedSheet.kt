@@ -116,6 +116,8 @@ fun AdvancedSheet(
     highlightPalette: HighlightPalette,
     onHighlightTintToggled: (HighlightTint) -> Unit,
     onHighlightDefaultTintChanged: (HighlightTint) -> Unit,
+    highlightStrength: Int,
+    onHighlightStrengthChanged: (Int) -> Unit,
     onAutoScrollSpeedChanged: (Float) -> Unit,
     keepScreenOn: Boolean,
     onKeepScreenOnChanged: (Boolean) -> Unit,
@@ -186,6 +188,8 @@ fun AdvancedSheet(
             // motion rows.
             ReadingHighlightPaletteControls(
                 palette = highlightPalette,
+                strength = highlightStrength,
+                onStrengthChanged = onHighlightStrengthChanged,
                 onTintToggled = onHighlightTintToggled,
                 onDefaultChanged = onHighlightDefaultTintChanged,
             )
