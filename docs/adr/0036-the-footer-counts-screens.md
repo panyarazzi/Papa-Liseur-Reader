@@ -2,9 +2,15 @@
 
 Date: 2026-10-02
 
-Status: accepted
+Status: superseded by [ADR 0037](0037-whole-book-page-index.md)
 
 Amends [29. What a page is in the footer](0029-what-a-page-is-in-the-footer.md)
+
+> **Superseded:** The implementation described below used WebView scroll geometry and
+> extrapolated unmeasured resources. That approach was retired because it could not
+> provide a true whole-book page count. The accepted replacement is ADR 0037, which
+> uses Readium's pagination callbacks and measures every reading-order resource.
+
 
 ## Context
 
