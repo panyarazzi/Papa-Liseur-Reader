@@ -56,7 +56,7 @@ class AnnotationSurfacesTest {
 
     @Test
     fun `the navigator highlight template preserves the annotation alpha`() {
-        val annotation = highlight().toDecorations(strength = 100).single()
+        val annotation = listOf(highlight()).toDecorations(strength = 100).single()
         val template = epubNavigatorConfigurationBase()
             .decorationTemplates[Decoration.Style.Highlight::class]
 
