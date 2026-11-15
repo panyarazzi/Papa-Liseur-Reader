@@ -1,8 +1,16 @@
 package com.chmouel.liseur.reader.progress
 
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
+/** A resource page count reported by either Readium navigator. */
+data class ResourcePageMeasurement(
+    val href: String,
+    val totalPages: Int,
+)
 
 /** The exact page currently reported by the visible Readium navigator. */
 data class CurrentResourcePage(
@@ -20,6 +28,11 @@ class WholeBookPageIndexStore(resourceCount: Int) {
     val index: StateFlow<WholeBookPageIndex> = _index.asStateFlow()
 
     private val _currentPage = MutableStateFlow<CurrentResourcePage?>(null)
+    private val _measurements = MutableSharedFlow<ResourcePageMeasurement>(
+        replay = 1,
+        extraBufferCapacity = 32,
+    )
+    val measurements: SharedFlow<ResourcePageMeasurement> = _measurements
     val currentPage: StateFlow<CurrentResourcePage?> = _currentPage.asStateFlow()
 
     @Synchronized
@@ -40,6 +53,12 @@ class WholeBookPageIndexStore(resourceCount: Int) {
             pageInResource = pageIndexZeroBased + 1,
             totalPagesInResource = totalPages,
         )
+    }
+
+    fun recordMeasurement(href: String, resourceIndex: Int, totalPages: Int) {
+        if (href.isBlank() || totalPages <= 0) return
+        recordResource(resourceIndex, totalPages)
+        _measurements.tryEmit(ResourcePageMeasurement(href, totalPages))
     }
 
     @Synchronized
