@@ -43,35 +43,38 @@ class DiagnosticHistory(context: Context) {
         attributes: Map<String, String> = emptyMap(),
         error: Throwable? = null,
     ) {
-        val safeEvent = event.take(MAX_EVENT_NAME_CHARS).ifBlank { "event.unnamed" }
+        if (event.isBlank()) return
         val safeAttributes = attributes.entries
-            .filterNot { (key, _) ->
-                SENSITIVE_ATTRIBUTE_KEY.containsMatchIn(key)
-            }
+            .filterNot { (key, _) -> SENSITIVE_ATTRIBUTE_KEY.containsMatchIn(key) }
             .take(MAX_ATTRIBUTES)
             .associate { (key, value) ->
                 key.take(MAX_ATTRIBUTE_KEY_CHARS) to value.take(MAX_ATTRIBUTE_VALUE_CHARS)
             }
+
+        // Both queue submission and disk writes are non-fatal to reading.
         runCatching {
             writer.execute {
                 runCatching {
-                val item = JSONObject()
-                    .put("timeUtcMs", System.currentTimeMillis())
-                    .put("elapsedMs", SystemClock.elapsedRealtime())
-                    .put("session", sessionId)
-                    .put("sequence", sequence.incrementAndGet())
-                    .put("event", safeEvent)
-                    .put("attributes", JSONObject(safeAttributes))
-                if (error != null) {
-                    item.put("errorType", error.javaClass.name.take(200))
-                    // Exception messages can contain local file paths, book
-                    // names or provider URIs. Keep the exception type and
-                    // stack frames, but deliberately omit the message.
-                    item.put(
-                        "stack",
-                        error.stackTrace.asSequence().take(12).joinToString("\n") { it.toString() }.take(1800),
-                    )
-                }
+                    val item = JSONObject()
+                    item.put("timestampUtcMs", System.currentTimeMillis())
+                    item.put("elapsedRealtimeMs", SystemClock.elapsedRealtime())
+                    item.put("sessionId", sessionId)
+                    item.put("sequence", sequence.incrementAndGet())
+                    item.put("event", event.take(MAX_EVENT_NAME_CHARS))
+                    item.put("attributes", JSONObject(safeAttributes))
+                    if (error != null) {
+                        item.put("errorType", error.javaClass.name.take(200))
+                        // Exception messages can contain local file paths, book
+                        // names or provider URIs. Keep stack frames, not messages.
+                        item.put(
+                            "stack",
+                            error.stackTrace.asSequence()
+                                .take(12)
+                                .joinToString("\n") { it.toString() }
+                                .take(1800),
+                        )
+                    }
+
                     synchronized(lock) {
                         val file = currentFile()
                         file.appendText(item.toString() + "\n", Charsets.UTF_8)
@@ -82,10 +85,6 @@ class DiagnosticHistory(context: Context) {
         }
     }
 
-    /**
-     * Each returned part is independently pasteable. The character limit
-     * includes its repeated APK/session header and its closing marker.
-     */
     suspend fun exportParts(maxCharacters: Int = DEFAULT_CHAT_PART_CHARACTERS): List<Part> =
         withContext(Dispatchers.IO) {
             require(maxCharacters in MIN_CHAT_PART_CHARACTERS..MAX_CHAT_PART_CHARACTERS)
