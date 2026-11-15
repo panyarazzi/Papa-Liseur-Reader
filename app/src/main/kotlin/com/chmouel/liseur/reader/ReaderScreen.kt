@@ -710,10 +710,17 @@ internal fun ReaderScreen(
         mutableStateOf(measurementPreferencesKey)
     }
     var indexedFontKey by remember(pageIndexStore) { mutableStateOf(fontKey) }
+    var customTypographyInitialized by remember(pageIndexStore) { mutableStateOf(false) }
+    var initialViewportMeasured by remember(pageIndexStore) { mutableStateOf(false) }
     LaunchedEffect(customTypography) {
-        // Per-book line height and indent are injected after Readium loads
-        // each resource, so they form part of the page-index layout key.
-        layoutGeneration++
+        // The first emission establishes the opening layout; it is not a
+        // change from an already-indexed layout and must not restart a scan.
+        // Subsequent per-book typography changes do invalidate page counts.
+        if (customTypographyInitialized) {
+            layoutGeneration++
+        } else {
+            customTypographyInitialized = true
+        }
     }
     SideEffect {
         val viewportChanged = indexedLayoutGeneration != layoutGeneration
@@ -1660,10 +1667,17 @@ internal fun ReaderScreen(
     // the turn is given up rather than drawn stretched. The activity
     // handles these changes itself, so nothing else would notice.
     LaunchedEffect(boxSize) {
-        if (pageCurl.isRunning) pageTurnDrag.abandon()
-        // The page is a different shape, so every screen counted at the
-        // old one is a count of something else.
-        layoutGeneration++
+        if (boxSize != IntSize.Zero) {
+            if (initialViewportMeasured) {
+                if (pageCurl.isRunning) pageTurnDrag.abandon()
+                // Only a change after the first real measurement invalidates
+                // the index. The initial Zero -> measured transition defines
+                // the opening viewport; it is not a later reflow.
+                layoutGeneration++
+            } else {
+                initialViewportMeasured = true
+            }
+        }
     }
     LaunchedEffect(effectiveScrolling) {
         if (effectiveScrolling) pageIndexStore.reset()
@@ -4067,7 +4081,15 @@ internal fun ReaderScreen(
         // The measurement navigator is isolated from the visible reader.
         // It receives the same viewport, preferences and EPUB transforms,
         // but its own FragmentManager and pagination listener.
-        if (reflowableText && !effectiveScrolling && !pageTranslated && pageTranslation == null && restoringPageTranslation == null) {
+        if (
+            reflowableText &&
+            !effectiveScrolling &&
+            !pageTranslated &&
+            pageTranslation == null &&
+            restoringPageTranslation == null &&
+            initialViewportMeasured &&
+            customTypographyInitialized
+        ) {
             key(pageIndexStore, layoutGeneration, measurementPreferencesKey, fontKey) {
                 AndroidFragment<PaginationMeasurementHostFragment>(
                     modifier = navigatorViewportModifier,
