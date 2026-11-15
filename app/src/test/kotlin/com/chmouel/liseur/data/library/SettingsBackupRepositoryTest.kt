@@ -58,6 +58,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.json.JSONObject
+import org.readium.r2.shared.publication.Locator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -278,6 +279,83 @@ class SettingsBackupRepositoryTest {
         ), format = 4)
         assertEquals(SettingsBackupInspection.Failed(SettingsBackupFailure.TOO_LARGE),
             repository(app, reader, UserFontRepository(context, this, loadCheck = { true })).inspect(Uri.fromFile(file)))
+    }
+
+    @Test
+    fun `ZIP round trip restores a highlight locator and its chapter excerpt to a rematched book`() = runTest {
+        val app = AppSettingsRepository(store("annotation-round-trip-app.preferences_pb"))
+        val reader = ReaderPreferencesRepository(store("annotation-round-trip-reader.preferences_pb"))
+        val fonts = UserFontRepository(context, this, loadCheck = { true })
+        val repository = repository(app, reader, fonts)
+        val source = "file:///old-location/book.epub"
+        val destination = "file:///new-location/book.epub"
+        db.bookDao().upsert(book(source))
+
+        val locatorJson = JSONObject()
+            .put("href", "chapter-04.xhtml")
+            .put("type", "application/xhtml+xml")
+            .put("title", "Chapter 4")
+            .put(
+                "locations",
+                JSONObject()
+                    .put("progression", 0.42)
+                    .put("totalProgression", 0.42)
+                    .put("position", 12),
+            )
+            .put(
+                "text",
+                JSONObject()
+                    .put("before", "The words before")
+                    .put("highlight", "The exact sentence marked by the reader.")
+                    .put("after", "The words after"),
+            )
+            .toString()
+        val original = BookAnnotation(
+            id = "highlight-round-trip",
+            bookId = source,
+            kind = AnnotationKind.HIGHLIGHT.name,
+            locatorJson = locatorJson,
+            text = "The exact sentence marked by the reader.",
+            note = "A note attached to this passage",
+            tint = "YELLOW",
+            chapter = "Chapter 4",
+            position = 12,
+            totalProgression = 0.42,
+            createdAt = 1234,
+            updatedAt = 1234000,
+        )
+        db.annotationDao().upsert(original)
+
+        val archive = Uri.fromFile(File(folder.root, "annotations-round-trip.zip"))
+        val exported = repository.exportTo(archive)
+        assertEquals(SettingsBackupExportResult.Exported(0, annotations = 1), exported)
+
+        // Simulate restoring on another installation where the same book
+        // has a different file URL but the same title and author.
+        db.annotationDao().deleteForBook(source)
+        db.bookDao().deleteByUrls(listOf(source))
+        db.bookDao().upsert(book(destination))
+
+        val preview = repository.inspect(archive) as SettingsBackupInspection.Ready
+        assertEquals(1, preview.preview.annotationCount)
+        assertEquals(1, preview.preview.matchedAnnotationBooks)
+
+        val restored = repository.restore(preview.archiveId) as SettingsBackupRestoreResult.Restored
+        assertEquals(1, restored.annotationsAdded)
+        assertEquals(0, restored.annotationsAlreadyPresent)
+
+        val actual = db.annotationDao().byId(original.id)!!
+        assertEquals(destination, actual.bookId)
+        assertEquals(original.locatorJson, actual.locatorJson)
+        assertEquals(original.text, actual.text)
+        assertEquals(original.note, actual.note)
+        assertEquals(original.tint, actual.tint)
+        assertEquals(original.chapter, actual.chapter)
+        assertEquals(original.position, actual.position)
+        assertEquals(original.totalProgression, actual.totalProgression)
+        val locator = Locator.fromJSON(JSONObject(actual.locatorJson))
+        assertEquals("chapter-04.xhtml", locator.href.toString())
+        assertEquals(original.text, locator.text.highlight)
     }
 
     @Test
