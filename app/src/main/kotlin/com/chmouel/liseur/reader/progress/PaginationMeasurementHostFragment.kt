@@ -45,6 +45,7 @@ class PaginationMeasurementHostFragment(
         )
         isClickable = false
         isFocusable = false
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
