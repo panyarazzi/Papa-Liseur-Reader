@@ -22,6 +22,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,30 +74,41 @@ fun ReadingHighlightPaletteControls(
     onTintToggled: (HighlightTint) -> Unit,
     onDefaultChanged: (HighlightTint) -> Unit,
 ) {
+    val sliderStrength = remember(strength) { mutableIntStateOf(strength) }
+    val currentStrength = sliderStrength.intValue
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         ReadingSectionLabel(stringResource(R.string.reader_highlight_strength))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = strength.toString(),
+                text = currentStrength.toString(),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f),
             )
             IconButton(
-                onClick = { onStrengthChanged((strength - 5).coerceAtLeast(0)) },
-                enabled = strength > 0,
+                onClick = {
+                    val next = (currentStrength - 5).coerceAtLeast(0)
+                    sliderStrength.intValue = next
+                    onStrengthChanged(next)
+                },
+                enabled = currentStrength > 0,
             ) {
                 Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.reader_highlight_strength_decrease))
             }
             IconButton(
-                onClick = { onStrengthChanged((strength + 5).coerceAtMost(100)) },
-                enabled = strength < 100,
+                onClick = {
+                    val next = (currentStrength + 5).coerceAtMost(100)
+                    sliderStrength.intValue = next
+                    onStrengthChanged(next)
+                },
+                enabled = currentStrength < 100,
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.reader_highlight_strength_increase))
             }
         }
         Slider(
-            value = strength.toFloat(),
-            onValueChange = { onStrengthChanged(it.roundToInt()) },
+            value = currentStrength.toFloat(),
+            onValueChange = { sliderStrength.intValue = it.roundToInt() },
+            onValueChangeFinished = { onStrengthChanged(sliderStrength.intValue) },
             valueRange = 0f..100f,
             steps = 99,
         )
@@ -111,7 +124,7 @@ fun ReadingHighlightPaletteControls(
                     tint = tint,
                     offered = tint in palette.offered,
                     isDefault = tint == palette.default,
-                    strength = strength,
+                    strength = currentStrength,
                     onToggle = { onTintToggled(tint) },
                     onMakeDefault = { onDefaultChanged(tint) },
                 )
