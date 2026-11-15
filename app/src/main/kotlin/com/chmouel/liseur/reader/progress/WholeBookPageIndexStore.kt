@@ -128,13 +128,19 @@ class WholeBookPageIndexStore(
      * XHTML href more than once in its Reading Order.
      */
     @Synchronized
-    fun publishMeasurement(href: String, totalPages: Int) {
-        val expected = expectedMeasurement ?: return
+    fun publishMeasurement(resourceIndex: Int?, href: String, totalPages: Int) {
         val normalizedHref = href.substringBefore('#')
-        if (normalizedHref != expected.second || totalPages <= 0) return
+        if (normalizedHref.isBlank() || totalPages <= 0) return
+        val expected = expectedMeasurement
+        val targetIndex = when {
+            expected != null && normalizedHref == expected.second -> expected.first
+            expected != null -> return
+            else -> resourceIndex ?: return
+        }
+        if (targetIndex !in 0 until this.resourceCount) return
         _measurements.tryEmit(
             ResourcePageMeasurement(
-                resourceIndex = expected.first,
+                resourceIndex = targetIndex,
                 href = normalizedHref,
                 totalPages = totalPages,
                 generation = generation,
