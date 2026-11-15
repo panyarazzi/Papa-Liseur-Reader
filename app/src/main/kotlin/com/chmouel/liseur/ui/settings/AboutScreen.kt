@@ -135,7 +135,9 @@ fun AboutScreen(
                         uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                     )
-                    val parts = if (diagnosticParts.isNotEmpty()) diagnosticParts else diagnostics.exportParts()
+                    val parts = diagnostics.exportParts()
+                    diagnosticParts = parts
+                    diagnosticPartIndex = 0
                     withContext(kotlinx.coroutines.Dispatchers.IO) {
                         DiagnosticExport.writeToTree(context, uri, parts)
                     }
@@ -313,6 +315,13 @@ fun AboutScreen(
                         ) {
                             Text(if (preparingDiagnostics) "Preparing…" else "Prepare / refresh export")
                         }
+                        Text(
+                            "Choose the Documents folder in the system picker. Liseur will create Papa Liseur Diagnostics and a separate folder for this APK build.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 10.dp),
+                        )
                         OutlinedButton(
                             enabled = !preparingDiagnostics && !exportingDiagnostics,
                             onClick = { exportFolderPicker.launch(null) },
