@@ -118,7 +118,14 @@ class PaginationMeasurementHostFragment(
 
             // Apply the same runtime typography and page repairs as the
             // visible reader before accepting a resource's final count.
-            val layoutChanged = pageIndexStore.prepareResource(navigator) ?: run {
+            var prepareResource = pageIndexStore.prepareResource
+            repeat(PREPARE_CALLBACK_WAIT_ATTEMPTS) {
+                if (prepareResource == null) {
+                    kotlinx.coroutines.delay(PREPARE_CALLBACK_POLL_MS)
+                    prepareResource = pageIndexStore.prepareResource
+                }
+            }
+            val layoutChanged = prepareResource?.invoke(navigator) ?: run {
                 pageIndexStore.recordScannerEvent(
                     "pagination.resource_prepare_failed",
                     mapOf("resourceIndex" to index.toString()),
@@ -171,6 +178,8 @@ class PaginationMeasurementHostFragment(
     companion object {
         private const val NAVIGATOR_TAG = "whole-book-page-measurement-navigator"
         private const val RESOURCE_MEASUREMENT_TIMEOUT_MS = 20_000L
+        private const val PREPARE_CALLBACK_WAIT_ATTEMPTS = 100
+        private const val PREPARE_CALLBACK_POLL_MS = 50L
     }
 }
 
