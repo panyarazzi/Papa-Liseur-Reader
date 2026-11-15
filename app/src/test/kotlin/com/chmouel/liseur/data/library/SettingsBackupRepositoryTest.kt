@@ -354,7 +354,7 @@ class SettingsBackupRepositoryTest {
         assertEquals(original.chapter, actual.chapter)
         assertEquals(original.position, actual.position)
         assertEquals(original.totalProgression, actual.totalProgression)
-        val locator = Locator.fromJSON(JSONObject(actual.locatorJson))
+        val locator = requireNotNull(Locator.fromJSON(JSONObject(actual.locatorJson)))
         assertEquals("https://example.com/book/chapter-04.xhtml", locator.href.toString())
         assertEquals(original.text, locator.text.highlight)
     }
