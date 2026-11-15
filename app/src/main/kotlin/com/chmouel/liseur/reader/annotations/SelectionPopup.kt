@@ -44,6 +44,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.chmouel.liseur.R
 import com.chmouel.liseur.ui.LocalEInk
+import com.chmouel.liseur.reader.annotations.highlightAlpha
 
 /** What the reader can do with a passage they have just selected. */
 class SelectionActions(
@@ -90,6 +91,7 @@ fun SelectionPopup(
     actions: SelectionActions,
     activeTint: HighlightTint?,
     palette: HighlightPalette,
+    highlightStrength: Int,
     onDismiss: () -> Unit,
     dismissOnOutsideTouch: Boolean = true,
 ) {
@@ -135,6 +137,7 @@ fun SelectionPopup(
                             TintChip(
                                 tint = tint,
                                 selected = tint == activeTint,
+                                strength = highlightStrength,
                                 onClick = { actions.onHighlight(tint) },
                             )
                         }
@@ -224,6 +227,7 @@ fun SelectionPopup(
 internal fun TintChip(
     tint: HighlightTint,
     selected: Boolean,
+    strength: Int,
     onClick: () -> Unit,
     ringColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
@@ -233,7 +237,7 @@ internal fun TintChip(
             .size(30.dp)
             .semantics { contentDescription = label }
             .clip(CircleShape)
-            .background(tint.color)
+            .background(tint.color.copy(alpha = highlightAlpha(strength)))
             .border(
                 width = if (selected) 2.dp else 0.dp,
                 color = if (selected) ringColor else Color.Transparent,
