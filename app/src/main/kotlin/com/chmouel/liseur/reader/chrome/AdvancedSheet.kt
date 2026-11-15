@@ -12,8 +12,12 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SegmentedButton
@@ -24,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -31,6 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import com.chmouel.liseur.R
 import com.chmouel.liseur.data.settings.AutoScrollPreference
 import com.chmouel.liseur.data.settings.ColumnMode
@@ -411,8 +418,6 @@ private fun ReaderChromePreferencesControls(
     var progressSize by remember(prefs.progressFontSizeSp) {
         mutableFloatStateOf(prefs.progressFontSizeSp)
     }
-    var marginTop by remember(prefs.marginTopDp) { mutableFloatStateOf(prefs.marginTopDp) }
-    var marginBottom by remember(prefs.marginBottomDp) { mutableFloatStateOf(prefs.marginBottomDp) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ReadingSectionLabel("Reader display")
         Row(
@@ -451,26 +456,8 @@ private fun ReaderChromePreferencesControls(
                 steps = 10,
             )
         }
-        Column {
-            Text("Top margin: ${marginTop.toInt()} dp", style = MaterialTheme.typography.bodyLarge)
-            Slider(
-                value = marginTop,
-                onValueChange = { marginTop = it },
-                onValueChangeFinished = { onMarginTopChanged(marginTop) },
-                valueRange = 0f..48f,
-                steps = 47,
-            )
-        }
-        Column {
-            Text("Bottom margin: ${marginBottom.toInt()} dp", style = MaterialTheme.typography.bodyLarge)
-            Slider(
-                value = marginBottom,
-                onValueChange = { marginBottom = it },
-                onValueChangeFinished = { onMarginBottomChanged(marginBottom) },
-                valueRange = 0f..48f,
-                steps = 47,
-            )
-        }
+        DpMarginEditor("Top margin", prefs.marginTopDp, onMarginTopChanged)
+        DpMarginEditor("Bottom margin", prefs.marginBottomDp, onMarginBottomChanged)
     }
 }
 
@@ -481,6 +468,45 @@ private val TopProgressMode.label: String
         TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> "Pages left + chapter"
     }
 
+
+@Composable
+private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Unit) {
+    var text by remember(value) { mutableStateOf(value.toInt().toString()) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("$label: ${value.toInt()} dp", style = MaterialTheme.typography.bodyLarge)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            IconButton(enabled = value > 0f, onClick = {
+                val next = (value - 1f).coerceAtLeast(0f)
+                text = next.toInt().toString()
+                onChanged(next)
+            }) {
+                Icon(Icons.Outlined.Remove, contentDescription = "Decrease $label")
+            }
+            OutlinedTextField(
+                value = text,
+                onValueChange = { raw ->
+                    text = raw
+                    raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..48f }?.let(onChanged)
+                },
+                singleLine = true,
+                suffix = { Text("dp") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(enabled = value < 48f, onClick = {
+                val next = (value + 1f).coerceAtMost(48f)
+                text = next.toInt().toString()
+                onChanged(next)
+            }) {
+                Icon(Icons.Outlined.Add, contentDescription = "Increase $label")
+            }
+        }
+    }
+}
 
 @Composable
 private fun TapZonesControl(selected: TapZones, onSelected: (TapZones) -> Unit) {
