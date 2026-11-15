@@ -866,7 +866,7 @@ internal fun ReaderScreen(
                         val status = try {
                             measurementNavigator.evaluateJavascript(
                                 "document.fonts ? document.fonts.status : 'loaded'",
-                            )?.trim()?.removeSurrounding("\\\"")
+                            )?.trim()?.removeSurrounding("\"")
                         } catch (cancellation: CancellationException) {
                             throw cancellation
                         } catch (_: Exception) {
