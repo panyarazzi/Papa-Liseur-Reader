@@ -1,5 +1,10 @@
 package com.chmouel.liseur.ui.settings
 
+import android.content.Intent
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.fadeIn
@@ -38,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
@@ -49,9 +55,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.chmouel.liseur.BuildConfig
 import com.chmouel.liseur.diagnostics.DiagnosticHistory
+import com.chmouel.liseur.diagnostics.DiagnosticExport
 import com.chmouel.liseur.R
 import com.chmouel.liseur.ui.LocalEInk
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private data class LiteraryQuote(val text: String, val author: String)
 
@@ -110,10 +118,37 @@ fun AboutScreen(
 ) {
     val quote = remember { LiteraryQuotes.random() }
     val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var diagnosticParts by remember { mutableStateOf(emptyList<DiagnosticHistory.Part>()) }
     var diagnosticPartIndex by remember { mutableStateOf(0) }
     var preparingDiagnostics by remember { mutableStateOf(false) }
+    var exportingDiagnostics by remember { mutableStateOf(false) }
+    val exportFolderPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                exportingDiagnostics = true
+                val result = runCatching {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                    )
+                    val parts = if (diagnosticParts.isNotEmpty()) diagnosticParts else diagnostics.exportParts()
+                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        DiagnosticExport.writeToTree(context, uri, parts)
+                    }
+                }
+                exportingDiagnostics = false
+                result.onSuccess {
+                    Toast.makeText(context, "Saved ${it.filesWritten} files in ${it.folderName}", Toast.LENGTH_LONG).show()
+                }.onFailure {
+                    Toast.makeText(context, "Diagnostic export failed: ${it.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
     val colors = MaterialTheme.colorScheme
 
     Scaffold(
@@ -277,6 +312,13 @@ fun AboutScreen(
                             modifier = Modifier.padding(top = 12.dp),
                         ) {
                             Text(if (preparingDiagnostics) "Preparing…" else "Prepare / refresh export")
+                        }
+                        OutlinedButton(
+                            enabled = !preparingDiagnostics && !exportingDiagnostics,
+                            onClick = { exportFolderPicker.launch(null) },
+                            modifier = Modifier.padding(top = 8.dp),
+                        ) {
+                            Text(if (exportingDiagnostics) "Exporting…" else "Export to Documents folder")
                         }
                         if (diagnosticParts.isNotEmpty()) {
                             val part = diagnosticParts[diagnosticPartIndex]
