@@ -57,6 +57,12 @@ Positions is allowed.
   Scrolling has no page count to report.
 - Stable Readium Positions remain the source for locator persistence, bookmarks,
   sync, go-to, scrubber and reading restoration.
+- Highlight, note, bookmark and annotation records remain independent of the page
+  index. Their original Locator JSON, selected excerpt, chapter label, note text and
+  tint are not rewritten when the page index is measured or invalidated.
+- The versioned ZIP backup continues to carry annotations in `annotations.json`.
+  The derived page index is not exported or restored; it is rebuilt from Readium
+  pagination for the current layout.
 - Page counts are transient display data. They are not written into reading
   positions, synchronized, or used as bookmark identity.
 - A stale callback from a previous layout generation must never populate the new
