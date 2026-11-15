@@ -87,20 +87,41 @@ internal object CustomParagraphTypography {
               else ratio = lineNumber;
             }
           }
-          var indentText = (css.textIndent || '0px').trim().toLowerCase();
-          var indentNumber = parseFloat(indentText);
-          var indentPixels = 0;
-          if (isFinite(indentNumber)) {
-            if (indentText.endsWith('%')) {
-              var parentWidth = el.parentElement ? el.parentElement.getBoundingClientRect().width : 0;
-              indentPixels = parentWidth * indentNumber / 100;
-            } else if (indentText.endsWith('rem')) {
-              var rootFontSize = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || fontSize;
-              indentPixels = indentNumber * rootFontSize;
-            } else if (indentText.endsWith('em')) indentPixels = indentNumber * fontSize;
-            else indentPixels = indentNumber;
+          // text-indent is inherited. Its computed value is an absolute
+          // length, so dividing by a descendant's font size can change a
+          // publisher's 2.2em when an ancestor supplied the declaration.
+          // Find the element where the computed value first differs from
+          // its parent, then express the value in that element's em scale.
+          function indentPixelsFor(node) {
+            var style = window.getComputedStyle(node);
+            var raw = (style.textIndent || '0px').trim().toLowerCase();
+            var number = parseFloat(raw);
+            if (!isFinite(number)) return 0;
+            if (raw.endsWith('%')) {
+              var width = node.parentElement ? node.parentElement.getBoundingClientRect().width : 0;
+              return width * number / 100;
+            }
+            if (raw.endsWith('rem')) {
+              var rootSize = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || fontSize;
+              return number * rootSize;
+            }
+            if (raw.endsWith('em')) {
+              var nodeSize = parseFloat(style.fontSize) || fontSize;
+              return number * nodeSize;
+            }
+            return number;
           }
-          var indentEm = indentPixels / fontSize;
+          var indentPixels = indentPixelsFor(el);
+          var indentOrigin = el;
+          var ancestor = el.parentElement;
+          while (ancestor) {
+            var ancestorPixels = indentPixelsFor(ancestor);
+            if (Math.abs(ancestorPixels - indentPixels) > 0.01) break;
+            indentOrigin = ancestor;
+            ancestor = ancestor.parentElement;
+          }
+          var originFontSize = parseFloat(window.getComputedStyle(indentOrigin).fontSize) || fontSize;
+          var indentEm = indentPixels / originFontSize;
           return (isFinite(ratio) ? String(ratio) : '') + '|' + (isFinite(indentEm) ? String(indentEm) : '');
         })();
     """.trimIndent()
