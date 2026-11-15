@@ -77,6 +77,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import com.chmouel.liseur.reader.progress.WholeBookPageIndexStore
+import com.chmouel.liseur.reader.progress.PaginationMeasurementHostFragment
+import com.chmouel.liseur.reader.progress.PaginationMeasurementHostFactory
+import com.chmouel.liseur.reader.progress.ReaderFragmentFactory
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.toAbsoluteUrl
 
@@ -457,55 +461,109 @@ class ReaderActivity : FragmentActivity() {
                                         css = readingCss,
                                     )
                                 }
-                                remember(
+                                val pageIndexStore = remember(s.publication, initialPreferences) {
+                                    WholeBookPageIndexStore(s.publication.readingOrder.size)
+                                }
+                                val epubConfiguration = remember(
                                     s.navigatorFactory,
                                     columnMode,
                                     scrollMode,
                                     reflowable,
                                     fontKey,
+                                    linkClicks,
+                                ) {
+                                    epubNavigatorConfiguration(
+                                        columnMode = columnMode,
+                                        scroll = scrollMode,
+                                        reflowable = reflowable,
+                                        userFonts = importedFonts,
+                                        onTextSelected = viewModel::onTextSelected,
+                                        onSelectionCleared = viewModel::onSelectionCleared,
+                                        clicks = linkClicks,
+                                        onSameDocumentLink = { resource, fragment ->
+                                            val nav = navigator
+                                            val href = resource.url().removeFragment().toString()
+                                            val link = sameDocumentDestination(resource, fragment)
+                                            if (nav != null && link != null &&
+                                                nav.currentLocator.value.href.toString() == href &&
+                                                s.publication.locatorFromLink(link) != null
+                                            ) {
+                                                linkTaps.fromBridge(link, href)
+                                            }
+                                        },
+                                    )
+                                }
+                                val visibleNavigatorFactory = remember(
+                                    s.navigatorFactory,
+                                    columnMode,
+                                    scrollMode,
+                                    reflowable,
+                                    fontKey,
+                                    pageIndexStore,
+                                    epubConfiguration,
                                 ) {
                                     s.navigatorFactory.createFragmentFactory(
                                         initialLocator = restoreTarget,
                                         initialPreferences = initialPreferences,
-                                        // Without a listener the navigator answers
-                                        // every link the same way — go there — and
-                                        // a footnote costs the reader their page.
                                         listener = ReaderNavigatorListener(
                                             linkTaps = linkTaps,
                                             onExternal = { pendingExternalLink = it },
                                         ),
-                                        configuration = epubNavigatorConfiguration(
-                                            columnMode = columnMode,
-                                            scroll = scrollMode,
-                                            reflowable = reflowable,
-                                            userFonts = importedFonts,
-                                            onTextSelected = viewModel::onTextSelected,
-                                            onSelectionCleared = viewModel::onSelectionCleared,
-                                            clicks = linkClicks,
-                                            onSameDocumentLink = { resource, fragment ->
-                                                val nav = navigator
-                                                val href = resource.url()
-                                                    .removeFragment().toString()
-                                                // Best-effort staleness gate: the
-                                                // navigator's published position
-                                                // is documented to lag the shown
-                                                // resource, and refusing is the
-                                                // safe side — the same window
-                                                // Readium's own async door has.
-                                                // Defense in depth on the way in:
-                                                // the payload is fragment-only and
-                                                // resource-bound by construction,
-                                                // and the publication says so
-                                                // again before anything moves.
-                                                val link = sameDocumentDestination(resource, fragment)
-                                                if (nav != null && link != null &&
-                                                    nav.currentLocator.value.href.toString() == href &&
-                                                    s.publication.locatorFromLink(link) != null
-                                                ) {
-                                                    linkTaps.fromBridge(link, href)
-                                                }
-                                            },
-                                        ),
+                                        paginationListener = object : EpubNavigatorFragment.PaginationListener {
+                                            override fun onPageChanged(
+                                                pageIndex: Int,
+                                                totalPages: Int,
+                                                locator: org.readium.r2.shared.publication.Locator,
+                                            ) {
+                                                val resourceIndex = viewModel.resourceIndexFor(locator)
+                                                    ?: return
+                                                pageIndexStore.onVisiblePageChanged(
+                                                    resourceIndex = resourceIndex,
+                                                    pageIndexZeroBased = pageIndex,
+                                                    totalPages = totalPages,
+                                                )
+                                            }
+                                        },
+                                        configuration = epubConfiguration,
+                                    )
+                                }
+                                val measurementNavigatorFactory = remember(
+                                    s.navigatorFactory,
+                                    initialPreferences,
+                                    epubConfiguration,
+                                    pageIndexStore,
+                                ) {
+                                    val firstLocator = s.publication.readingOrder.firstOrNull()
+                                        ?.let(s.publication::locatorFromLink)
+                                    s.navigatorFactory.createFragmentFactory(
+                                        initialLocator = firstLocator,
+                                        initialPreferences = initialPreferences,
+                                        paginationListener = object : EpubNavigatorFragment.PaginationListener {
+                                            override fun onPageChanged(
+                                                pageIndex: Int,
+                                                totalPages: Int,
+                                                locator: org.readium.r2.shared.publication.Locator,
+                                            ) {
+                                                pageIndexStore.publishMeasurement(
+                                                    href = locator.href.toString(),
+                                                    totalPages = totalPages,
+                                                )
+                                            }
+                                        },
+                                        configuration = epubConfiguration,
+                                    )
+                                }
+                                remember(visibleNavigatorFactory, measurementNavigatorFactory, pageIndexStore) {
+                                    ReaderFragmentFactory(
+                                        hostFactory = PaginationMeasurementHostFactory {
+                                            PaginationMeasurementHostFragment(
+                                                publication = s.publication,
+                                                navigatorFactory = measurementNavigatorFactory,
+                                                pageIndexStore = pageIndexStore,
+                                                enabled = true,
+                                            )
+                                        },
+                                        navigatorFactory = visibleNavigatorFactory,
                                     ).also { supportFragmentManager.fragmentFactory = it }
                                 }
                                 pendingExternalLink?.let { link ->
