@@ -89,7 +89,8 @@ No diagnostic data is uploaded automatically.
             .replace(Regex("[^a-z0-9._-]+"), "-")
             .trim('-', '.', '_').take(48).ifBlank { "build" }
         val commit = BuildConfig.PAPA_BUILD_COMMIT.take(7).ifBlank { "unknown" }
-        return "APK-$label-v${BuildConfig.VERSION_CODE}-$commit"
+        val run = BuildConfig.PAPA_BUILD_RUN_ID.takeIf { it.isNotBlank() }?.let { "-run$it" }.orEmpty()
+        return "APK-$label-v${BuildConfig.VERSION_CODE}-$commit$run"
     }
 
     private fun writeNewFile(context: Context, folder: DocumentFile, name: String, contents: String) {
