@@ -130,19 +130,31 @@ fun AboutScreen(
         if (uri != null) {
             scope.launch {
                 exportingDiagnostics = true
-                val result = runCatching {
-                    context.contentResolver.takePersistableUriPermission(
-                        uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-                    )
+                val result = try {
+                    try {
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                        )
+                    } catch (_: SecurityException) {
+                        // The temporary picker grant still permits this export.
+                        // The user can choose the folder again for a later export.
+                    }
                     val parts = diagnostics.exportParts()
                     diagnosticParts = parts
                     diagnosticPartIndex = 0
-                    withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        DiagnosticExport.writeToTree(context, uri, parts)
-                    }
+                    Result.success(
+                        withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            DiagnosticExport.writeToTree(context, uri, parts)
+                        },
+                    )
+                } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                    throw cancellation
+                } catch (error: Exception) {
+                    Result.failure(error)
+                } finally {
+                    exportingDiagnostics = false
                 }
-                exportingDiagnostics = false
                 result.onSuccess {
                     Toast.makeText(context, "Saved ${it.filesWritten} files in ${it.folderName}", Toast.LENGTH_LONG).show()
                 }.onFailure {
@@ -306,9 +318,16 @@ fun AboutScreen(
                             onClick = {
                                 preparingDiagnostics = true
                                 scope.launch {
-                                    diagnosticParts = runCatching { diagnostics.exportParts() }.getOrElse { emptyList() }
-                                    diagnosticPartIndex = 0
-                                    preparingDiagnostics = false
+                                    try {
+                                        diagnosticParts = diagnostics.exportParts()
+                                        diagnosticPartIndex = 0
+                                    } catch (cancellation: kotlinx.coroutines.CancellationException) {
+                                        throw cancellation
+                                    } catch (_: Exception) {
+                                        diagnosticParts = emptyList()
+                                    } finally {
+                                        preparingDiagnostics = false
+                                    }
                                 }
                             },
                             modifier = Modifier.padding(top = 12.dp),
