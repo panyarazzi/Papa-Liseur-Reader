@@ -2,9 +2,12 @@ package com.chmouel.liseur.reader.annotations
 
 import com.chmouel.liseur.data.db.AnnotationKind
 import com.chmouel.liseur.data.db.BookAnnotation
+import com.chmouel.liseur.reader.epubNavigatorConfigurationBase
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.readium.r2.navigator.Decoration
 import org.junit.runner.RunWith
@@ -49,6 +52,18 @@ class AnnotationSurfacesTest {
                 (drawn.last().style as Decoration.Style.Highlight).tint,
             ),
         )
+    }
+
+    @Test
+    fun `the navigator highlight template preserves the annotation alpha`() {
+        val annotation = highlight().toDecorations(strength = 100).single()
+        val template = epubNavigatorConfigurationBase()
+            .decorationTemplates[Decoration.Style.Highlight::class]
+
+        assertNotNull(template)
+        val html = template!!.element(annotation)
+        assertTrue(html.contains("rgba(255, 213, 79, "))
+        assertFalse(html.contains("0.3)"))
     }
 
     @Test
