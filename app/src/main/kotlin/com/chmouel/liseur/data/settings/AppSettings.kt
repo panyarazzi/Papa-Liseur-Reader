@@ -286,6 +286,8 @@ data class AppSettings(
     val clearTranslationsOnFinish: Boolean = true,
     val statsRange: StatsRange = StatsRange.Default,
     val highlightPalette: HighlightPalette = HighlightPalette(),
+    /** Opacity of every saved and newly-created highlight, shared across books. */
+    val highlightStrength: Int = 65,
     val readAloudVoice: String? = null,
     val readAloudModel: String? = null,
     val readAloudProvider: String? = null,
@@ -455,6 +457,7 @@ class AppSettingsRepository(
         val STATS_RANGE = stringPreferencesKey("stats_range")
         val HIGHLIGHT_TINTS = stringSetPreferencesKey("highlight_tints_offered")
         val HIGHLIGHT_TINT_DEFAULT = stringPreferencesKey("highlight_tint_default")
+        val HIGHLIGHT_STRENGTH = intPreferencesKey("highlight_strength")
         val CATALOG_PARTIAL_DISMISSED = stringPreferencesKey("catalog_partial_dismissed")
         val READ_ALOUD_VOICE = stringPreferencesKey("read_aloud_voice")
         val READ_ALOUD_MODEL = stringPreferencesKey("read_aloud_model")
@@ -551,6 +554,7 @@ class AppSettingsRepository(
                 offeredNames = p[Keys.HIGHLIGHT_TINTS],
                 defaultName = p[Keys.HIGHLIGHT_TINT_DEFAULT],
             ),
+            highlightStrength = (p[Keys.HIGHLIGHT_STRENGTH] ?: 65).coerceIn(0, 100),
             readAloudVoice = p[Keys.READ_ALOUD_VOICE],
             readAloudModel = p[Keys.READ_ALOUD_MODEL],
             readAloudProvider = p[Keys.READ_ALOUD_PROVIDER],
@@ -782,6 +786,11 @@ class AppSettingsRepository(
 
     suspend fun setHighlightDefaultTint(tint: HighlightTint) {
         store.edit { it[Keys.HIGHLIGHT_TINT_DEFAULT] = tint.name }
+    }
+
+    /** Sets the shared highlight opacity on a stable 0–100 scale. */
+    suspend fun setHighlightStrength(strength: Int) {
+        store.edit { it[Keys.HIGHLIGHT_STRENGTH] = strength.coerceIn(0, 100) }
     }
 
     suspend fun setReadAloudVoice(name: String) {
@@ -1218,6 +1227,7 @@ internal val APP_BACKUP_TYPES = mapOf(
     "clear_translations_on_finish" to BackupValueType.BOOLEAN,
     "highlight_tints_offered" to BackupValueType.STRING_SET,"lock_footer_on" to BackupValueType.BOOLEAN,
     "highlight_tint_default" to BackupValueType.STRING,
+    "highlight_strength" to BackupValueType.INT,
     "read_aloud_voice" to BackupValueType.STRING, "read_aloud_model" to BackupValueType.STRING,
     "read_aloud_provider" to BackupValueType.STRING,
     ServerSettings.SERVERS_NAME to BackupValueType.STRING,
