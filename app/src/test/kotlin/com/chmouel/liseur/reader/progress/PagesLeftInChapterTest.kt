@@ -21,8 +21,8 @@ class PagesLeftInChapterTest {
     )
 
     @Test
-    fun `counts the positions after the current one`() {
-        assertEquals(18, pagesLeftInChapter(chapter, 40))
+    fun `counts stable positions after the current one`() {
+        assertEquals(18, positionsLeftInChapter(chapter, 40))
         assertEquals(1, pagesLeftInChapter(chapter, 57))
     }
 
