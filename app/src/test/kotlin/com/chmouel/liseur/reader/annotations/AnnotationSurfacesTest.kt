@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.readium.r2.navigator.Decoration
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -30,6 +31,24 @@ class AnnotationSurfacesTest {
         val drawn = listOf(highlight(), passageNote(), bookNote(), bookmark()).toDecorations()
 
         assertEquals(listOf("highlight", "passage-note"), drawn.map { it.id })
+    }
+
+    @Test
+    fun `existing marks carry the selected strength as their alpha`() {
+        val drawn = listOf(highlight(), passageNote()).toDecorations(strength = 100)
+
+        assertEquals(
+            191,
+            android.graphics.Color.alpha(
+                (drawn.first().style as Decoration.Style.Highlight).tint,
+            ),
+        )
+        assertEquals(
+            191,
+            android.graphics.Color.alpha(
+                (drawn.last().style as Decoration.Style.Highlight).tint,
+            ),
+        )
     }
 
     @Test
