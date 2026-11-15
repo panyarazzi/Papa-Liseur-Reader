@@ -3123,12 +3123,6 @@ class ReaderViewModel(
         bookScreenDao.upsert(BookScreen(bookUrl = bookId, keepScreenOn = enabled))
     }
 
-    /**
-     * Answers the scrolling question for this book alone, for the same
-     * reason [setKeepScreenOn] does: the switch is reached from inside a
-     * book, so it is about that book, and a later change to the app-wide
-     * setting has no business undoing it.
-     */
     fun setScrollMode(enabled: Boolean) = viewModelScope.launch {
         appSettings.setScrollMode(enabled)
     }
