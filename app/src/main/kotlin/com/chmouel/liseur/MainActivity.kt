@@ -658,6 +658,7 @@ private fun LiseurApp(
                             onOpenSource = { context.openLink(SOURCE_URL.toUri()) },
                             onOpenSponsor = { context.openLink(SPONSOR_URL.toUri()) },
                             onOpenLicences = { backStack.push(Route.Licences) },
+                            diagnostics = (context.applicationContext as LiseurApplication).diagnostics,
                         )
                     }
 
