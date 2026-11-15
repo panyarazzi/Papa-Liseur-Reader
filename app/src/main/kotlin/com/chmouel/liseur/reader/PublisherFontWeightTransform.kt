@@ -89,15 +89,19 @@ internal object PublisherFontWeightTransform {
           }
 
           state.apply = function () {
+            var changed = false;
             var sheets = document.styleSheets || [];
-            for (var i = 0; i < sheets.length; i++) rewriteSheet(sheets[i]);
+            for (var i = 0; i < sheets.length; i++) {
+              changed = rewriteSheet(sheets[i]) || changed;
+            }
 
             // XHTML can carry declarations directly on elements as well as
             // in linked or embedded stylesheets.
             var inlineStyles = document.querySelectorAll("[style]");
             for (var j = 0; j < inlineStyles.length; j++) {
-              rewriteDeclaration(inlineStyles[j].style);
+              changed = rewriteDeclaration(inlineStyles[j].style) || changed;
             }
+            return changed;
           };
 
           state.schedule = function () {
@@ -114,7 +118,7 @@ internal object PublisherFontWeightTransform {
             }
           };
 
-          state.apply();
+          var changed = state.apply();
 
           // Catch stylesheets and inline styles added after the first pass.
           if (!state.observer && window.MutationObserver) {
@@ -130,7 +134,7 @@ internal object PublisherFontWeightTransform {
             document.addEventListener("load", state.schedule, true);
           }
 
-          return "applied";
+          return changed ? "changed" : "stable";
         })();
     """.trimIndent()
 }
