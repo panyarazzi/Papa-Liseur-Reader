@@ -4232,14 +4232,14 @@ internal fun ReaderScreen(
                     val title = current.chapterTitle?.takeIf { it.isNotBlank() }
                     val chapterPage = sectionScreens
                         ?.takeIf { reflowableText }
-                        ?.let { it.screen to it.screens }
-                    when {
-                        chapterPage != null && title != null ->
-                            "${chapterPage.first.coerceAtLeast(1)}/${chapterPage.second.coerceAtLeast(1)} ${title}"
-                        title != null -> title
-                        chapterPage != null -> "${chapterPage.first}/${chapterPage.second}"
-                        else -> null
-                    }
+                        ?.let { "${it.screen.coerceAtLeast(1)}/${it.screens.coerceAtLeast(1)}" }
+                    val wholeBookPercent = String.format(
+                        java.util.Locale.ROOT,
+                        "%.2f%%",
+                        current.totalProgression.coerceIn(0f, 1f) * 100f,
+                    )
+                    listOfNotNull(chapterPage, wholeBookPercent, title)
+                        .joinToString("•")
                 }
             }
             topProgressText?.let { label ->
