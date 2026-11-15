@@ -38,6 +38,9 @@ class WholeBookPageIndexStore(
 
     private val measurementSequence = AtomicLong(0)
     @Volatile
+    private var expectedMeasurement: Pair<Int, String>? = null
+
+    @Volatile
     var prepareResource: (suspend (EpubNavigatorFragment) -> Boolean?)? = null
 
     private val _index = MutableStateFlow(WholeBookPageIndex.empty(resourceCount))
@@ -104,12 +107,35 @@ class WholeBookPageIndexStore(
         onDiagnostic(event, attributes + ("generation" to generation.toString()))
     }
 
-    fun publishMeasurement(resourceIndex: Int, href: String, totalPages: Int) {
-        if (resourceIndex !in 0 until resourceCount || href.isBlank() || totalPages <= 0) return
+    /** The resource the isolated navigator is currently being asked to measure. */
+    @Synchronized
+    fun expectMeasurement(resourceIndex: Int, href: String) {
+        if (resourceIndex !in 0 until resourceCount || href.isBlank()) {
+            expectedMeasurement = null
+            return
+        }
+        expectedMeasurement = resourceIndex to href.substringBefore('#')
+    }
+
+    @Synchronized
+    fun clearExpectedMeasurement(resourceIndex: Int) {
+        if (expectedMeasurement?.first == resourceIndex) expectedMeasurement = null
+    }
+
+    /**
+     * Associates a callback with the scanner's active target, not a second
+     * href-to-resource lookup. This matters when an EPUB lists the same
+     * XHTML href more than once in its Reading Order.
+     */
+    @Synchronized
+    fun publishMeasurement(href: String, totalPages: Int) {
+        val expected = expectedMeasurement ?: return
+        val normalizedHref = href.substringBefore('#')
+        if (normalizedHref != expected.second || totalPages <= 0) return
         _measurements.tryEmit(
             ResourcePageMeasurement(
-                resourceIndex = resourceIndex,
-                href = href,
+                resourceIndex = expected.first,
+                href = normalizedHref,
                 totalPages = totalPages,
                 generation = generation,
                 sequence = measurementSequence.incrementAndGet(),
@@ -120,6 +146,7 @@ class WholeBookPageIndexStore(
     @Synchronized
     fun reset() {
         generation += 1
+        expectedMeasurement = null
         _index.value = WholeBookPageIndex.empty(resourceCount)
         _currentPage.value = null
         onDiagnostic(
