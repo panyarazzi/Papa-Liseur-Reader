@@ -9,8 +9,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
 class DiagnosticHistoryTest {
     @Test
     fun `chat export keeps every part below the full character limit`() = runBlocking {
