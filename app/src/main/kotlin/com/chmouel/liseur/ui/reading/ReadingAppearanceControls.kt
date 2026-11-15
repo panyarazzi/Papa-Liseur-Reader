@@ -54,7 +54,9 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -746,6 +748,7 @@ fun ReadingLayoutControls(
             onReset = if (pageMargins != null) ({ onPageMarginsChanged(null) }) else null,
             minimum = 0.0,
             maximum = 4.0,
+            commitOnDone = true,
         )
         if (showColumns && widthClass().isAtLeastMedium) {
             ReadingSectionLabel(stringResource(R.string.reader_columns))
@@ -774,6 +777,7 @@ private fun CustomMetricEditor(
     onReset: (() -> Unit)? = null,
     minimum: Double,
     maximum: Double,
+    commitOnDone: Boolean = false,
 ) {
     var text by remember(value) { mutableStateOf(value.toString()) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -794,12 +798,24 @@ private fun CustomMetricEditor(
                 value = text,
                 onValueChange = { next ->
                     text = next
-                    next.toDoubleOrNull()?.takeIf { it.isFinite() && it in minimum..maximum }?.let(onChanged)
+                    if (!commitOnDone) {
+                        next.toDoubleOrNull()?.takeIf { it.isFinite() && it in minimum..maximum }?.let(onChanged)
+                    }
                 },
                 enabled = enabled,
                 singleLine = true,
                 suffix = { if (suffix.isNotEmpty()) Text(suffix) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = if (commitOnDone) ImeAction.Done else ImeAction.Default,
+                ),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (commitOnDone) {
+                        text.toDoubleOrNull()
+                            ?.takeIf { it.isFinite() && it in minimum..maximum }
+                            ?.let(onChanged)
+                    }
+                }),
                 modifier = Modifier.weight(1f),
             )
             IconButton(enabled = enabled && value < maximum, onClick = {
