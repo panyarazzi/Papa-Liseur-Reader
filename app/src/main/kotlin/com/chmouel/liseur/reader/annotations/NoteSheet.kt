@@ -173,6 +173,7 @@ fun NoteSheet(
                         TintChip(
                             tint = chip,
                             selected = chip == tint,
+                            strength = highlightStrength,
                             onClick = { actions.onRecolour(chip) },
                             ringColor = ink,
                         )
