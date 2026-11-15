@@ -16,6 +16,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +38,7 @@ import com.chmouel.liseur.data.settings.FooterMode
 import com.chmouel.liseur.data.settings.FooterField
 import com.chmouel.liseur.data.settings.FooterSlot
 import com.chmouel.liseur.data.settings.PageTurnStyle
+import com.chmouel.liseur.data.settings.TapZones
 import com.chmouel.liseur.data.settings.ReaderPrefs
 import com.chmouel.liseur.data.settings.TopProgressMode
 import com.chmouel.liseur.data.settings.ReadingCss
@@ -94,6 +98,8 @@ fun AdvancedSheet(
     scrolling: Boolean,
     scrollMode: Boolean,
     onScrollModeChanged: (Boolean) -> Unit,
+    tapZones: TapZones,
+    onTapZonesChanged: (TapZones) -> Unit,
     autoScrollSpeed: Float,
     typographyIsOwn: Boolean,
     readingCss: ReadingCss,
@@ -146,6 +152,7 @@ fun AdvancedSheet(
         ) {
             val reshapeable = readingCss.honoursAnything
             ScrollModeToggle(enabled = scrollMode, onChanged = onScrollModeChanged)
+            TapZonesControl(selected = tapZones, onSelected = onTapZonesChanged)
             if (!reshapeable) FixedLayoutNotice()
             ReadingLayoutControls(
                 lineHeight = prefs.lineHeight,
@@ -474,6 +481,33 @@ private val TopProgressMode.label: String
         TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> "Pages left + chapter"
     }
 
+
+@Composable
+private fun TapZonesControl(selected: TapZones, onSelected: (TapZones) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ReadingSectionLabel(stringResource(R.string.settings_tap_zones))
+        Text(
+            text = stringResource(R.string.settings_tap_zones_detail),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            val options = TapZones.entries
+            options.forEachIndexed { index, option ->
+                val label = when (option) {
+                    TapZones.STANDARD -> R.string.tap_zones_standard
+                    TapZones.SWAPPED -> R.string.tap_zones_swapped
+                    TapZones.TAP_ANYWHERE -> R.string.tap_zones_anywhere
+                }
+                SegmentedButton(
+                    selected = selected == option,
+                    onClick = { onSelected(option) },
+                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                ) { Text(stringResource(label)) }
+            }
+        }
+    }
+}
 
 @Composable
 private fun ScrollModeToggle(enabled: Boolean, onChanged: (Boolean) -> Unit) {
