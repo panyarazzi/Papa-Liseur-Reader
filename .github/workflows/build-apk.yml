@@ -27,11 +27,14 @@ jobs:
     - name: Run unit tests before packaging
       run: ./gradlew testFossDebugUnitTest testPlayDebugUnitTest
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
+    - name: Build normal FOSS APK
+      run: ./gradlew assembleFossDebug
 
-    - name: Upload APK artifact
+    - name: Name APK for this workflow run
+      run: cp app/build/outputs/apk/foss/debug/app-foss-debug.apk "Papa-Liseur-Reader#${{ github.run_number }}.apk"
+
+    - name: Upload FOSS APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug-apk
-        path: app/build/outputs/apk/**/*.apk
+        name: Papa-Liseur-Reader#${{ github.run_number }}
+        path: Papa-Liseur-Reader#${{ github.run_number }}.apk
