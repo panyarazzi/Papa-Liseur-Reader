@@ -18,6 +18,7 @@ import com.chmouel.liseur.domain.LibrarySort
 import com.chmouel.liseur.domain.StatsRange
 import com.chmouel.liseur.reader.annotations.HighlightPalette
 import com.chmouel.liseur.reader.annotations.HighlightTint
+import com.chmouel.liseur.reader.annotations.DEFAULT_HIGHLIGHT_STRENGTH
 import com.chmouel.liseur.reader.dictionary.ALT_LANGUAGE_OFF
 import com.chmouel.liseur.translate.TranslationLanguages
 import com.chmouel.liseur.tts.SpeechServerPresets
@@ -287,7 +288,7 @@ data class AppSettings(
     val statsRange: StatsRange = StatsRange.Default,
     val highlightPalette: HighlightPalette = HighlightPalette(),
     /** Opacity of every saved and newly-created highlight, shared across books. */
-    val highlightStrength: Int = 65,
+    val highlightStrength: Int = DEFAULT_HIGHLIGHT_STRENGTH,
     val readAloudVoice: String? = null,
     val readAloudModel: String? = null,
     val readAloudProvider: String? = null,
@@ -554,7 +555,7 @@ class AppSettingsRepository(
                 offeredNames = p[Keys.HIGHLIGHT_TINTS],
                 defaultName = p[Keys.HIGHLIGHT_TINT_DEFAULT],
             ),
-            highlightStrength = (p[Keys.HIGHLIGHT_STRENGTH] ?: 65).coerceIn(0, 100),
+            highlightStrength = (p[Keys.HIGHLIGHT_STRENGTH] ?: DEFAULT_HIGHLIGHT_STRENGTH).coerceIn(0, 100),
             readAloudVoice = p[Keys.READ_ALOUD_VOICE],
             readAloudModel = p[Keys.READ_ALOUD_MODEL],
             readAloudProvider = p[Keys.READ_ALOUD_PROVIDER],
