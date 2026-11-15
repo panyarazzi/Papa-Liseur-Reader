@@ -44,7 +44,6 @@ import com.chmouel.liseur.data.db.BookAnnotation
 import com.chmouel.liseur.data.settings.ReaderTheme
 import com.chmouel.liseur.ui.LiseurModalBottomSheet
 import com.chmouel.liseur.ui.LocalEInk
-import com.chmouel.liseur.reader.annotations.highlightAlpha
 
 /** What the reader can do with a note they have opened. */
 class NoteSheetActions(
