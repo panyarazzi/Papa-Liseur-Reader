@@ -17,12 +17,13 @@ import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.shared.publication.Publication
 
 /**
- * A second, invisible Readium navigator used only to measure each resource.
+ * A second, transparent Readium navigator used only to measure each resource.
  *
  * It has its own child FragmentManager so its PaginationListener and page
  * navigation cannot interfere with the navigator the reader is using.
- * The host must be laid out at the same viewport size and with the same
- * preferences/configuration as the visible navigator.
+ * The host must remain VISIBLE to Android: Readium's WebView needs an active
+ * rendering lifecycle to lay out documents and emit pagination callbacks.
+ * Alpha zero keeps it visually absent while preserving that lifecycle.
  */
 class PaginationMeasurementHostFragment(
     private val publication: Publication,
@@ -43,9 +44,13 @@ class PaginationMeasurementHostFragment(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT,
         )
-        // INVISIBLE keeps the exact measured viewport while preventing
-        // the background WebView from drawing or intercepting reader input.
-        visibility = View.INVISIBLE
+        // Do not use INVISIBLE/GONE here. Readium reports pagination from
+        // its WebView after rendering; a non-visible host can leave the
+        // measurement navigator attached but never produce page callbacks.
+        // Keep it in the render tree at alpha zero. It is composed before
+        // the visible navigator, so the reader remains the topmost surface.
+        visibility = View.VISIBLE
+        alpha = 0f
         isClickable = false
         isFocusable = false
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
