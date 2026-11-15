@@ -731,21 +731,16 @@ fun ReadingLayoutControls(
         }
 
         ReadingSectionLabel(stringResource(R.string.reader_margins))
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            val options = listOf(
-                R.string.reader_margins_narrow to 0.5,
-                R.string.reader_margins_default to null,
-                R.string.reader_margins_wide to 2.0,
-            )
-            options.forEachIndexed { index, (label, v) ->
-                SegmentedButton(
-                    selected = pageMargins == v,
-                    enabled = enabled,
-                    onClick = { onPageMarginsChanged(v) },
-                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                ) { Text(stringResource(label)) }
-            }
-        }
+        CustomMetricEditor(
+            label = "Left / right margin",
+            value = pageMargins ?: 1.0,
+            suffix = "×",
+            enabled = enabled,
+            onChanged = onPageMarginsChanged,
+            onReset = if (pageMargins != null) ({ onPageMarginsChanged(null) }) else null,
+            minimum = 0.0,
+            maximum = 4.0,
+        )
         if (showColumns && widthClass().isAtLeastMedium) {
             ReadingSectionLabel(stringResource(R.string.reader_columns))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
