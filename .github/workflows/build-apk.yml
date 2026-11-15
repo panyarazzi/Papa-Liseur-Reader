@@ -38,3 +38,4 @@ jobs:
       with:
         name: Papa-Liseur-Reader#${{ github.run_number }}
         path: Papa-Liseur-Reader#${{ github.run_number }}.apk
+        if-no-files-found: error
