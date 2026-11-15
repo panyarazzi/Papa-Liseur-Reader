@@ -46,6 +46,15 @@ class CustomParagraphTypographyTest {
     }
 
     @Test
+    fun metricsProbeFindsTheOriginOfInheritedTextIndent() {
+        val script = CustomParagraphTypography.READ_METRICS_SCRIPT
+        assertTrue(script.contains("function indentPixelsFor(node)"))
+        assertTrue(script.contains("var indentOrigin = el"))
+        assertTrue(script.contains("var originFontSize = parseFloat"))
+        assertTrue(script.contains("indentPixels / originFontSize"))
+    }
+
+    @Test
     fun customRulesTargetOnlyParagraphLineHeightAndFirstLineIndent() {
         val script = CustomParagraphTypography.applyScript(1.15, 0.75)
         assertTrue(script.contains("var line = '1.15'"))
