@@ -87,7 +87,8 @@ class BookPositions(
      */
     fun resourceIndexFor(locator: Locator): Int? {
         if (!isUsable) return null
-        val candidates = resources.filter { it.href == locator.href.toString() }
+        val href = locator.href.toString().substringBefore('#')
+        val candidates = resources.filter { it.href.substringBefore('#') == href }
         return candidates.withAnchor(locator.locations.position)?.index
             ?: candidates.firstOrNull()?.index
     }
