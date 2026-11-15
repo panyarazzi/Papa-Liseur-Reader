@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /** A resource page count reported by the isolated measurement navigator. */
 data class ResourcePageMeasurement(
+    val resourceIndex: Int,
     val href: String,
     val totalPages: Int,
     val generation: Int,
@@ -103,10 +104,16 @@ class WholeBookPageIndexStore(
         onDiagnostic(event, attributes + ("generation" to generation.toString()))
     }
 
-    fun publishMeasurement(href: String, totalPages: Int) {
-        if (href.isBlank() || totalPages <= 0) return
+    fun publishMeasurement(resourceIndex: Int, href: String, totalPages: Int) {
+        if (resourceIndex !in 0 until resourceCount || href.isBlank() || totalPages <= 0) return
         _measurements.tryEmit(
-            ResourcePageMeasurement(href, totalPages, generation, measurementSequence.incrementAndGet()),
+            ResourcePageMeasurement(
+                resourceIndex = resourceIndex,
+                href = href,
+                totalPages = totalPages,
+                generation = generation,
+                sequence = measurementSequence.incrementAndGet(),
+            ),
         )
     }
 
