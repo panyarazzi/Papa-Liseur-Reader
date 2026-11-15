@@ -111,14 +111,13 @@ private val CHROME_FADE_HEIGHT = 20.dp
  * and nothing else; holding it opens a picker. Taps never turn the
  * page.
  *
- * What a page is here depends on the book. A reflowable one counts
- * screenfuls of the resource on screen, measured from the laid-out
- * page, so the page number moves and the chapter countdown comes down
- * by one for every turn. A fixed-layout one counts the book's own
- * pages, which are Readium positions there. [screens] is null while a
- * reflowable page is still being laid out, and a slot that would need
- * it stays blank for that moment rather than filling itself with a
- * number that counts something else.
+ * A reflowable book uses Readium's exact pagination callback for the
+ * current resource and a separately measured whole-book index. The
+ * whole-book total stays blank until every reading-order resource has
+ * been measured at the current viewport and typography. Chapter counts
+ * aggregate every resource in that chapter. Fixed-layout and scrolling
+ * behavior remain separate; stable Readium Positions are not substituted
+ * for reflowable screen-page counts.
  *
  * [turn] counts page turns and means nothing on its own. The clock and
  * the battery are read while the footer is drawn, so a footer that
