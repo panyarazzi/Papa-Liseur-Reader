@@ -129,7 +129,7 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            // The launcher label is overridden in src/dev/res/values/strings.xml.
+            // The launcher label is set with resValue below.
             isMinifyEnabled = false
         }
     }
@@ -162,7 +162,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-        resValues = true
         resValues = true
     }
 
