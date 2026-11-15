@@ -694,7 +694,12 @@ internal fun ReaderScreen(
     val progress by progressFlow.collectAsStateWithLifecycle()
     val pageIndex by pageIndexStore.index.collectAsStateWithLifecycle()
     val currentResourcePage by pageIndexStore.currentPage.collectAsStateWithLifecycle()
-    val chapterResourceIndices = currentResourcePage
+    // The navigator and stable progress publish independently. Never let a
+    // page callback from the resource just left label the resource just entered.
+    val visibleResourcePage = currentResourcePage?.takeIf {
+        it.resourceIndex == progress?.resource?.index
+    }
+    val chapterResourceIndices = visibleResourcePage
         ?.let { onChapterResourceIndices(it.resourceIndex) }
         .orEmpty()
     // Identifies viewport rebuilds for page-curl snapshots and for
@@ -1604,6 +1609,9 @@ internal fun ReaderScreen(
         // The page is a different shape, so every screen counted at the
         // old one is a count of something else.
         layoutGeneration++
+    }
+    LaunchedEffect(effectiveScrolling) {
+        if (effectiveScrolling) pageIndexStore.reset()
     }
 
     LaunchedEffect(showingEnd) {
@@ -4113,7 +4121,7 @@ internal fun ReaderScreen(
                 TopProgressMode.PERCENT -> progress?.let { "${it.percent}%" }
                 TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> progress?.let { current ->
                     val title = current.chapterTitle?.takeIf { it.isNotBlank() }
-                    val chapterPage = currentResourcePage
+                    val chapterPage = visibleResourcePage
                         ?.takeIf { reflowableText }
                         ?.let { current ->
                             val page = pageIndex.pageInChapter(
@@ -4517,7 +4525,7 @@ internal fun ReaderScreen(
                 progress = progress,
                 reflowable = reflowableText,
                 pageIndex = pageIndex,
-                currentPage = currentResourcePage,
+                currentPage = visibleResourcePage,
                 chapterResourceIndices = chapterResourceIndices,
                 mode = prefs.footerMode,
                 left = prefs.footerLeft,
