@@ -30,7 +30,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,8 +46,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.chmouel.liseur.BuildConfig
+import com.chmouel.liseur.diagnostics.DiagnosticHistory
 import com.chmouel.liseur.R
 import com.chmouel.liseur.ui.LocalEInk
+import kotlinx.coroutines.launch
 
 private data class LiteraryQuote(val text: String, val author: String)
 
@@ -97,9 +103,15 @@ fun AboutScreen(
     onOpenSource: () -> Unit,
     onOpenSponsor: () -> Unit,
     onOpenLicences: () -> Unit,
+    diagnostics: DiagnosticHistory,
     modifier: Modifier = Modifier,
 ) {
     val quote = remember { LiteraryQuotes.random() }
+    val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
+    var diagnosticParts by remember { mutableStateOf(emptyList<DiagnosticHistory.Part>()) }
+    var diagnosticPartIndex by remember { mutableStateOf(0) }
+    var preparingDiagnostics by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
 
     Scaffold(
@@ -235,6 +247,60 @@ fun AboutScreen(
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 8.dp),
                     )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 32.dp, bottom = 40.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text("Diagnostic history", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Local only. Each copied part is limited to 12,000 characters.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                        OutlinedButton(
+                            enabled = !preparingDiagnostics,
+                            onClick = {
+                                preparingDiagnostics = true
+                                scope.launch {
+                                    diagnosticParts = runCatching { diagnostics.exportParts() }.getOrElse { emptyList() }
+                                    diagnosticPartIndex = 0
+                                    preparingDiagnostics = false
+                                }
+                            },
+                            modifier = Modifier.padding(top = 12.dp),
+                        ) {
+                            Text(if (preparingDiagnostics) "Preparing…" else "Prepare / refresh export")
+                        }
+                        if (diagnosticParts.isNotEmpty()) {
+                            val part = diagnosticParts[diagnosticPartIndex]
+                            Text(
+                                "Part ${part.index} of ${part.count} · ${part.characterCount} characters",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                TextButton(diagnosticPartIndex > 0, onClick = { diagnosticPartIndex-- }) {
+                                    Text("Previous")
+                                }
+                                TextButton(onClick = { clipboard.setText(AnnotatedString(part.text)) }) {
+                                    Text("Copy this part")
+                                }
+                                TextButton(
+                                    diagnosticPartIndex < diagnosticParts.lastIndex,
+                                    onClick = { diagnosticPartIndex++ },
+                                ) { Text("Next") }
+                            }
+                        }
+                    }
                 }
             }
         }
