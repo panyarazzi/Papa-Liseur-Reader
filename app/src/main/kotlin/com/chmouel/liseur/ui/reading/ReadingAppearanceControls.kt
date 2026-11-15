@@ -53,7 +53,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chmouel.liseur.R
@@ -533,17 +535,21 @@ fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -
                 value = sizeText,
                 onValueChange = { text ->
                     sizeText = text
-                    val parsed = text.toDoubleOrNull()
-                    if (parsed != null && parsed.isFinite() &&
-                        parsed in ReaderPrefs.MIN_FONT_SIZE..ReaderPrefs.MAX_FONT_SIZE
-                    ) {
-                        sliderValue = parsed.toFloat()
-                        onChanged(parsed)
-                    }
+                    text.toDoubleOrNull()
+                        ?.takeIf { it.isFinite() && it in ReaderPrefs.MIN_FONT_SIZE..ReaderPrefs.MAX_FONT_SIZE }
+                        ?.let { sliderValue = it.toFloat() }
                 },
                 enabled = enabled,
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = {
+                    sizeText.toDoubleOrNull()
+                        ?.takeIf { it.isFinite() && it in ReaderPrefs.MIN_FONT_SIZE..ReaderPrefs.MAX_FONT_SIZE }
+                        ?.let(onChanged)
+                }),
                 modifier = Modifier.weight(0.42f),
             )
             IconButton(
