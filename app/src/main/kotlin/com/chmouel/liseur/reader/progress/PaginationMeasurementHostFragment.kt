@@ -112,7 +112,6 @@ class PaginationMeasurementHostFragment(
             val initialMeasurement = withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
                 pageIndexStore.measurements.first { event ->
                     event.generation == measurementGeneration &&
-                        event.resourceIndex == index &&
                         event.href.substringBefore('#') == href && event.totalPages > 0
                 }
             } ?: run {
@@ -157,7 +156,6 @@ class PaginationMeasurementHostFragment(
                 withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
                     pageIndexStore.measurements.first { event ->
                         event.generation == measurementGeneration &&
-                            event.resourceIndex == index &&
                             event.href.substringBefore('#') == href &&
                             event.totalPages > 0 &&
                             event.sequence > initialMeasurement.sequence
