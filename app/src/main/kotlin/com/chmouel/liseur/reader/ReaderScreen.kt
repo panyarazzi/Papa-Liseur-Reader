@@ -843,8 +843,20 @@ internal fun ReaderScreen(
                 } catch (_: Exception) {
                     null
                 }
-                val repaired = repairPage(measurementNavigator)
+                val transformsApplied =
+                    weightResult in setOf("changed", "stable") &&
+                        paragraphResult in setOf("changed", "stable")
+                val repaired = try {
+                    repairPage(measurementNavigator)
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    null
+                }
 
+                if (!transformsApplied || repaired == null) {
+                    null
+                } else {
                 // The publisher-weight transform can make a different
                 // embedded face eligible. Wait for any resulting font load
                 // before asking Readium to publish the final page count.
@@ -873,6 +885,7 @@ internal fun ReaderScreen(
                     if (waitedForTransformedFonts) delay(100)
                     waitedForFonts || waitedForTransformedFonts ||
                         weightResult == "changed" || paragraphResult == "changed" || repaired
+                }
                 }
             }
         }
