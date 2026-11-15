@@ -37,7 +37,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import com.chmouel.liseur.R
 import com.chmouel.liseur.data.settings.AutoScrollPreference
 import com.chmouel.liseur.data.settings.ColumnMode
@@ -488,13 +490,18 @@ private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Un
             }
             OutlinedTextField(
                 value = text,
-                onValueChange = { raw ->
-                    text = raw
-                    raw.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..48f }?.let(onChanged)
-                },
+                onValueChange = { raw -> text = raw },
                 singleLine = true,
                 suffix = { Text("dp") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = {
+                    text.toFloatOrNull()
+                        ?.takeIf { it.isFinite() && it in 0f..48f }
+                        ?.let(onChanged)
+                }),
                 modifier = Modifier.weight(1f),
             )
             IconButton(enabled = value < 48f, onClick = {
