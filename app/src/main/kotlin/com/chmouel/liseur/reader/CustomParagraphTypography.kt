@@ -115,20 +115,26 @@ internal object CustomParagraphTypography {
           if (!line && !indent) {
             if (state.observer) state.observer.disconnect();
             try { delete window.__papaCustomParagraphTypography; } catch (ignored) {}
-            if (old) old.remove();
-            return 'unchanged';
+            if (old) {
+              old.remove();
+              return 'changed';
+            }
+            return 'stable';
           }
           var rules = [];
           if (line) rules.push('line-height:' + line + ' !important');
           if (indent) rules.push('text-indent:' + indent + 'em !important');
           var style = old || document.createElement('style');
+          var nextText = 'html body p:not(#papa-custom-paragraph-typography) {' + rules.join(';') + '}';
+          var changed = !old || old.textContent !== nextText;
           style.id = id;
-          style.textContent = 'html body p:not(#papa-custom-paragraph-typography):not(#papa-custom-paragraph-typography) {' + rules.join(';') + '}';
+          style.textContent = nextText;
           var parent = document.head || document.documentElement;
           function keepLast() {
             if (style.parentNode !== parent || style !== parent.lastElementChild) {
               if (style.parentNode) style.parentNode.removeChild(style);
               parent.appendChild(style);
+              changed = true;
             }
           }
           keepLast();
@@ -137,7 +143,7 @@ internal object CustomParagraphTypography {
             state.observer.observe(parent, { childList: true });
           }
           window.__papaCustomParagraphTypography = state;
-          return 'applied';
+          return changed ? 'changed' : 'stable';
         })();
     """.trimIndent()
 }
