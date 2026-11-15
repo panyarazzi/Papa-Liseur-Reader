@@ -96,6 +96,10 @@ class BookPositions(
     /** Reading-order resources belonging to the chapter of [resourceIndex]. */
     fun chapterResourceIndices(resourceIndex: Int): List<Int> {
         val chapterIndex = chapterIndexByResource[resourceIndex] ?: return emptyList()
+        // A nameless chapter is deliberately not a chapter for counting:
+        // otherwise a book without a TOC would present the whole book as
+        // one enormous chapter in the page footer.
+        if (chapters.getOrNull(chapterIndex)?.title.isNullOrBlank()) return emptyList()
         return resources
             .filter { chapterIndexByResource[it.index] == chapterIndex }
             .map { it.index }
