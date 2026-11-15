@@ -117,7 +117,7 @@ class ReaderPositionPersistenceTest {
                 progressDao = dao, bookDao = container.database.bookDao(),
                 annotationDao = container.database.annotationDao(), typographyDao = container.database.typographyDao(),
                 customTypographyDao = container.database.customTypographyDao(),
-                bookScreenDao = container.database.bookScreenDao(), readingModeDao = container.database.bookReadingModeDao(),
+                bookScreenDao = container.database.bookScreenDao(),
                 library = container.libraryRepository, prefsRepo = container.readerPreferences,
                 readingPace = container.readingPace, positionSync = container.positionSync,
                 appSettings = container.appSettings, positionPublisher = publisher,
