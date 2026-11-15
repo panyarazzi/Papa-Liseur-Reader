@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import java.util.concurrent.atomic.AtomicLong
 
-/** A resource page count reported by either Readium navigator. */
+/** A resource page count reported by the isolated measurement navigator. */
 data class ResourcePageMeasurement(
     val href: String,
     val totalPages: Int,
@@ -82,7 +82,7 @@ class WholeBookPageIndexStore(
         pageIndexZeroBased: Int,
         totalPages: Int,
     ) {
-        if (totalPages <= 0 || pageIndexZeroBased !in 0 until totalPages) return
+        if (resourceIndex !in 0 until resourceCount || totalPages <= 0 || pageIndexZeroBased !in 0 until totalPages) return
         _currentPage.value = CurrentResourcePage(
             resourceIndex = resourceIndex,
             pageInResource = pageIndexZeroBased + 1,
