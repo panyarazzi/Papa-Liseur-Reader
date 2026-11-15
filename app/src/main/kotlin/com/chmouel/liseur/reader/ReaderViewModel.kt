@@ -100,7 +100,7 @@ import com.chmouel.liseur.reader.progress.GoToDestination
 import com.chmouel.liseur.reader.progress.GoToPagePrompt
 import com.chmouel.liseur.reader.progress.GoToPageResolver
 import com.chmouel.liseur.reader.progress.goToPercent
-import com.chmouel.liseur.reader.progress.pagesLeftInChapter
+import com.chmouel.liseur.reader.progress.positionsLeftInChapter
 import com.chmouel.liseur.reader.footnotes.FootnoteResolver
 import com.chmouel.liseur.reader.progress.ReaderProgress
 import com.chmouel.liseur.reader.progress.ReadingPace
@@ -2616,7 +2616,7 @@ class ReaderViewModel(
             chapterTitle = chapter?.title,
             minutesLeftInChapter = speed.minutesFor(chapterEnd - stable.coordinate),
             minutesLeftInBook = speed.minutesFor(positions.totalPositions - stable.coordinate),
-            positionsLeftInChapter = pagesLeftInChapter(chapter, position),
+            positionsLeftInChapter = positionsLeftInChapter(chapter, position),
             isSpeedMeasured = speed.isMeasured,
             resource = stable.resource,
         )
