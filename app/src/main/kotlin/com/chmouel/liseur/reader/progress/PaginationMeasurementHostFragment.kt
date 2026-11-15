@@ -115,3 +115,19 @@ class PaginationMeasurementHostFactory(
             super.instantiate(classLoader, className)
         }
 }
+
+/**
+ * Routes Compose-created reader fragments to the host or the visible
+ * navigator factory without changing the activity's normal fallback.
+ */
+class ReaderFragmentFactory(
+    private val hostFactory: PaginationMeasurementHostFactory,
+    private val navigatorFactory: FragmentFactory,
+) : FragmentFactory() {
+    override fun instantiate(classLoader: ClassLoader, className: String): Fragment =
+        if (className == PaginationMeasurementHostFragment::class.java.name) {
+            hostFactory.instantiate(classLoader, className)
+        } else {
+            navigatorFactory.instantiate(classLoader, className)
+        }
+}
