@@ -12,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [35])
 class DiagnosticHistoryTest {
     @Test
     fun `chat export keeps every part below the full character limit`() = runBlocking {
