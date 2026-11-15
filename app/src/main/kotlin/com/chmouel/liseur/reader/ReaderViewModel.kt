@@ -90,6 +90,7 @@ import com.chmouel.liseur.domain.isSamePassage
 import com.chmouel.liseur.domain.exportNotebookMarkdown
 import com.chmouel.liseur.reader.annotations.HighlightPalette
 import com.chmouel.liseur.reader.annotations.HighlightTint
+import com.chmouel.liseur.reader.annotations.DEFAULT_HIGHLIGHT_STRENGTH
 import com.chmouel.liseur.reader.annotations.locator
 import com.chmouel.liseur.reader.annotations.markedPassage
 import com.chmouel.liseur.ui.messageRes
@@ -1327,7 +1328,7 @@ class ReaderViewModel(
     /** The shared opacity applied to every saved and new highlight. */
     val highlightStrength: StateFlow<Int> = appSettings.settings
         .map { it.highlightStrength }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, 65)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, DEFAULT_HIGHLIGHT_STRENGTH)
 
     private val _place = MutableStateFlow<Locator?>(null)
 
