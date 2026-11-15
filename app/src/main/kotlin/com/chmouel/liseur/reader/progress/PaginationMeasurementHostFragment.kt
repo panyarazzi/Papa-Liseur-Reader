@@ -50,6 +50,9 @@ class PaginationMeasurementHostFragment(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // A new host means a new viewport/layout identity. Clear any old
+        // counts before its child navigator can publish the first callback.
+        pageIndexStore.reset()
         childFragmentManager.fragmentFactory = navigatorFactory
         if (childFragmentManager.findFragmentByTag(NAVIGATOR_TAG) == null) {
             childFragmentManager.commitNow {
