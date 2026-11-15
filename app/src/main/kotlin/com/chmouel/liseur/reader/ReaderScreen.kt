@@ -709,6 +709,7 @@ internal fun ReaderScreen(
     var indexedMeasurementPreferences by remember(pageIndexStore) {
         mutableStateOf(measurementPreferencesKey)
     }
+    var indexedFontKey by remember(pageIndexStore) { mutableStateOf(fontKey) }
     LaunchedEffect(customTypography) {
         // Per-book line height and indent are injected after Readium loads
         // each resource, so they form part of the page-index layout key.
@@ -717,10 +718,12 @@ internal fun ReaderScreen(
     SideEffect {
         val viewportChanged = indexedLayoutGeneration != layoutGeneration
         val preferencesChanged = indexedMeasurementPreferences != measurementPreferencesKey
-        if (viewportChanged || preferencesChanged) {
+        val fontsChanged = indexedFontKey != fontKey
+        if (viewportChanged || preferencesChanged || fontsChanged) {
             pageIndexStore.reset()
             indexedLayoutGeneration = layoutGeneration
             indexedMeasurementPreferences = measurementPreferencesKey
+            indexedFontKey = fontKey
         }
     }
     val jumpBack by jumpBackFlow.collectAsStateWithLifecycle()
@@ -4024,7 +4027,7 @@ internal fun ReaderScreen(
         // It receives the same viewport, preferences and EPUB transforms,
         // but its own FragmentManager and pagination listener.
         if (reflowableText && !effectiveScrolling && !pageTranslated && pageTranslation == null && restoringPageTranslation == null) {
-            key(pageIndexStore, layoutGeneration, measurementPreferencesKey) {
+            key(pageIndexStore, layoutGeneration, measurementPreferencesKey, fontKey) {
                 AndroidFragment<PaginationMeasurementHostFragment>(
                     modifier = navigatorViewportModifier,
                 )
