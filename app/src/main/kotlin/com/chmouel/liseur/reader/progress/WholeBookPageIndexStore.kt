@@ -52,7 +52,6 @@ class WholeBookPageIndexStore(private val resourceCount: Int) {
         totalPages: Int,
     ) {
         if (totalPages <= 0 || pageIndexZeroBased !in 0 until totalPages) return
-        recordResource(resourceIndex, totalPages)
         _currentPage.value = CurrentResourcePage(
             resourceIndex = resourceIndex,
             pageInResource = pageIndexZeroBased + 1,
