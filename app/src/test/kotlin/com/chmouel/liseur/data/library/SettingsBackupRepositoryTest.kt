@@ -292,7 +292,7 @@ class SettingsBackupRepositoryTest {
         db.bookDao().upsert(book(source))
 
         val locatorJson = JSONObject()
-            .put("href", "chapter-04.xhtml")
+            .put("href", "https://example.com/book/chapter-04.xhtml")
             .put("type", "application/xhtml+xml")
             .put("title", "Chapter 4")
             .put(
@@ -354,7 +354,7 @@ class SettingsBackupRepositoryTest {
         assertEquals(original.position, actual.position)
         assertEquals(original.totalProgression, actual.totalProgression)
         val locator = Locator.fromJSON(JSONObject(actual.locatorJson))
-        assertEquals("chapter-04.xhtml", locator.href.toString())
+        assertEquals("https://example.com/book/chapter-04.xhtml", locator.href.toString())
         assertEquals(original.text, locator.text.highlight)
     }
 
