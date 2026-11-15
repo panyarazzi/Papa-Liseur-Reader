@@ -162,6 +162,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 
     // Lists the bundled UI languages (from the values-* folders) so Android
