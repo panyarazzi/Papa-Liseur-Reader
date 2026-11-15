@@ -44,7 +44,6 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.chmouel.liseur.R
 import com.chmouel.liseur.ui.LocalEInk
-import com.chmouel.liseur.reader.annotations.highlightAlpha
 
 /** What the reader can do with a passage they have just selected. */
 class SelectionActions(
