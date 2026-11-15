@@ -41,13 +41,15 @@ class WholeBookPageIndexStoreTest {
     @Test
     fun `resource callbacks carry a generation and increasing sequence`() = runBlocking {
         val store = WholeBookPageIndexStore(resourceCount = 2)
-        store.publishMeasurement("chapter-a.xhtml", 8)
+        store.publishMeasurement(resourceIndex = 0, href = "chapter-a.xhtml", totalPages = 8)
         val first = store.measurements.first()
 
         store.reset()
-        store.publishMeasurement("chapter-b.xhtml", 6)
+        store.publishMeasurement(resourceIndex = 1, href = "chapter-b.xhtml", totalPages = 6)
         val second = store.measurements.first { it.generation == 1 }
 
+        assertEquals(0, first.resourceIndex)
+        assertEquals(1, second.resourceIndex)
         assertEquals(0, first.generation)
         assertEquals(1, second.generation)
         assertEquals(1L, first.sequence)
