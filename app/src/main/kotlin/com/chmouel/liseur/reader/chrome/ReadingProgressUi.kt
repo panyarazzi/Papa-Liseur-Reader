@@ -216,12 +216,14 @@ fun ReadingFooter(
     val startFigure = footerFigure(startField, progress, reflowable, screens, bookScreens, device)
     val endFigure = footerFigure(endField, progress, reflowable, screens, bookScreens, device)
     val middleContent = middleText(progress, mode, reflowable, screens)
-    val middle = middleContent?.let {
-        buildString {
+    val middle = when {
+        middleContent != null -> buildString {
             if (startFigure != null) append("•")
-            append(it)
+            append(middleContent)
             if (endFigure != null) append("•")
         }
+        startFigure != null && endFigure != null -> "•"
+        else -> null
     }
     Row(
         modifier
