@@ -21,6 +21,7 @@ object DiagnosticExport {
         val root = findOrCreateDirectory(selectedRoot, "Papa Liseur Diagnostics")
         val folderName = buildFolderName()
         val apkFolder = findOrCreateDirectory(root, folderName)
+        val actualFolderName = apkFolder.name ?: folderName
 
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
         val prefix = "export-$stamp"
@@ -34,7 +35,7 @@ object DiagnosticExport {
 
         val combined = buildString {
             appendLine("PAPA-LISEUR COMPLETE DIAGNOSTIC EXPORT")
-            appendLine("APK_FOLDER: $folderName")
+            appendLine("APK_FOLDER: $actualFolderName")
             appendLine("EXPORTED_AT: $stamp")
             appendLine("PARTS: ${parts.size}")
             appendLine()
@@ -71,11 +72,13 @@ Inside that folder:
 - export-*-part-*.txt: individually copyable parts, each with APK and part metadata.
 - export-*-export-info.txt: build identity and export details.
 
+The export-info file is written last and identifies a completed export.
 Keep older APK folders. They may contain evidence needed to compare regressions.
 No diagnostic data is uploaded automatically.
 """
         writeOrReplace(context, root, "README.txt", readme)
-        return Result(folderName, written)
+        written++
+        return Result(actualFolderName, written)
     }
 
     private fun findOrCreateDirectory(parent: DocumentFile, requestedName: String): DocumentFile {
