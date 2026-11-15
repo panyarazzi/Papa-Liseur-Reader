@@ -76,6 +76,7 @@ class PaginationMeasurementHostFragment(
     }
 
     private suspend fun scanReadingOrder(navigator: EpubNavigatorFragment) {
+        val measurementGeneration = pageIndexStore.generation
         publication.readingOrder.forEachIndexed { index, link ->
             if (pageIndexStore.index.value.pagesByResource.containsKey(index)) {
                 return@forEachIndexed
@@ -90,7 +91,8 @@ class PaginationMeasurementHostFragment(
             // resource from holding up the rest of the book indefinitely.
             val measured = withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
                 pageIndexStore.measurements.first { event ->
-                    event.href.substringBefore('#') == href && event.totalPages > 0
+                    event.generation == measurementGeneration &&
+                        event.href.substringBefore('#') == href && event.totalPages > 0
                 }
             } ?: return@forEachIndexed
 
