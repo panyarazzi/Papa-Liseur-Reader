@@ -468,6 +468,8 @@ class ReaderActivity : FragmentActivity() {
                                         (application as? LiseurApplication)?.diagnostics?.record(event, attributes)
                                     }
                                 }
+                                val measurementGeneration by pageIndexStore.generationFlow
+                                    .collectAsStateWithLifecycle()
                                 val measurementPreferences = remember(pageIndexStore) {
                                     MutableStateFlow(initialPreferences)
                                 }
@@ -551,7 +553,9 @@ class ReaderActivity : FragmentActivity() {
                                     measurementPreferencesValue,
                                     epubConfiguration,
                                     pageIndexStore,
+                                    measurementGeneration,
                                 ) {
+                                    val callbackGeneration = measurementGeneration
                                     val firstLocator = s.publication.readingOrder.firstOrNull()
                                         ?.let { link -> s.publication.locatorFromLink(link) }
                                     s.navigatorFactory.createFragmentFactory(
@@ -570,12 +574,15 @@ class ReaderActivity : FragmentActivity() {
                                                         "resourceIndex" to (resourceIndex?.toString() ?: "unknown"),
                                                         "pageIndexZeroBased" to pageIndex.toString(),
                                                         "totalPages" to totalPages.toString(),
+                                                        "callbackGeneration" to callbackGeneration.toString(),
+                                                        "activeGeneration" to pageIndexStore.generation.toString(),
                                                     ),
                                                 )
                                                 pageIndexStore.publishMeasurement(
                                                     resourceIndex = resourceIndex,
                                                     href = locator.href.toString(),
                                                     totalPages = totalPages,
+                                                    callbackGeneration = callbackGeneration,
                                                 )
                                             }
 
@@ -641,6 +648,10 @@ class ReaderActivity : FragmentActivity() {
                                 ReaderScreen(
                                     publication = s.publication,
                                     pageIndexStore = pageIndexStore,
+                                    measurementGeneration = measurementGeneration,
+                                    onRestoreDiagnostic = { event, attributes ->
+                                        (application as? LiseurApplication)?.diagnostics?.record(event, attributes)
+                                    },
                                     measurementPreferencesKey = measurementPreferencesValue,
                                     onChapterResourceIndices = viewModel::chapterResourceIndices,
                                     displayAuthors = s.displayAuthors,
