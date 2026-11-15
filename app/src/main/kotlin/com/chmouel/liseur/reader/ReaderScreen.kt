@@ -844,8 +844,8 @@ internal fun ReaderScreen(
                     null
                 }
                 val transformsApplied =
-                    weightResult in setOf("changed", "stable") &&
-                        paragraphResult in setOf("changed", "stable")
+                    (weightResult == "changed" || weightResult == "stable") &&
+                        (paragraphResult == "changed" || paragraphResult == "stable")
                 val repaired = try {
                     repairPage(measurementNavigator)
                 } catch (cancellation: CancellationException) {
@@ -857,35 +857,35 @@ internal fun ReaderScreen(
                 if (!transformsApplied || repaired == null) {
                     null
                 } else {
-                // The publisher-weight transform can make a different
-                // embedded face eligible. Wait for any resulting font load
-                // before asking Readium to publish the final page count.
-                var transformedFontsReady = false
-                var waitedForTransformedFonts = false
-                for (attempt in 0 until 100) {
-                    val status = try {
-                        measurementNavigator.evaluateJavascript(
-                            "document.fonts ? document.fonts.status : 'loaded'",
-                        )?.trim()?.removeSurrounding("\"")
-                    } catch (cancellation: CancellationException) {
-                        throw cancellation
-                    } catch (_: Exception) {
+                    // The publisher-weight transform can make a different
+                    // embedded face eligible. Wait for any resulting font load
+                    // before asking Readium to publish the final page count.
+                    var transformedFontsReady = false
+                    var waitedForTransformedFonts = false
+                    for (attempt in 0 until 100) {
+                        val status = try {
+                            measurementNavigator.evaluateJavascript(
+                                "document.fonts ? document.fonts.status : 'loaded'",
+                            )?.trim()?.removeSurrounding("\\\"")
+                        } catch (cancellation: CancellationException) {
+                            throw cancellation
+                        } catch (_: Exception) {
+                            null
+                        }
+                        if (status == "loaded") {
+                            transformedFontsReady = true
+                            break
+                        }
+                        waitedForTransformedFonts = true
+                        delay(50)
+                    }
+                    if (!transformedFontsReady) {
                         null
+                    } else {
+                        if (waitedForTransformedFonts) delay(100)
+                        waitedForFonts || waitedForTransformedFonts ||
+                            weightResult == "changed" || paragraphResult == "changed" || repaired
                     }
-                    if (status == "loaded") {
-                        transformedFontsReady = true
-                        break
-                    }
-                    waitedForTransformedFonts = true
-                    delay(50)
-                }
-                if (!transformedFontsReady) {
-                    null
-                } else {
-                    if (waitedForTransformedFonts) delay(100)
-                    waitedForFonts || waitedForTransformedFonts ||
-                        weightResult == "changed" || paragraphResult == "changed" || repaired
-                }
                 }
             }
         }
