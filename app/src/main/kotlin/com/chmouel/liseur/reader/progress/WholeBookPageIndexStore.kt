@@ -5,12 +5,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import java.util.concurrent.atomic.AtomicLong
 
 /** A resource page count reported by either Readium navigator. */
 data class ResourcePageMeasurement(
     val href: String,
     val totalPages: Int,
     val generation: Int,
+    val sequence: Long,
 )
 
 /** The exact page currently reported by the visible Readium navigator. */
@@ -28,6 +31,10 @@ class WholeBookPageIndexStore(private val resourceCount: Int) {
     @Volatile
     var generation: Int = 0
         private set
+
+    private val measurementSequence = AtomicLong(0)
+    @Volatile
+    var prepareResource: suspend (EpubNavigatorFragment) -> Boolean? = { false }
 
     private val _index = MutableStateFlow(WholeBookPageIndex.empty(resourceCount))
     val index: StateFlow<WholeBookPageIndex> = _index.asStateFlow()
@@ -67,7 +74,9 @@ class WholeBookPageIndexStore(private val resourceCount: Int) {
 
     fun publishMeasurement(href: String, totalPages: Int) {
         if (href.isBlank() || totalPages <= 0) return
-        _measurements.tryEmit(ResourcePageMeasurement(href, totalPages, generation))
+        _measurements.tryEmit(
+            ResourcePageMeasurement(href, totalPages, generation, measurementSequence.incrementAndGet()),
+        )
     }
 
     @Synchronized
