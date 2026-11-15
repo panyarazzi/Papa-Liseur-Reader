@@ -5733,12 +5733,12 @@ private suspend fun repairPage(nav: EpubNavigatorFragment): Boolean {
     val fitted = WideContentFit.apply(nav) == WideContentFit.Result.CHANGED
     val here = nav.currentLocator.value.locations.fragments
     val noted = FootnoteLayout.apply(nav, here) == FootnoteLayout.Result.CHANGED
-    val led = SelectionHandleFix.apply(nav) == SelectionHandleFix.Result.CHANGED
+    SelectionHandleFix.apply(nav)
     // Handed the same-document anchors nothing else sees. An
     // acknowledgment only — nothing here can move the page — so it never
     // feeds the answer below.
     SameDocumentLinks.apply(nav)
-    return fitted || noted || led
+    return fitted || noted
 }
 
 /**
