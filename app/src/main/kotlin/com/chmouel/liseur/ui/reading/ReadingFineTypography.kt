@@ -133,15 +133,6 @@ fun ReadingFineTypographyControls(
         )
 
         DefaultableSpacingSlider(
-            label = stringResource(R.string.reader_glyph_width),
-            value = prefs.glyphWidth,
-            range = TypographyRange.GLYPH_WIDTH,
-            enabled = enabled,
-            note = stringResource(R.string.reader_glyph_width_note),
-            onChanged = { actions.onGlyphWidthChanged(it ?: 1.0) },
-        )
-
-        DefaultableSpacingSlider(
             label = stringResource(R.string.reader_letter_spacing),
             value = prefs.letterSpacing,
             range = TypographyRange.LETTER_SPACING,
