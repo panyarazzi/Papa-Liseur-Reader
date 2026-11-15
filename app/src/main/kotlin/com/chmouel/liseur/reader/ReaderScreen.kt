@@ -519,6 +519,8 @@ internal fun ReaderScreen(
     highlightPaletteFlow: StateFlow<HighlightPalette>,
     onHighlightTintToggled: (HighlightTint) -> Unit,
     onHighlightDefaultTintChanged: (HighlightTint) -> Unit,
+    highlightStrengthFlow: StateFlow<Int>,
+    onHighlightStrengthChanged: (Int) -> Unit,
     // The activity draws dialogs of its own over this screen — a link
     // out of the book, a sync, an offer to send the book up — and a tap
     // on a link never reaches the tap zones, so the screen would
@@ -594,6 +596,7 @@ internal fun ReaderScreen(
     val tapAnywhereZonesNow by rememberUpdatedState(tapZones.tapAnywhere)
     val pinchToResize by pinchToResizeFlow.collectAsStateWithLifecycle()
     val highlightPalette by highlightPaletteFlow.collectAsStateWithLifecycle()
+    val highlightStrength by highlightStrengthFlow.collectAsStateWithLifecycle()
     // Readium reads vertical text off the book rather than off the
     // reader: it cannot paginate lines that run down the page, so such a
     // book is scrolled whatever the setting says. Everything that asks
@@ -2869,9 +2872,9 @@ internal fun ReaderScreen(
 
     // Draw the marks the reader has made over the page.
     // Off while the page is translated: they mark the book's words.
-    LaunchedEffect(navigator, annotations, pageTranslated) {
+    LaunchedEffect(navigator, annotations, pageTranslated, highlightStrength) {
         val nav = navigator ?: return@LaunchedEffect
-        nav.applyDecorations(if (pageTranslated) emptyList() else annotations.toDecorations(), DECORATION_GROUP)
+        nav.applyDecorations(if (pageTranslated) emptyList() else annotations.toDecorations(highlightStrength), DECORATION_GROUP)
         tappedSelection = tappedSelection?.let { active ->
             annotations.firstOrNull { it.id == active.existing?.id }?.let {
                 active.copy(existing = it)
@@ -5098,6 +5101,7 @@ internal fun ReaderScreen(
                 passage = passage,
                 theme = readingTheme,
                 palette = highlightPalette,
+                highlightStrength = highlightStrength,
                 actions = remember(active) {
                     NoteSheetActions(
                         onEdit = {
@@ -5136,6 +5140,7 @@ internal fun ReaderScreen(
                 offset = active.popupOffset(),
                 activeTint = active.existing?.tint?.let(HighlightTint::fromName),
                 palette = highlightPalette,
+                highlightStrength = highlightStrength,
                 actions = remember(active, dictionary, translateReady, translateLabel, pageTranslated, translationRun, companion) {
                     SelectionActions(
                         onHighlight = { tint ->
@@ -5491,6 +5496,8 @@ internal fun ReaderScreen(
             highlightPalette = highlightPalette,
             onHighlightTintToggled = onHighlightTintToggled,
             onHighlightDefaultTintChanged = onHighlightDefaultTintChanged,
+            highlightStrength = highlightStrength,
+            onHighlightStrengthChanged = onHighlightStrengthChanged,
             onAutoScrollSpeedChanged = onPrefsAction.setAutoScrollSpeed,
             keepScreenOn = keepScreenOn,
             onKeepScreenOnChanged = onKeepScreenOnChanged,
