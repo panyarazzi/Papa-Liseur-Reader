@@ -669,6 +669,10 @@
     <string name="reader_page_turn_style_none_detail">The next page is simply there. This is what an e-ink screen gets whichever of the three is chosen.</string>
 
     <!-- The colours offered when a passage is marked. -->
+    <string name="reader_highlight_strength">Highlight strength</string>
+    <string name="reader_highlight_strength_help">The same strength is used for existing and new highlights on every display. Choose a number from 0 to 100.</string>
+    <string name="reader_highlight_strength_decrease">Decrease highlight strength</string>
+    <string name="reader_highlight_strength_increase">Increase highlight strength</string>
     <string name="reader_highlight_colours">Available colours</string>
     <string name="reader_highlight_colours_help">Tap a colour to offer it when you mark a passage. Hold one to make it the default, which is %1$s: a highlight made without picking gets it, and a note uses the first colour in the bar\'s order.</string>
     <string name="reader_highlight_colours_none">No colours are offered, so marking a passage highlights it in %1$s. Tap a colour to bring the choice back.</string>
