@@ -18,16 +18,9 @@ object DiagnosticExport {
             "The selected folder is unavailable."
         }
         require(selectedRoot.isDirectory && selectedRoot.canWrite()) { "The selected folder is not writable." }
-        val root = selectedRoot.findFile("Papa Liseur Diagnostics")?.takeIf { it.isDirectory }
-            ?: requireNotNull(selectedRoot.createDirectory("Papa Liseur Diagnostics")) {
-                "Could not create the Papa Liseur Diagnostics folder."
-            }
-
+        val root = findOrCreateDirectory(selectedRoot, "Papa Liseur Diagnostics")
         val folderName = buildFolderName()
-        val apkFolder = root.findFile(folderName)?.takeIf { it.isDirectory }
-            ?: requireNotNull(root.createDirectory(folderName)) {
-                "Could not create the APK diagnostic folder."
-            }
+        val apkFolder = findOrCreateDirectory(root, folderName)
 
         val stamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
         val prefix = "export-$stamp"
@@ -83,6 +76,21 @@ No diagnostic data is uploaded automatically.
 """
         writeOrReplace(context, root, "README.txt", readme)
         return Result(folderName, written)
+    }
+
+    private fun findOrCreateDirectory(parent: DocumentFile, requestedName: String): DocumentFile {
+        val existing = parent.findFile(requestedName)
+        if (existing?.isDirectory == true) return existing
+
+        var candidate = requestedName
+        var suffix = 2
+        while (parent.findFile(candidate) != null) {
+            candidate = "$requestedName-$suffix"
+            suffix++
+        }
+        return requireNotNull(parent.createDirectory(candidate)) {
+            "Could not create the $candidate folder."
+        }
     }
 
     private fun buildFolderName(): String {
