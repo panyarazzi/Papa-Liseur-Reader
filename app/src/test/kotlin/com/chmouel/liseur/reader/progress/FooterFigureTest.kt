@@ -130,6 +130,7 @@ class FooterFigureTest {
             figure(
                 FooterField.PAGES_LEFT_CHAPTER,
                 progress = progress.copy(positionsLeftInChapter = null),
+                chapter = emptyList(),
             ),
         )
     }
