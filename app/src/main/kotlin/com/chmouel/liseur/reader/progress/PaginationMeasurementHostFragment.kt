@@ -93,7 +93,7 @@ class PaginationMeasurementHostFragment(
                 return@forEachIndexed
             }
             val href = locator.href.toString().substringBefore('#')
-            if (!navigator.go(locator)) {
+            if (!navigator.go(locator, animated = false)) {
                 pageIndexStore.recordScannerEvent(
                     "pagination.resource_navigation_failed",
                     mapOf("resourceIndex" to index.toString()),
