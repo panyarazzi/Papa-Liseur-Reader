@@ -30,8 +30,18 @@ jobs:
     - name: Build FOSS side-by-side test APK
       run: ./gradlew assembleFossDev
 
+    - name: Rename FOSS test APK with workflow run number
+      shell: bash
+      run: |
+        source_apk="app/build/outputs/apk/foss/dev/app-foss-dev.apk"
+        target_apk="app/build/outputs/apk/foss/dev/Papa-Liseur-Reader#${GITHUB_RUN_NUMBER}.apk"
+        test -f "$source_apk"
+        cp "$source_apk" "$target_apk"
+        echo "APK_FILE=$target_apk" >> "$GITHUB_ENV"
+
     - name: Upload FOSS test APK
       uses: actions/upload-artifact@v4
       with:
-        name: papa-liseur-foss-dev-apk
-        path: app/build/outputs/apk/foss/dev/app-foss-dev.apk
+        name: Papa-Liseur-Reader-${{ github.run_number }}
+        path: ${{ env.APK_FILE }}
+        if-no-files-found: error
