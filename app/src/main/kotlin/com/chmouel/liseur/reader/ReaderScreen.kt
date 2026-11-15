@@ -844,8 +844,36 @@ internal fun ReaderScreen(
                     null
                 }
                 val repaired = repairPage(measurementNavigator)
-                waitedForFonts || weightResult == "changed" ||
-                    paragraphResult == "changed" || repaired
+
+                // The publisher-weight transform can make a different
+                // embedded face eligible. Wait for any resulting font load
+                // before asking Readium to publish the final page count.
+                var transformedFontsReady = false
+                var waitedForTransformedFonts = false
+                for (attempt in 0 until 100) {
+                    val status = try {
+                        measurementNavigator.evaluateJavascript(
+                            "document.fonts ? document.fonts.status : 'loaded'",
+                        )?.trim()?.removeSurrounding("\"")
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    } catch (_: Exception) {
+                        null
+                    }
+                    if (status == "loaded") {
+                        transformedFontsReady = true
+                        break
+                    }
+                    waitedForTransformedFonts = true
+                    delay(50)
+                }
+                if (!transformedFontsReady) {
+                    null
+                } else {
+                    if (waitedForTransformedFonts) delay(100)
+                    waitedForFonts || waitedForTransformedFonts ||
+                        weightResult == "changed" || paragraphResult == "changed" || repaired
+                }
             }
         }
     }
