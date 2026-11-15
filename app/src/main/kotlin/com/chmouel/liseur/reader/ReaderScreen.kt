@@ -778,6 +778,58 @@ internal fun ReaderScreen(
     val noteShowing by rememberUpdatedState(footnote != null)
     // This collector outlives preference recompositions; page changes use the latest weight.
     val publisherFontWeightMultiplier by rememberUpdatedState(prefs.fontWeight.multiplier)
+    SideEffect {
+        pageIndexStore.prepareResource = { measurementNavigator ->
+            var fontsReady = false
+            var waitedForFonts = false
+            repeat(100) {
+                val status = try {
+                    measurementNavigator.evaluateJavascript(
+                        "document.readyState + '|' + (document.fonts ? document.fonts.status : 'loaded')",
+                    )?.trim()?.removeSurrounding("\"")
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    null
+                }
+                val values = status?.split('|')
+                if (values?.getOrNull(0) == "complete" && values.getOrNull(1) == "loaded") {
+                    fontsReady = true
+                    return@repeat
+                }
+                waitedForFonts = true
+                delay(50)
+            }
+            if (!fontsReady) {
+                null
+            } else {
+                val weightResult = try {
+                    measurementNavigator.evaluateJavascript(
+                        PublisherFontWeightTransform.script(publisherFontWeightMultiplier),
+                    )?.trim()?.removeSurrounding("\"")
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    null
+                }
+                val paragraphResult = try {
+                    measurementNavigator.evaluateJavascript(
+                        CustomParagraphTypography.applyScript(
+                            customTypography?.lineHeight,
+                            customTypography?.textIndent,
+                        ),
+                    )?.trim()?.removeSurrounding("\"")
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    null
+                }
+                val repaired = repairPage(measurementNavigator)
+                waitedForFonts || weightResult == "changed" ||
+                    paragraphResult == "changed" || repaired
+            }
+        }
+    }
     var selection by remember { mutableStateOf<ActiveSelection?>(null) }
     // The settled selection drives the action bar, but it intentionally
     // waits for the WebView's reports to quiet down. Gesture arbitration
@@ -3947,7 +3999,7 @@ internal fun ReaderScreen(
         // The measurement navigator is isolated from the visible reader.
         // It receives the same viewport, preferences and EPUB transforms,
         // but its own FragmentManager and pagination listener.
-        if (reflowableText && !effectiveScrolling) {
+        if (reflowableText && !effectiveScrolling && !pageTranslated && pageTranslation == null && restoringPageTranslation == null) {
             key(pageIndexStore, layoutGeneration) {
                 AndroidFragment<PaginationMeasurementHostFragment>(
                     modifier = navigatorViewportModifier.alpha(0f),
