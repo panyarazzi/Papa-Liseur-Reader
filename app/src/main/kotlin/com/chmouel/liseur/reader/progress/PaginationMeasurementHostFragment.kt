@@ -136,7 +136,7 @@ class PaginationMeasurementHostFragment(
                 // Re-issue the same locator in the isolated navigator so
                 // Readium publishes a fresh page callback after DOM/CSS
                 // changes, even when the current page index did not move.
-                if (!navigator.go(locator)) {
+                if (!navigator.go(locator, animated = false)) {
                     pageIndexStore.recordScannerEvent(
                         "pagination.resource_reflow_navigation_failed",
                         mapOf("resourceIndex" to index.toString()),
