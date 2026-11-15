@@ -18,6 +18,9 @@ import com.chmouel.liseur.reader.footnotes.SameDocumentLinkBridge
 import com.chmouel.liseur.ui.WidthClass
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.Decoration
+import org.readium.r2.navigator.html.HtmlDecorationTemplate
+import org.readium.r2.navigator.html.toCss
 import org.readium.r2.navigator.epub.css.ColCount
 import org.readium.r2.navigator.epub.css.Length
 import org.readium.r2.navigator.epub.css.RsProperties
@@ -411,4 +414,41 @@ internal fun epubNavigatorConfigurationBase(
 ): EpubNavigatorFragment.Configuration =
     EpubNavigatorFragment.Configuration {
         configureFontSizeRendering(reflowable)
+    }.apply {
+        // Readium's stock template replaces every tint's ARGB alpha with
+        // a fixed 0.3. This template keeps the same line treatment while
+        // respecting the alpha carried by each annotation's tint.
+        decorationTemplates[Decoration.Style.Highlight::class] = HtmlDecorationTemplate(
+            layout = HtmlDecorationTemplate.Layout.BOXES,
+            element = { decoration ->
+                val style = decoration.style
+                val tint = (style as? Decoration.Style.Tinted)?.tint ?: android.graphics.Color.YELLOW
+                val active = (style as? Decoration.Style.Activable)?.isActive == true
+                val css = buildString {
+                    append("background-color: ${tint.toCss()} !important;")
+                    if (active) append("--papa-highlight-underline-color: ${tint.toCss()};")
+                }
+                """<div class="papa-reader-highlight" style="$css"/>"""
+            },
+            stylesheet = """
+                .papa-reader-highlight {
+                    margin: 0 -1px 0 0;
+                    padding: 0 2px 0 0;
+                    border-radius: 3px;
+                    box-sizing: border-box;
+                    border: 0 solid var(--papa-highlight-underline-color);
+                }
+                [data-writing-mode="horizontal-tb"].papa-reader-highlight {
+                    border-bottom-width: 2px;
+                }
+                [data-writing-mode="vertical-rl"].papa-reader-highlight,
+                [data-writing-mode="sideways-rl"].papa-reader-highlight {
+                    border-left-width: 2px;
+                }
+                [data-writing-mode="vertical-lr"].papa-reader-highlight,
+                [data-writing-mode="sideways-lr"].papa-reader-highlight {
+                    border-right-width: 2px;
+                }
+            """,
+        )
     }
