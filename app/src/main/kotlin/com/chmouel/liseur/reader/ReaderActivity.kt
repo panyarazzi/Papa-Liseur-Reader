@@ -80,7 +80,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import com.chmouel.liseur.reader.progress.WholeBookPageIndexStore
-import com.chmouel.liseur.LiseurApplication
 import com.chmouel.liseur.reader.progress.PaginationMeasurementHostFragment
 import com.chmouel.liseur.reader.progress.PaginationMeasurementHostFactory
 import com.chmouel.liseur.reader.progress.ReaderFragmentFactory
