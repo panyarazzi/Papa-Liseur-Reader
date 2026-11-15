@@ -14,10 +14,14 @@ object DiagnosticExport {
 
     fun writeToTree(context: Context, treeUri: Uri, parts: List<DiagnosticHistory.Part>): Result {
         require(parts.isNotEmpty()) { "There is no diagnostic history to export." }
-        val root = requireNotNull(DocumentFile.fromTreeUri(context, treeUri)) {
+        val selectedRoot = requireNotNull(DocumentFile.fromTreeUri(context, treeUri)) {
             "The selected folder is unavailable."
         }
-        require(root.isDirectory && root.canWrite()) { "The selected folder is not writable." }
+        require(selectedRoot.isDirectory && selectedRoot.canWrite()) { "The selected folder is not writable." }
+        val root = selectedRoot.findFile("Papa Liseur Diagnostics")?.takeIf { it.isDirectory }
+            ?: requireNotNull(selectedRoot.createDirectory("Papa Liseur Diagnostics")) {
+                "Could not create the Papa Liseur Diagnostics folder."
+            }
 
         val folderName = buildFolderName()
         val apkFolder = root.findFile(folderName)?.takeIf { it.isDirectory }
