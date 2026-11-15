@@ -1280,12 +1280,12 @@ class ReaderViewModel(
         .map { it.lockFooterOn }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     /**
-     * Whether this book is read by scrolling: the app-wide setting,
-     * unless the book has been answered for on its own.
+     * Whether books are read by scrolling. This is one app-wide setting,
+     * shared with Library Settings; Reader Settings must not create a
+     * per-book override.
      */
     val scrollMode: StateFlow<Boolean> = appSettings.settings
         .map { it.scrollMode }
-        .combine(readingModeDao.observe(bookId)) { global, own -> own.scrollsWith(global) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _scrolling = MutableStateFlow(false)
@@ -3133,8 +3133,9 @@ class ReaderViewModel(
      * book, so it is about that book, and a later change to the app-wide
      * setting has no business undoing it.
      */
+    /** Changes the single app-wide reading mode shared with Library Settings. */
     fun setScrollMode(enabled: Boolean) = viewModelScope.launch {
-        readingModeDao.upsert(BookReadingMode(bookUrl = bookId, scroll = enabled))
+        appSettings.setScrollMode(enabled)
     }
 
     /** Updates the shared page-turn zones used by Library and Reader settings. */
