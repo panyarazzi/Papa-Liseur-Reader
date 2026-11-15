@@ -31,6 +31,7 @@ class PublisherFontWeightTransformTest {
         assertTrue(script.endsWith("})();"))
         assertTrue(script.contains("var target = 700;"))
         assertFalse(script.contains("__PAPA_FONT_WEIGHT__"))
+        assertTrue(script.contains('return changed ? "changed" : "stable";'))
     }
 
     @Test
