@@ -126,6 +126,16 @@ class PaginationMeasurementHostFragment(
                 return@forEachIndexed
             }
             val measured = if (layoutChanged) {
+                // Re-issue the same locator in the isolated navigator so
+                // Readium publishes a fresh page callback after DOM/CSS
+                // changes, even when the current page index did not move.
+                if (!navigator.go(locator)) {
+                    pageIndexStore.recordScannerEvent(
+                        "pagination.resource_reflow_navigation_failed",
+                        mapOf("resourceIndex" to index.toString()),
+                    )
+                    return@forEachIndexed
+                }
                 withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
                     pageIndexStore.measurements.first { event ->
                         event.generation == measurementGeneration &&
