@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
 class LiseurApplication : Application(), SingletonImageLoader.Factory {
     lateinit var container: AppContainer
         private set
+    lateinit var diagnostics: com.chmouel.liseur.diagnostics.DiagnosticHistory
+        private set
 
     private val appScope = CoroutineScope(Dispatchers.IO)
     private var lastForegroundSyncAt = 0L
@@ -43,6 +45,9 @@ class LiseurApplication : Application(), SingletonImageLoader.Factory {
         AppLocales.adoptLegacyChoice(this)
         AppLocales.applyProcessDefault(this)
         container = AppContainer(this)
+        diagnostics = com.chmouel.liseur.diagnostics.DiagnosticHistory(this).also {
+            it.record("app.process_started")
+        }
         // A restored backup brings the account with it but not the key
         // that unlocks it, so check before anything tries to use it.
         appScope.launch {
