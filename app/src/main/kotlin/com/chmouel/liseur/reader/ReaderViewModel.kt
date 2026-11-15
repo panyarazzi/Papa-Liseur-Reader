@@ -3137,6 +3137,11 @@ class ReaderViewModel(
         readingModeDao.upsert(BookReadingMode(bookUrl = bookId, scroll = enabled))
     }
 
+    /** Updates the shared page-turn zones used by Library and Reader settings. */
+    fun setTapZones(zones: TapZones) = viewModelScope.launch {
+        appSettings.setTapZones(zones)
+    }
+
     fun setColumnMode(mode: ColumnMode) =
         viewModelScope.launch { prefsRepo.setColumnMode(mode) }
 
