@@ -40,7 +40,9 @@ class CustomParagraphTypographyTest {
     fun noSelectedCustomValueLeavesPublisherCssAlone() {
         val script = CustomParagraphTypography.applyScript(null, null)
         assertTrue(script.contains("if (!line && !indent)"))
-        assertTrue(script.contains("if (old) old.remove()"))
+        assertTrue(script.contains("if (old) {"))
+        assertTrue(script.contains("return 'changed'"))
+        assertTrue(script.contains("return 'stable'"))
         assertFalse(script.contains("line-height: !important"))
         assertFalse(script.contains("text-indent:em !important"))
     }
