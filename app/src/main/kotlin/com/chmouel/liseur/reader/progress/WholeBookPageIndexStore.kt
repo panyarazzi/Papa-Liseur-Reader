@@ -99,12 +99,6 @@ class WholeBookPageIndexStore(
         )
     }
 
-    fun recordMeasurement(href: String, resourceIndex: Int, totalPages: Int) {
-        if (href.isBlank() || totalPages <= 0) return
-        recordResource(resourceIndex, totalPages)
-        publishMeasurement(href, totalPages)
-    }
-
     fun recordScannerEvent(event: String, attributes: Map<String, String> = emptyMap()) {
         onDiagnostic(event, attributes + ("generation" to generation.toString()))
     }
@@ -117,14 +111,14 @@ class WholeBookPageIndexStore(
     }
 
     @Synchronized
-    fun reset(resourceCount: Int = this.resourceCount) {
+    fun reset() {
         generation += 1
         _index.value = WholeBookPageIndex.empty(resourceCount)
         _currentPage.value = null
         onDiagnostic(
             "pagination.index_invalidated",
             mapOf(
-                "resourceCount" to resourceCount.toString(),
+                "resourceCount" to this.resourceCount.toString(),
                 "generation" to generation.toString(),
             ),
         )
