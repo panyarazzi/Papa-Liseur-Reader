@@ -39,13 +39,31 @@ class WholeBookPageIndexStoreTest {
     }
 
     @Test
+    fun `measurement callback is assigned to the active reading-order occurrence`() = runBlocking {
+        val store = WholeBookPageIndexStore(resourceCount = 3)
+        // The same href can occur more than once in an EPUB spine. The
+        // scanner's active occurrence, rather than a first-href lookup,
+        // determines which resource receives the page count.
+        store.expectMeasurement(resourceIndex = 2, href = "shared.xhtml")
+        store.publishMeasurement(href = "unrelated.xhtml", totalPages = 4)
+        store.publishMeasurement(href = "shared.xhtml#fragment", totalPages = 7)
+
+        val event = store.measurements.first()
+        assertEquals(2, event.resourceIndex)
+        assertEquals("shared.xhtml", event.href)
+        assertEquals(7, event.totalPages)
+    }
+
+    @Test
     fun `resource callbacks carry a generation and increasing sequence`() = runBlocking {
         val store = WholeBookPageIndexStore(resourceCount = 2)
-        store.publishMeasurement(resourceIndex = 0, href = "chapter-a.xhtml", totalPages = 8)
+        store.expectMeasurement(resourceIndex = 0, href = "chapter-a.xhtml")
+        store.publishMeasurement(href = "chapter-a.xhtml", totalPages = 8)
         val first = store.measurements.first()
 
         store.reset()
-        store.publishMeasurement(resourceIndex = 1, href = "chapter-b.xhtml", totalPages = 6)
+        store.expectMeasurement(resourceIndex = 1, href = "chapter-b.xhtml")
+        store.publishMeasurement(href = "chapter-b.xhtml", totalPages = 6)
         val second = store.measurements.first { it.generation == 1 }
 
         assertEquals(0, first.resourceIndex)
