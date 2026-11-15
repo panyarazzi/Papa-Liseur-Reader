@@ -253,7 +253,6 @@ import com.chmouel.liseur.reader.progress.WholeBookPageIndexStore
 import com.chmouel.liseur.reader.progress.CurrentResourcePage
 import com.chmouel.liseur.reader.progress.PaginationMeasurementHostFragment
 import com.chmouel.liseur.reader.progress.ReaderProgress
-import com.chmouel.liseur.reader.progress.SectionScreens
 import com.chmouel.liseur.companion.CharacterPane
 import com.chmouel.liseur.companion.CompanionPeekBar
 import com.chmouel.liseur.reader.progress.ExactLocatorAnchor
@@ -3463,14 +3462,11 @@ internal fun ReaderScreen(
             val bookmarkPreview = capturedLocator?.let {
                 ExactLocatorAnchor.bookmarkParagraph(nav, it)
             }
-            val pageSnapshot = currentResourcePage?.let {
-                SectionScreens(it.pageInResource, it.totalPagesInResource)
-            }
             onAnnotationAction.toggleBookmark(
                 locatorToSave,
                 bookmarkPreview,
-                pageSnapshot?.screen,
-                pageSnapshot?.screens,
+                currentResourcePage?.pageInResource,
+                currentResourcePage?.totalPagesInResource,
             )
         }
     }
