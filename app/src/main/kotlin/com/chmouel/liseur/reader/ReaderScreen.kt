@@ -93,7 +93,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
@@ -4027,7 +4026,7 @@ internal fun ReaderScreen(
         if (reflowableText && !effectiveScrolling && !pageTranslated && pageTranslation == null && restoringPageTranslation == null) {
             key(pageIndexStore, layoutGeneration, measurementPreferencesKey) {
                 AndroidFragment<PaginationMeasurementHostFragment>(
-                    modifier = navigatorViewportModifier.alpha(0f),
+                    modifier = navigatorViewportModifier,
                 )
             }
         }
