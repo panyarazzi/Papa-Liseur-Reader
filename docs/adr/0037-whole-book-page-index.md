@@ -51,8 +51,11 @@ Positions is allowed.
   complete.
 - Chapter pages aggregate the page counts of all resources belonging to the chapter,
   including split chapters.
-- Repeated hrefs remain distinct reading-order occurrences; resource resolution uses
-  Readium locators and the BookPositions occurrence mapping.
+- Repeated hrefs remain distinct reading-order occurrences in the index. The
+  scanner binds each callback to the reading-order entry it is currently measuring;
+  if Readium resolves a repeated href to its first occurrence, the same XHTML
+  resource's count is reused for that occurrence. The visible page still resolves
+  through Readium locators and the BookPositions occurrence mapping.
 - Fixed-layout pagination and scrolling behavior are not redefined by this index.
   Scrolling has no page count to report.
 - Stable Readium Positions remain the source for locator persistence, bookmarks,
