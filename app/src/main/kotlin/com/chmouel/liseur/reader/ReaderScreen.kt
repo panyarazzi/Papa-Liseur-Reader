@@ -701,6 +701,11 @@ internal fun ReaderScreen(
     // replacing the isolated whole-book measurement navigator.
     var layoutGeneration by remember { mutableIntStateOf(0) }
     var indexedLayoutGeneration by remember(pageIndexStore) { mutableIntStateOf(0) }
+    LaunchedEffect(customTypography) {
+        // Per-book line height and indent are injected after Readium loads
+        // each resource, so they form part of the page-index layout key.
+        layoutGeneration++
+    }
     SideEffect {
         if (indexedLayoutGeneration != layoutGeneration) {
             pageIndexStore.reset()
