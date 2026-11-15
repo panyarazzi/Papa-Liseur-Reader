@@ -135,6 +135,45 @@ class BookPositionsTest {
     }
 
     @Test
+    fun `resource index resolves repeated hrefs by stable position`() {
+        val book = positions(
+            listOf(
+                listOf(
+                    locator("shared.xhtml", 0.0, 1),
+                    locator("shared.xhtml", 1.0, 2),
+                ),
+                listOf(
+                    locator("shared.xhtml", 0.0, 3),
+                    locator("shared.xhtml", 1.0, 4),
+                ),
+            ),
+        )
+
+        assertEquals(0, book.resourceIndexFor(locator("shared.xhtml", 0.5, 1)))
+        assertEquals(1, book.resourceIndexFor(locator("shared.xhtml", 0.5, 3)))
+    }
+
+    @Test
+    fun `chapter resource indices preserve reading order across split chapters`() {
+        val book = positions(
+            resources = listOf(
+                listOf(locator("one-a.xhtml", 0.0, 1)),
+                listOf(locator("one-b.xhtml", 0.0, 2)),
+                listOf(locator("two-a.xhtml", 0.0, 3)),
+                listOf(locator("two-b.xhtml", 0.0, 4)),
+            ),
+            chapters = listOf(
+                BookChapter("One", firstPosition = 1, lastPosition = 2),
+                BookChapter("Two", firstPosition = 3, lastPosition = 4),
+            ),
+            chapterIndexByResource = mapOf(0 to 0, 1 to 0, 2 to 1, 3 to 1),
+        )
+
+        assertEquals(listOf(0, 1), book.chapterResourceIndices(1))
+        assertEquals(listOf(2, 3), book.chapterResourceIndices(3))
+    }
+
+    @Test
     fun `an ordinary book has no occurrence to report`() {
         val book = positions(
             listOf(
