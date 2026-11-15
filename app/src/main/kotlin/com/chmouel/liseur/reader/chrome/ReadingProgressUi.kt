@@ -213,6 +213,16 @@ fun ReadingFooter(
     val endSlot = if (leftFirst) FooterSlot.RIGHT else FooterSlot.LEFT
     val startField = if (leftFirst) left else right
     val endField = if (leftFirst) right else left
+    val startFigure = footerFigure(startField, progress, reflowable, screens, bookScreens, device)
+    val endFigure = footerFigure(endField, progress, reflowable, screens, bookScreens, device)
+    val middleContent = middleText(progress, mode, reflowable, screens)
+    val middle = middleContent?.let {
+        buildString {
+            if (startFigure != null) append("•")
+            append(it)
+            if (endFigure != null) append("•")
+        }
+    }
     Row(
         modifier
             .fillMaxWidth()
@@ -226,7 +236,7 @@ fun ReadingFooter(
     ) {
         FooterEdge(
             field = startField,
-            figure = footerFigure(startField, progress, reflowable, screens, bookScreens, device),
+            figure = startFigure,
             color = color,
             fontSizeSp = progressFontSizeSp,
             clickLabel = stringResource(startSlot.cycleLabel),
@@ -243,7 +253,6 @@ fun ReadingFooter(
             alignment = Alignment.CenterStart,
             modifier = Modifier.fillMaxHeight(),
         )
-        val middle = middleText(progress, mode, reflowable, screens)
         FooterSlotBox(
             clickLabel = stringResource(R.string.footer_cycle_middle),
             locked = footerLocked,
@@ -276,7 +285,7 @@ fun ReadingFooter(
         }
         FooterEdge(
             field = endField,
-            figure = footerFigure(endField, progress, reflowable, screens, bookScreens, device),
+            figure = endFigure,
             color = color,
             fontSizeSp = progressFontSizeSp,
             clickLabel = stringResource(endSlot.cycleLabel),
@@ -682,7 +691,7 @@ private fun middleText(
         is FooterMiddle.Chapter -> middle.title
 
         is FooterMiddle.PagesAndChapter ->
-            "${middle.page}/${middle.totalPages} ${middle.title}"
+            "${middle.page}/${middle.totalPages}•${middle.title}"
 
         is FooterMiddle.PagesInChapter ->
             if (middle.pages == 0) {
