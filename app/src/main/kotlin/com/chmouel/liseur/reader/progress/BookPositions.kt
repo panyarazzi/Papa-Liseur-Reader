@@ -15,8 +15,8 @@ data class BookChapter(
 )
 
 /**
- * How many pages remain before the next chapter, or null when there is
- * no chapter to count to.
+ * How many stable Readium positions remain before the next chapter, or null
+ * when there is no chapter to count to. This is not a screen-page count.
  *
  * A nameless chapter counts as no chapter. [BookPositions.of] gives
  * every book at least one, by opening a chapter on the first resource
@@ -36,10 +36,10 @@ fun pagesLeftInChapter(chapter: BookChapter?, position: Int): Int? {
 }
 
 /**
- * The page-like "positions" Readium computes for a book, grouped by
- * chapter. Positions are numbered from 1 and are stable for a given
- * book, whatever the font size, which makes them a good basis for
- * page numbers, the scrubber and time-left estimates.
+ * Readium's stable locator positions, grouped by chapter. Positions are
+ * numbered from 1 and remain stable across typography and viewport changes.
+ * They are used for restoration, bookmarks, sync, scrubbing and progress
+ * estimation. They are not screen pages and must never be used as page counts.
  */
 class BookPositions(
     private val locators: List<Locator>,
@@ -442,10 +442,8 @@ data class StableBookProgress(
  * Where the reader is in the book, and how much is left to read.
  *
  * [positionsLeftInChapter] is null when there is no chapter to count
- * to. The time estimates fall back to the end of the book in that
- * case, which is a fair guess for a figure that is a guess anyway; a
- * count labelled "in chapter" cannot do the same without quietly
- * counting something else. See [pagesLeftInChapter].
+ * to. It is a stable-position distance, not a count of screen pages.
+ * The time estimates fall back to the end of the book in that case.
  */
 data class ReaderProgress(
     val position: Int,
