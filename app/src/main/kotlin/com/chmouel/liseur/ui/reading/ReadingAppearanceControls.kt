@@ -736,7 +736,7 @@ fun ReadingLayoutControls(
             value = pageMargins ?: 1.0,
             suffix = "×",
             enabled = enabled,
-            onChanged = onPageMarginsChanged,
+            onChanged = { onPageMarginsChanged(it) },
             onReset = if (pageMargins != null) ({ onPageMarginsChanged(null) }) else null,
             minimum = 0.0,
             maximum = 4.0,
