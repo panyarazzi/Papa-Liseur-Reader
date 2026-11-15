@@ -8,11 +8,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -29,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.chmouel.liseur.R
 import com.chmouel.liseur.reader.annotations.HighlightPalette
 import com.chmouel.liseur.reader.annotations.HighlightTint
+import com.chmouel.liseur.reader.annotations.highlightAlpha
 
 /**
  * Which colours the bar over a selected passage offers, and which one a
@@ -59,10 +66,39 @@ import com.chmouel.liseur.reader.annotations.HighlightTint
 @Composable
 fun ReadingHighlightPaletteControls(
     palette: HighlightPalette,
+    strength: Int,
+    onStrengthChanged: (Int) -> Unit,
     onTintToggled: (HighlightTint) -> Unit,
     onDefaultChanged: (HighlightTint) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        ReadingSectionLabel(stringResource(R.string.reader_highlight_strength))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = strength.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(
+                onClick = { onStrengthChanged((strength - 5).coerceAtLeast(0)) },
+                enabled = strength > 0,
+            ) {
+                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+            }
+            IconButton(
+                onClick = { onStrengthChanged((strength + 5).coerceAtMost(100)) },
+                enabled = strength < 100,
+            ) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+            }
+        }
+        Slider(
+            value = strength.toFloat(),
+            onValueChange = { onStrengthChanged(it.roundToInt()) },
+            valueRange = 0f..100f,
+            steps = 99,
+        )
+        ReadingSupportingText(stringResource(R.string.reader_highlight_strength_help))
         ReadingSectionLabel(stringResource(R.string.reader_highlight_colours))
         FlowRow(
             Modifier.fillMaxWidth(),
@@ -74,6 +110,7 @@ fun ReadingHighlightPaletteControls(
                     tint = tint,
                     offered = tint in palette.offered,
                     isDefault = tint == palette.default,
+                    strength = strength,
                     onToggle = { onTintToggled(tint) },
                     onMakeDefault = { onDefaultChanged(tint) },
                 )
@@ -117,6 +154,7 @@ private fun HighlightTintSwatch(
     tint: HighlightTint,
     offered: Boolean,
     isDefault: Boolean,
+    strength: Int,
     onToggle: () -> Unit,
     onMakeDefault: () -> Unit,
 ) {
@@ -159,7 +197,7 @@ private fun HighlightTintSwatch(
             Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(if (offered) tint.color else Color.Transparent)
+                .background(if (offered) tint.color.copy(alpha = highlightAlpha(strength)) else Color.Transparent)
                 .border(
                     width = if (offered) 0.dp else 2.dp,
                     color = if (offered) Color.Transparent else tint.color,
