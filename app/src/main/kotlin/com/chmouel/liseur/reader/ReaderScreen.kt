@@ -93,6 +93,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
@@ -249,6 +250,8 @@ import com.chmouel.liseur.reader.chrome.TypographySheet
 import com.chmouel.liseur.reader.progress.GoToDestination
 import com.chmouel.liseur.reader.progress.GoToPagePrompt
 import com.chmouel.liseur.reader.progress.BookScreenEstimate
+import com.chmouel.liseur.reader.progress.WholeBookPageIndexStore
+import com.chmouel.liseur.reader.progress.PaginationMeasurementHostFragment
 import com.chmouel.liseur.reader.progress.ReaderProgress
 import com.chmouel.liseur.reader.progress.SectionScreenProgress
 import com.chmouel.liseur.reader.progress.SectionScreens
@@ -423,6 +426,7 @@ private enum class ReaderSheet { NONE, TYPOGRAPHY, ADVANCED }
 @Composable
 internal fun ReaderScreen(
     publication: Publication,
+    pageIndexStore: WholeBookPageIndexStore,
     displayAuthors: List<String>,
     /**
      * Where this navigator is being reopened to, snapshotted when it was
@@ -4084,57 +4088,56 @@ internal fun ReaderScreen(
                 }
             },
         ).dp
+        val navigatorViewportModifier = Modifier
+            .fillMaxSize()
+            .then(behindViewer)
+            .then(
+                if (pageContainerScrolls) {
+                    Modifier
+                        .windowInsetsPadding(
+                            WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal),
+                        )
+                        .padding(
+                            top = (
+                                (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
+                                if (prefs.topProgressMode != TopProgressMode.OFF) {
+                                    (prefs.progressFontSizeSp * 1.5f + 22f).toInt()
+                                } else 0
+                            ).dp,
+                            bottom = (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0).dp,
+                        )
+                } else {
+                    Modifier
+                        .windowInsetsPadding(WindowInsets.displayCutout)
+                        .padding(
+                            top = (
+                                (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
+                                if (prefs.topProgressMode != TopProgressMode.OFF) {
+                                    (prefs.progressFontSizeSp * 1.5f + 22f).toInt()
+                                } else 0
+                            ).dp,
+                            bottom = (
+                                (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0) +
+                                if (footerShowing) footerReserve.value.toInt() else 0
+                            ).dp,
+                        )
+                },
+            )
+
+        // The measurement navigator is isolated from the visible reader.
+        // It receives the same viewport, preferences and EPUB transforms,
+        // but its own FragmentManager and pagination listener.
+        if (reflowableText && !effectiveScrolling) {
+            key(pageIndexStore, layoutGeneration) {
+                AndroidFragment<PaginationMeasurementHostFragment>(
+                    modifier = navigatorViewportModifier.alpha(0f),
+                )
+            }
+        }
+
         key(columnMode, scrollMode, fontKey) {
-            // Derived, not measured: the reservation must exist before
-            // the page lays out, or the last line is cut in half. The
-            // line height is the very style the footer draws with, and
-            // toDp() owns the sp-to-dp conversion so nonlinear font
-            // scaling is honoured. A footer switched off reserves only
-            // the page's own 12dp margin, same as the top edge — the
-            // footer band goes back to the text, and the one reflow
-            // that costs is the settings change itself.
-            //
-            // A vertical-text book draws no footer either, but it keeps
-            // the band: whether the text is vertical is only known once
-            // the navigator has read the publication, and taking the
-            // band back then would reflow the book under the reader on
-            // open. An unused 38dp is the cheaper of the two.
             AndroidFragment<EpubNavigatorFragment>(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(behindViewer)
-                    .then(
-                        if (pageContainerScrolls) {
-                            Modifier
-                                .windowInsetsPadding(
-                                    WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal),
-                                )
-                                .padding(
-                                    top = (
-                                        (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
-                                        if (prefs.topProgressMode != TopProgressMode.OFF) {
-                                            (prefs.progressFontSizeSp * 1.5f + 22f).toInt()
-                                        } else 0
-                                    ).dp,
-                                    bottom = (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0).dp,
-                                )
-                        } else {
-                            Modifier
-                                .windowInsetsPadding(WindowInsets.displayCutout)
-                                .padding(
-                                    top = (
-                                        (if (prefs.marginTopDp is Number) (prefs.marginTopDp as Number).toInt() else 0) +
-                                        if (prefs.topProgressMode != TopProgressMode.OFF) {
-                                            (prefs.progressFontSizeSp * 1.5f + 22f).toInt()
-                                        } else 0
-                                    ).dp,
-                                    bottom = (
-                                        (if (prefs.marginBottomDp is Number) (prefs.marginBottomDp as Number).toInt() else 0) +
-                                        if (footerShowing) footerReserve.value.toInt() else 0
-                                    ).dp,
-                                )
-                        },
-                    ),
+                modifier = navigatorViewportModifier,
             ) { fragment ->
                 navigator = fragment
                 fragment.view?.let(::consumeInsetsForReadium)
