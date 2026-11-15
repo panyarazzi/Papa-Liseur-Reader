@@ -38,6 +38,7 @@ import com.chmouel.liseur.reader.chrome.ExternalLinkDialog
 import com.chmouel.liseur.reader.chrome.PageTurner
 import androidx.lifecycle.lifecycleScope
 import com.chmouel.liseur.R
+import com.chmouel.liseur.LiseurApplication
 import com.chmouel.liseur.container
 import com.chmouel.liseur.data.db.Book
 import androidx.compose.foundation.layout.Box
@@ -89,6 +90,18 @@ class ReaderActivity : FragmentActivity() {
                 "changingConfigurations=$isChangingConfigurations target=${target?.id} " +
                 "keyboard=${config.keyboard} hardKeyboardHidden=${config.hardKeyboardHidden} " +
                 "orientation=${config.orientation} screenLayout=${config.screenLayout}",
+        )
+        (application as? LiseurApplication)?.diagnostics?.record(
+            "reader.lifecycle",
+            mapOf(
+                "stage" to event.substringBefore(' '),
+                "activityInstance" to System.identityHashCode(this).toString(),
+                "changingConfigurations" to isChangingConfigurations.toString(),
+                "orientation" to config.orientation.toString(),
+                "screenLayout" to config.screenLayout.toString(),
+                "keyboard" to config.keyboard.toString(),
+                "hardKeyboardHidden" to config.hardKeyboardHidden.toString(),
+            ),
         )
     }
 
