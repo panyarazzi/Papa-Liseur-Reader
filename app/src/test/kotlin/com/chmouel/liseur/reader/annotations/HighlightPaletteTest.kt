@@ -16,6 +16,15 @@ import org.junit.Test
 class HighlightPaletteTest {
 
     @Test
+    fun `highlight strength maps to bounded alpha and clamps invalid values`() {
+        assertEquals(0.15f, highlightAlpha(0), 0.0001f)
+        assertEquals(0.54f, highlightAlpha(DEFAULT_HIGHLIGHT_STRENGTH), 0.0001f)
+        assertEquals(0.75f, highlightAlpha(100), 0.0001f)
+        assertEquals(highlightAlpha(0), highlightAlpha(-20), 0.0001f)
+        assertEquals(highlightAlpha(100), highlightAlpha(120), 0.0001f)
+    }
+
+    @Test
     fun `one colour by default`() {
         val palette = HighlightPalette()
 
