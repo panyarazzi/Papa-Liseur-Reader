@@ -23,6 +23,12 @@ import org.readium.r2.shared.publication.Locator
  * could not name would otherwise arrive rewritten, and a sync that
  * quietly changes what it carries is worse than one colour too many.
  */
+const val DEFAULT_HIGHLIGHT_STRENGTH = 65
+
+/** Maps the reader-facing 0–100 scale to a legible decoration alpha. */
+fun highlightAlpha(strength: Int): Float =
+    0.15f + (0.60f * strength.coerceIn(0, 100) / 100f)
+
 enum class HighlightTint(val color: Color, @param:StringRes val label: Int) {
     YELLOW(Color(0xFFFFD54F), R.string.annotation_tint_yellow),
     GREEN(Color(0xFF9CCC65), R.string.annotation_tint_green),
@@ -52,7 +58,9 @@ const val DECORATION_GROUP = "annotations"
  * highlight so the words it belongs to stay visible.
  */
 @OptIn(ExperimentalReadiumApi::class)
-fun List<BookAnnotation>.toDecorations(): List<Decoration> =
+fun List<BookAnnotation>.toDecorations(
+    strength: Int = DEFAULT_HIGHLIGHT_STRENGTH,
+): List<Decoration> =
     mapNotNull { annotation ->
         if (annotation.kind == AnnotationKind.BOOKMARK.name ||
             annotation.kind == AnnotationKind.BOOK_NOTE.name
@@ -64,7 +72,7 @@ fun List<BookAnnotation>.toDecorations(): List<Decoration> =
             id = annotation.id,
             locator = locator,
             style = Decoration.Style.Highlight(
-                tint = HighlightTint.fromName(annotation.tint).color.toArgb(),
+                tint = HighlightTint.fromName(annotation.tint).color.copy(alpha = highlightAlpha(strength)).toArgb(),
                 isActive = false,
             ),
         )
