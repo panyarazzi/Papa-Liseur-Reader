@@ -563,7 +563,10 @@ class ReaderActivity : FragmentActivity() {
                                                 totalPages: Int,
                                                 locator: org.readium.r2.shared.publication.Locator,
                                             ) {
+                                                val resourceIndex = viewModel.resourceIndexFor(locator)
+                                                    ?: return
                                                 pageIndexStore.publishMeasurement(
+                                                    resourceIndex = resourceIndex,
                                                     href = locator.href.toString(),
                                                     totalPages = totalPages,
                                                 )
