@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -34,9 +33,8 @@ class DiagnosticHistory(context: Context) {
     private val lock = Any()
 
     init {
-        if (!directory.exists() && !directory.mkdirs()) {
-            throw IOException("Could not create diagnostic history directory")
-        }
+        // Diagnostics must never prevent the reader itself from starting.
+        runCatching { directory.mkdirs() }
     }
 
     /** Queue one bounded event without blocking the reader thread. */
@@ -85,6 +83,7 @@ class DiagnosticHistory(context: Context) {
         withContext(Dispatchers.IO) {
             require(maxCharacters in MIN_CHAT_PART_CHARACTERS..MAX_CHAT_PART_CHARACTERS)
             writer.submit {}.get(5, TimeUnit.SECONDS)
+            if (!directory.isDirectory) return@withContext emptyList()
             val lines = synchronized(lock) {
                 eventFiles().flatMap { it.readLines(Charsets.UTF_8) }.filter { it.isNotBlank() }
             }
@@ -141,7 +140,7 @@ class DiagnosticHistory(context: Context) {
                 appendLine("BUILD_EPOCH_SECONDS: ${BuildConfig.PAPA_BUILD_EPOCH_SECONDS}")
                 appendLine("DEVICE: ${Build.MANUFACTURER} ${Build.MODEL}")
                 appendLine("ANDROID_API: ${Build.VERSION.SDK_INT}")
-                appendLine("SESSION: $sessionId")
+                appendLine("EXPORT_SESSION: $sessionId (events may include retained earlier sessions)")
                 appendLine("PART: ${index + 1}/$total")
                 appendLine("EVENT_LINES: ${group.size}")
                 appendLine("--- EVENTS ---")
