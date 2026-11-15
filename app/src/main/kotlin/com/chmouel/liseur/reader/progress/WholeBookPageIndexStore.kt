@@ -27,7 +27,10 @@ data class CurrentResourcePage(
  * Shared state between the visible navigator, the background measurement
  * navigator and reader chrome. It deliberately contains no scroll geometry.
  */
-class WholeBookPageIndexStore(private val resourceCount: Int) {
+class WholeBookPageIndexStore(
+    private val resourceCount: Int,
+    private val onDiagnostic: (String, Map<String, String>) -> Unit = { _, _ -> },
+) {
     @Volatile
     var generation: Int = 0
         private set
@@ -49,7 +52,28 @@ class WholeBookPageIndexStore(private val resourceCount: Int) {
 
     @Synchronized
     fun recordResource(resourceIndex: Int, totalPages: Int) {
-        _index.value = _index.value.recording(resourceIndex, totalPages)
+        val previous = _index.value
+        val updated = previous.recording(resourceIndex, totalPages)
+        if (updated == previous) return
+        _index.value = updated
+        onDiagnostic(
+            "pagination.resource_measured",
+            mapOf(
+                "resourceIndex" to resourceIndex.toString(),
+                "totalPages" to totalPages.toString(),
+                "generation" to generation.toString(),
+            ),
+        )
+        if (updated.isComplete) {
+            onDiagnostic(
+                "pagination.index_complete",
+                mapOf(
+                    "resourceCount" to updated.resourceCount.toString(),
+                    "totalPages" to (updated.totalPages ?: 0).toString(),
+                    "generation" to generation.toString(),
+                ),
+            )
+        }
     }
 
     @Synchronized
@@ -64,12 +88,25 @@ class WholeBookPageIndexStore(private val resourceCount: Int) {
             pageInResource = pageIndexZeroBased + 1,
             totalPagesInResource = totalPages,
         )
+        onDiagnostic(
+            "pagination.visible_page",
+            mapOf(
+                "resourceIndex" to resourceIndex.toString(),
+                "pageIndexZeroBased" to pageIndexZeroBased.toString(),
+                "totalPages" to totalPages.toString(),
+                "generation" to generation.toString(),
+            ),
+        )
     }
 
     fun recordMeasurement(href: String, resourceIndex: Int, totalPages: Int) {
         if (href.isBlank() || totalPages <= 0) return
         recordResource(resourceIndex, totalPages)
         publishMeasurement(href, totalPages)
+    }
+
+    fun recordScannerEvent(event: String, attributes: Map<String, String> = emptyMap()) {
+        onDiagnostic(event, attributes + ("generation" to generation.toString()))
     }
 
     fun publishMeasurement(href: String, totalPages: Int) {
@@ -84,5 +121,12 @@ class WholeBookPageIndexStore(private val resourceCount: Int) {
         generation += 1
         _index.value = WholeBookPageIndex.empty(resourceCount)
         _currentPage.value = null
+        onDiagnostic(
+            "pagination.index_invalidated",
+            mapOf(
+                "resourceCount" to resourceCount.toString(),
+                "generation" to generation.toString(),
+            ),
+        )
     }
 }
