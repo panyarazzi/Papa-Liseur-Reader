@@ -136,7 +136,7 @@ class FooterMiddleTest {
                 reflowable = true,
                 pageIndex = index,
                 currentPage = current,
-                chapterResourceIndices = chapter,
+                chapterResourceIndices = emptyList(),
             ),
         )
     }
