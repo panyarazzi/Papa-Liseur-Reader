@@ -3542,8 +3542,8 @@ internal fun ReaderScreen(
             onAnnotationAction.toggleBookmark(
                 locatorToSave,
                 bookmarkPreview,
-                currentResourcePage?.pageInResource,
-                currentResourcePage?.totalPagesInResource,
+                visibleResourcePage?.takeIf { pageCountingAllowed }?.pageInResource,
+                visibleResourcePage?.takeIf { pageCountingAllowed }?.totalPagesInResource,
             )
         }
     }
