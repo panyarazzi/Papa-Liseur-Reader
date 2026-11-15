@@ -37,6 +37,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
@@ -288,14 +290,14 @@ fun AboutScreen(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                TextButton(diagnosticPartIndex > 0, onClick = { diagnosticPartIndex-- }) {
+                                TextButton(enabled = diagnosticPartIndex > 0, onClick = { diagnosticPartIndex-- }) {
                                     Text("Previous")
                                 }
                                 TextButton(onClick = { clipboard.setText(AnnotatedString(part.text)) }) {
                                     Text("Copy this part")
                                 }
                                 TextButton(
-                                    diagnosticPartIndex < diagnosticParts.lastIndex,
+                                    enabled = diagnosticPartIndex < diagnosticParts.lastIndex,
                                     onClick = { diagnosticPartIndex++ },
                                 ) { Text("Next") }
                             }
