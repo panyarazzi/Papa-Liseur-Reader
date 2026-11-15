@@ -2,6 +2,8 @@ package com.chmouel.liseur.reader.chrome
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -50,12 +52,22 @@ fun FontSizeHud(size: Double, theme: ReaderTheme) {
     // aloud tells a screen reader nothing, and the percentage does.
     val spoken = stringResource(R.string.reader_pinch_size, (size * 100).roundToInt())
     HudPill(theme) {
-        Text(
-            text = stringResource(R.string.reader_pinch_sample),
-            color = theme.foreground,
-            fontSize = (SAMPLE_BASE_SP * size).sp,
-            modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.reader_pinch_sample),
+                color = theme.foreground,
+                fontSize = (SAMPLE_BASE_SP * size).sp,
+                modifier = Modifier.clearAndSetSemantics { contentDescription = spoken },
+            )
+            Text(
+                text = String.format(java.util.Locale.ROOT, "%.2f×", size),
+                color = theme.foreground,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
     }
 }
 
