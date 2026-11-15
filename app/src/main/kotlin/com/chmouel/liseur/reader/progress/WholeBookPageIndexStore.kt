@@ -34,7 +34,7 @@ class WholeBookPageIndexStore(private val resourceCount: Int) {
 
     private val measurementSequence = AtomicLong(0)
     @Volatile
-    var prepareResource: suspend (EpubNavigatorFragment) -> Boolean? = { false }
+    var prepareResource: suspend (EpubNavigatorFragment) -> Boolean? = { null }
 
     private val _index = MutableStateFlow(WholeBookPageIndex.empty(resourceCount))
     val index: StateFlow<WholeBookPageIndex> = _index.asStateFlow()
