@@ -31,12 +31,10 @@ private const val SAMPLE_BASE_SP = 22f
 /**
  * What a pinch on the page is doing, while it is doing it.
  *
- * The reader is not asking "what multiplier is this", they are asking
- * "can I read that", so the pill answers in the only terms that question
- * has: the letters "Aa" drawn at the size being landed on. The page
+ * The reader can judge the sample letters at the size being landed
+ * on and read the exact numeric multiplier beneath them. The page
  * underneath has not moved — nothing commits until the fingers lift (see
- * `docs/adr/0022-pinch-on-the-page.md`) — so this sample is the whole of
- * the feedback.
+ * `docs/adr/0022-pinch-on-the-page.md`).
  *
  * Painted in the reading theme rather than in Material colours, for the
  * same reason [FootnoteCard] is: a white card over a black page at night
