@@ -57,10 +57,11 @@ object DiagnosticExport {
         val info = buildString {
             appendLine("PAPA-LISEUR DIAGNOSTIC EXPORT INFO")
             appendLine("APK_LABEL: ${BuildConfig.PAPA_BUILD_LABEL}")
+            appendLine("APPLICATION_ID: ${BuildConfig.APPLICATION_ID}")
             appendLine("VERSION: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
             appendLine("COMMIT: ${BuildConfig.PAPA_BUILD_COMMIT}")
             appendLine("RUN_ID: ${BuildConfig.PAPA_BUILD_RUN_ID.ifBlank { "local" }}")
-            appendLine("BUILD_EPOCH_SECONDS: ${BuildConfig.PAPA_BUILD_EPOCH_SECONDS}")
+            appendLine("SOURCE_COMMIT_EPOCH_SECONDS: ${BuildConfig.PAPA_BUILD_EPOCH_SECONDS}")
             appendLine("EXPORTED_AT: $stamp")
             appendLine("PARTS: ${parts.size}")
             appendLine("CHARACTER_LIMIT_PER_PART: ${DiagnosticHistory.DEFAULT_CHAT_PART_CHARACTERS}")
