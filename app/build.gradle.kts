@@ -129,6 +129,8 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
+            // Make the side-by-side development install unmistakable in the launcher.
+            resValue("string", "app_name", "Liseur Test (FOSS)")
             isMinifyEnabled = false
         }
     }
