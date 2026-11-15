@@ -10,13 +10,10 @@ import androidx.fragment.app.FragmentFactory
 import androidx.fragment.app.commitNow
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
-import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.shared.publication.Publication
 
 /**
@@ -30,9 +27,7 @@ import org.readium.r2.shared.publication.Publication
 class PaginationMeasurementHostFragment(
     private val publication: Publication,
     private val navigatorFactory: FragmentFactory,
-    private val measurementPreferences: StateFlow<EpubPreferences>,
     private val pageIndexStore: WholeBookPageIndexStore,
-    private val enabled: Boolean,
 ) : Fragment() {
 
     private var containerId: Int = View.generateViewId()
@@ -65,19 +60,10 @@ class PaginationMeasurementHostFragment(
 
     override fun onStart() {
         super.onStart()
-        if (!enabled) return
         scanJob = viewLifecycleOwner.lifecycleScope.launch {
             val navigator = childFragmentManager.findFragmentByTag(NAVIGATOR_TAG)
                 as? EpubNavigatorFragment ?: return@launch
-            var previousPreferences: EpubPreferences? = null
-            measurementPreferences.collectLatest { preferences ->
-                if (previousPreferences != null && previousPreferences != preferences) {
-                    pageIndexStore.reset()
-                }
-                previousPreferences = preferences
-                navigator.submitPreferences(preferences)
-                scanReadingOrder(navigator)
-            }
+            scanReadingOrder(navigator)
         }
     }
 
