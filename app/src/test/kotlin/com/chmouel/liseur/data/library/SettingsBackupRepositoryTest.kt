@@ -286,6 +286,7 @@ class SettingsBackupRepositoryTest {
         val app = AppSettingsRepository(store("annotation-round-trip-app.preferences_pb"))
         val reader = ReaderPreferencesRepository(store("annotation-round-trip-reader.preferences_pb"))
         val fonts = UserFontRepository(context, this, loadCheck = { true })
+        fonts.awaitReady()
         val repository = repository(app, reader, fonts)
         val source = "file:///old-location/book.epub"
         val destination = "file:///new-location/book.epub"
