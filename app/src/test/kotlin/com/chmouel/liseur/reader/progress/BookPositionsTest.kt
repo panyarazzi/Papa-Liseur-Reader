@@ -174,6 +174,21 @@ class BookPositionsTest {
     }
 
     @Test
+    fun `a nameless chapter is not treated as a page-counting chapter`() {
+        val book = positions(
+            resources = listOf(
+                listOf(locator("one.xhtml", 0.0, 1)),
+                listOf(locator("two.xhtml", 0.0, 2)),
+            ),
+            chapters = listOf(BookChapter(null, firstPosition = 1, lastPosition = 2)),
+            chapterIndexByResource = mapOf(0 to 0, 1 to 0),
+        )
+
+        assertEquals(emptyList<Int>(), book.chapterResourceIndices(0))
+        assertEquals(emptyList<Int>(), book.chapterResourceIndices(1))
+    }
+
+    @Test
     fun `an ordinary book has no occurrence to report`() {
         val book = positions(
             listOf(
