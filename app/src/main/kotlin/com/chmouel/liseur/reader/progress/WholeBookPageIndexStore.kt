@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 data class ResourcePageMeasurement(
     val href: String,
     val totalPages: Int,
+    val generation: Int,
 )
 
 /** The exact page currently reported by the visible Readium navigator. */
@@ -23,7 +24,11 @@ data class CurrentResourcePage(
  * Shared state between the visible navigator, the background measurement
  * navigator and reader chrome. It deliberately contains no scroll geometry.
  */
-class WholeBookPageIndexStore(resourceCount: Int) {
+class WholeBookPageIndexStore(private val resourceCount: Int) {
+    @Volatile
+    var generation: Int = 0
+        private set
+
     private val _index = MutableStateFlow(WholeBookPageIndex.empty(resourceCount))
     val index: StateFlow<WholeBookPageIndex> = _index.asStateFlow()
 
@@ -63,11 +68,13 @@ class WholeBookPageIndexStore(resourceCount: Int) {
 
     fun publishMeasurement(href: String, totalPages: Int) {
         if (href.isBlank() || totalPages <= 0) return
-        _measurements.tryEmit(ResourcePageMeasurement(href, totalPages))
+        _measurements.tryEmit(ResourcePageMeasurement(href, totalPages, generation))
     }
 
     @Synchronized
-    fun reset(resourceCount: Int) {
+    @Synchronized
+    fun reset(resourceCount: Int = this.resourceCount) {
+        generation += 1
         _index.value = WholeBookPageIndex.empty(resourceCount)
         _currentPage.value = null
     }
