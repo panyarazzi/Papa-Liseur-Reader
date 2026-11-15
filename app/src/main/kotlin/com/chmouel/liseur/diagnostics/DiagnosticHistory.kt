@@ -134,10 +134,11 @@ class DiagnosticHistory(context: Context) {
             val header = buildString {
                 appendLine("PAPA-LISEUR DIAGNOSTIC EXPORT")
                 appendLine("APK_LABEL: ${BuildConfig.PAPA_BUILD_LABEL}")
+                appendLine("APPLICATION_ID: ${BuildConfig.APPLICATION_ID}")
                 appendLine("VERSION: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
                 appendLine("COMMIT: ${BuildConfig.PAPA_BUILD_COMMIT}")
                 appendLine("RUN_ID: ${BuildConfig.PAPA_BUILD_RUN_ID.ifBlank { "local" }}")
-                appendLine("BUILD_EPOCH_SECONDS: ${BuildConfig.PAPA_BUILD_EPOCH_SECONDS}")
+                appendLine("SOURCE_COMMIT_EPOCH_SECONDS: ${BuildConfig.PAPA_BUILD_EPOCH_SECONDS}")
                 appendLine("DEVICE: ${Build.MANUFACTURER} ${Build.MODEL}")
                 appendLine("ANDROID_API: ${Build.VERSION.SDK_INT}")
                 appendLine("EXPORT_SESSION: $sessionId (events may include retained earlier sessions)")
