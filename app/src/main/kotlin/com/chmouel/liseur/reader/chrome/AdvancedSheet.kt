@@ -92,6 +92,8 @@ import com.chmouel.liseur.ui.windowWidth
 fun AdvancedSheet(
     prefs: ReaderPrefs,
     scrolling: Boolean,
+    scrollMode: Boolean,
+    onScrollModeChanged: (Boolean) -> Unit,
     autoScrollSpeed: Float,
     typographyIsOwn: Boolean,
     readingCss: ReadingCss,
@@ -143,6 +145,7 @@ fun AdvancedSheet(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             val reshapeable = readingCss.honoursAnything
+            ScrollModeToggle(enabled = scrollMode, onChanged = onScrollModeChanged)
             if (!reshapeable) FixedLayoutNotice()
             ReadingLayoutControls(
                 lineHeight = prefs.lineHeight,
@@ -470,3 +473,31 @@ private val TopProgressMode.label: String
         TopProgressMode.PERCENT -> "Percent"
         TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> "Pages left + chapter"
     }
+
+
+@Composable
+private fun ScrollModeToggle(enabled: Boolean, onChanged: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(
+                value = enabled,
+                role = Role.Switch,
+                onValueChange = onChanged,
+            ),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_scroll_mode),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = stringResource(R.string.settings_scroll_mode_detail),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = null)
+    }
+}
