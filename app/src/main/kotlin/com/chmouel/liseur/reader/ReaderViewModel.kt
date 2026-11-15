@@ -43,9 +43,6 @@ import com.chmouel.liseur.reader.progress.BookOrbitOpening
 import com.chmouel.liseur.reader.ResourceAddress
 import com.chmouel.liseur.data.db.BookScreen
 import com.chmouel.liseur.data.db.BookScreenDao
-import com.chmouel.liseur.data.db.BookReadingMode
-import com.chmouel.liseur.data.db.BookReadingModeDao
-import com.chmouel.liseur.data.db.scrollsWith
 import com.chmouel.liseur.data.db.keepsScreenOnWith
 import com.chmouel.liseur.data.db.BookTypography
 import com.chmouel.liseur.data.db.BookCustomTypography
@@ -168,7 +165,6 @@ class ReaderViewModel(
     private val typographyDao: BookTypographyDao,
     private val customTypographyDao: BookCustomTypographyDao,
     private val bookScreenDao: BookScreenDao,
-    private val readingModeDao: BookReadingModeDao,
     private val library: LocalLibraryRepository,
     private val prefsRepo: ReaderPreferencesRepository,
     private val readingPace: ReadingPaceRepository,
@@ -3133,7 +3129,6 @@ class ReaderViewModel(
      * book, so it is about that book, and a later change to the app-wide
      * setting has no business undoing it.
      */
-    /** Changes the single app-wide reading mode shared with Library Settings. */
     fun setScrollMode(enabled: Boolean) = viewModelScope.launch {
         appSettings.setScrollMode(enabled)
     }
@@ -3344,7 +3339,6 @@ class ReaderViewModel(
                     typographyDao = container.database.typographyDao(),
                     customTypographyDao = container.database.customTypographyDao(),
                     bookScreenDao = container.database.bookScreenDao(),
-                    readingModeDao = container.database.bookReadingModeDao(),
                     library = container.libraryRepository,
                     prefsRepo = container.readerPreferences,
                     readingPace = container.readingPace,
