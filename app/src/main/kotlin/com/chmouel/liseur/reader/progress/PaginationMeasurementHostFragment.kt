@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.shared.publication.Publication
@@ -70,9 +71,11 @@ class PaginationMeasurementHostFragment(
     override fun onStart() {
         super.onStart()
         scanJob = viewLifecycleOwner.lifecycleScope.launch {
-            val navigator = childFragmentManager.findFragmentByTag(NAVIGATOR_TAG)
-                as? EpubNavigatorFragment ?: return@launch
-            scanReadingOrder(navigator)
+            pageIndexStore.scannerMutex.withLock {
+                val navigator = childFragmentManager.findFragmentByTag(NAVIGATOR_TAG)
+                    as? EpubNavigatorFragment ?: return@withLock
+                scanReadingOrder(navigator)
+            }
         }
     }
 
@@ -86,7 +89,10 @@ class PaginationMeasurementHostFragment(
         val measurementGeneration = pageIndexStore.generation
         pageIndexStore.recordScannerEvent(
             "pagination.scan_started",
-            mapOf("resourceCount" to publication.readingOrder.size.toString()),
+            mapOf(
+                "resourceCount" to publication.readingOrder.size.toString(),
+                "scannerGeneration" to measurementGeneration.toString(),
+            ),
         )
         publication.readingOrder.forEachIndexed { index, link ->
             if (pageIndexStore.index.value.pagesByResource.containsKey(index)) {
@@ -102,6 +108,10 @@ class PaginationMeasurementHostFragment(
             }
             val href = locator.href.toString().substringBefore('#')
             pageIndexStore.expectMeasurement(index, href)
+            // SharedFlow replays its last value. Require a callback emitted
+            // after this navigation request so a repeated href cannot reuse
+            // the previous resource's measurement.
+            val sequenceBeforeNavigation = pageIndexStore.latestMeasurementSequence()
             if (!navigator.go(locator, animated = false)) {
                 pageIndexStore.clearExpectedMeasurement(index)
                 pageIndexStore.recordScannerEvent(
@@ -117,6 +127,7 @@ class PaginationMeasurementHostFragment(
             val initialMeasurement = withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
                 pageIndexStore.measurements.first { event ->
                     event.generation == measurementGeneration &&
+                        event.sequence > sequenceBeforeNavigation &&
                         event.href.substringBefore('#') == href && event.totalPages > 0
                 }
             } ?: run {
