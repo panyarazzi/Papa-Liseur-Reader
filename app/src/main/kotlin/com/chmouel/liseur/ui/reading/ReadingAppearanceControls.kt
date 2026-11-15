@@ -53,9 +53,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chmouel.liseur.R
@@ -788,19 +786,14 @@ private fun CustomMetricEditor(
             }
             OutlinedTextField(
                 value = text,
-                onValueChange = { next -> text = next },
+                onValueChange = { next ->
+                    text = next
+                    next.toDoubleOrNull()?.takeIf { it.isFinite() && it in minimum..maximum }?.let(onChanged)
+                },
                 enabled = enabled,
                 singleLine = true,
                 suffix = { if (suffix.isNotEmpty()) Text(suffix) },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = {
-                    text.toDoubleOrNull()
-                        ?.takeIf { it.isFinite() && it in minimum..maximum }
-                        ?.let(onChanged)
-                }),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
             )
             IconButton(enabled = enabled && value < maximum, onClick = {
