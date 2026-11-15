@@ -14,6 +14,7 @@ import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -72,6 +73,7 @@ import com.chmouel.liseur.ui.LocalEInk
 import com.chmouel.liseur.ui.WidthClass
 import com.chmouel.liseur.ui.widthClass
 import com.chmouel.liseur.ui.ProvideEInk
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -464,6 +466,17 @@ class ReaderActivity : FragmentActivity() {
                                 val pageIndexStore = remember(s.publication, initialPreferences) {
                                     WholeBookPageIndexStore(s.publication.readingOrder.size)
                                 }
+                                val measurementPreferences = remember(pageIndexStore) {
+                                    MutableStateFlow(initialPreferences)
+                                }
+                                SideEffect {
+                                    measurementPreferences.value = prefs.toEpubPreferences(
+                                        theme = readingTheme,
+                                        columnMode = columnMode,
+                                        scroll = scrollMode,
+                                        css = readingCss,
+                                    )
+                                }
                                 val epubConfiguration = remember(
                                     s.navigatorFactory,
                                     columnMode,
@@ -559,6 +572,7 @@ class ReaderActivity : FragmentActivity() {
                                             PaginationMeasurementHostFragment(
                                                 publication = s.publication,
                                                 navigatorFactory = measurementNavigatorFactory,
+                                                measurementPreferences = measurementPreferences,
                                                 pageIndexStore = pageIndexStore,
                                                 enabled = true,
                                             )
