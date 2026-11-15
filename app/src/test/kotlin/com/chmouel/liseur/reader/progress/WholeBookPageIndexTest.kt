@@ -43,13 +43,12 @@ class WholeBookPageIndexTest {
     fun `chapter count sums its resources and never guesses missing counts`() {
         val index = WholeBookPageIndex.empty(4)
             .recording(0, 4)
-            .recording(1, 7)
             .recording(2, 6)
 
         assertNull(index.pagesInChapter(listOf(1, 3)))
         assertNull(index.pageInChapter(2, 3, listOf(1, 2, 3)))
 
-        val complete = index.recording(3, 2)
+        val complete = index.recording(1, 7).recording(3, 2)
         assertEquals(8, complete.pagesInChapter(listOf(2, 3)))
         assertEquals(8, complete.pageInChapter(3, 2, listOf(2, 3)))
     }
