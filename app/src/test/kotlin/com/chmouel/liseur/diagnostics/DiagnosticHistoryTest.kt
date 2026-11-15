@@ -1,5 +1,6 @@
 package com.chmouel.liseur.diagnostics
 
+import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import android.content.Context
 import java.io.File
@@ -12,7 +13,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35])
+@Config(sdk = [35], application = Application::class)
 class DiagnosticHistoryTest {
     @Test
     fun `chat export keeps every part below the full character limit`() = runBlocking {
