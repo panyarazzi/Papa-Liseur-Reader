@@ -43,6 +43,9 @@ class PaginationMeasurementHostFragment(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT,
         )
+        // INVISIBLE keeps the exact measured viewport while preventing
+        // the background WebView from drawing or intercepting reader input.
+        visibility = View.INVISIBLE
         isClickable = false
         isFocusable = false
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
