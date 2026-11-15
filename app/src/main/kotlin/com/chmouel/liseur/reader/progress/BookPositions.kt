@@ -81,6 +81,26 @@ class BookPositions(
         chapterIndexByResource[resourceIndex]?.let(chapters::getOrNull)
 
     /**
+     * Resolves a locator to its reading-order occurrence. The position is
+     * used to distinguish repeated hrefs when an EPUB lists one XHTML file
+     * more than once in its spine.
+     */
+    fun resourceIndexFor(locator: Locator): Int? {
+        if (!isUsable) return null
+        val candidates = resources.filter { it.href == locator.href.toString() }
+        return candidates.withAnchor(locator.locations.position)?.index
+            ?: candidates.firstOrNull()?.index
+    }
+
+    /** Reading-order resources belonging to the chapter of [resourceIndex]. */
+    fun chapterResourceIndices(resourceIndex: Int): List<Int> {
+        val chapterIndex = chapterIndexByResource[resourceIndex] ?: return emptyList()
+        return resources
+            .filter { chapterIndexByResource[it.index] == chapterIndex }
+            .map { it.index }
+    }
+
+    /**
      * The start of the adjacent chapter, based on the current integer
      * position rather than a Float scrubber tick. This avoids rounding a
      * chapter boundary back onto a neighbouring synthetic position.
