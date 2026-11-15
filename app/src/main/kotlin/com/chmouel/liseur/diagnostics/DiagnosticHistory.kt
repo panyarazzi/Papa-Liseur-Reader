@@ -49,8 +49,9 @@ class DiagnosticHistory(context: Context) {
             .associate { (key, value) ->
                 key.take(MAX_ATTRIBUTE_KEY_CHARS) to value.take(MAX_ATTRIBUTE_VALUE_CHARS)
             }
-        writer.execute {
-            runCatching {
+        runCatching {
+            writer.execute {
+                runCatching {
                 val item = JSONObject()
                     .put("timeUtcMs", System.currentTimeMillis())
                     .put("elapsedMs", SystemClock.elapsedRealtime())
@@ -66,10 +67,11 @@ class DiagnosticHistory(context: Context) {
                         error.stackTraceToString().lineSequence().take(12).joinToString("\n").take(1800),
                     )
                 }
-                synchronized(lock) {
-                    val file = currentFile()
-                    file.appendText(item.toString() + "\n", Charsets.UTF_8)
-                    rotateIfNeeded(file)
+                    synchronized(lock) {
+                        val file = currentFile()
+                        file.appendText(item.toString() + "\n", Charsets.UTF_8)
+                        rotateIfNeeded(file)
+                    }
                 }
             }
         }
