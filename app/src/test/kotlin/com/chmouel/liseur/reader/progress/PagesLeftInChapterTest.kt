@@ -23,12 +23,12 @@ class PagesLeftInChapterTest {
     @Test
     fun `counts stable positions after the current one`() {
         assertEquals(18, positionsLeftInChapter(chapter, 40))
-        assertEquals(1, pagesLeftInChapter(chapter, 57))
+        assertEquals(1, positionsLeftInChapter(chapter, 57))
     }
 
     @Test
     fun `the chapter's last position has none left`() {
-        assertEquals(0, pagesLeftInChapter(chapter, 58))
+        assertEquals(0, positionsLeftInChapter(chapter, 58))
     }
 
     @Test
@@ -37,14 +37,14 @@ class PagesLeftInChapterTest {
         // a resource that shares its href with another one in the reading
         // order. Claiming the last page of that wrong chapter is false,
         // whichever side of the range the position falls on.
-        assertNull(pagesLeftInChapter(chapter, 61))
-        assertNull(pagesLeftInChapter(chapter, 39))
+        assertNull(positionsLeftInChapter(chapter, 61))
+        assertNull(positionsLeftInChapter(chapter, 39))
     }
 
     @Test
     fun `a one-position chapter is its own last page`() {
         val single = BookChapter(title = "Colophon", firstPosition = 7, lastPosition = 7)
-        assertEquals(0, pagesLeftInChapter(single, 7))
+        assertEquals(0, positionsLeftInChapter(single, 7))
     }
 
     @Test
@@ -53,12 +53,12 @@ class PagesLeftInChapterTest {
         // as one untitled chapter spanning the whole text. Counting to
         // the end of that is counting to the end of the book, which is
         // not what the label says.
-        assertNull(pagesLeftInChapter(chapter.copy(title = null), 40))
-        assertNull(pagesLeftInChapter(chapter.copy(title = "   "), 40))
+        assertNull(positionsLeftInChapter(chapter.copy(title = null), 40))
+        assertNull(positionsLeftInChapter(chapter.copy(title = "   "), 40))
     }
 
     @Test
     fun `no chapter at all counts nothing`() {
-        assertNull(pagesLeftInChapter(null, 40))
+        assertNull(positionsLeftInChapter(null, 40))
     }
 }
