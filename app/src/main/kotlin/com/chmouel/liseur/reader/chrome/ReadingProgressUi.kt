@@ -85,10 +85,10 @@ import com.chmouel.liseur.data.settings.FooterMode
 import com.chmouel.liseur.data.settings.FooterSlot
 import com.chmouel.liseur.data.settings.ReaderTheme
 import com.chmouel.liseur.data.settings.footerHasAnythingToSay
-import com.chmouel.liseur.reader.progress.BookScreenEstimate
+import com.chmouel.liseur.reader.progress.WholeBookPageIndex
+import com.chmouel.liseur.reader.progress.CurrentResourcePage
 import com.chmouel.liseur.reader.progress.FooterFigure
 import com.chmouel.liseur.reader.progress.FooterMiddle
-import com.chmouel.liseur.reader.progress.SectionScreens
 import com.chmouel.liseur.reader.progress.footerFigure
 import com.chmouel.liseur.reader.progress.ReaderProgress
 import com.chmouel.liseur.reader.progress.footerMiddle
@@ -130,8 +130,9 @@ private val CHROME_FADE_HEIGHT = 20.dp
 fun ReadingFooter(
     progress: ReaderProgress?,
     reflowable: Boolean,
-    screens: SectionScreens?,
-    bookScreens: BookScreenEstimate,
+    pageIndex: WholeBookPageIndex?,
+    currentPage: CurrentResourcePage?,
+    chapterResourceIndices: List<Int>,
     mode: FooterMode,
     left: FooterField,
     right: FooterField,
@@ -173,8 +174,9 @@ fun ReadingFooter(
                     next,
                     progress,
                     reflowable,
-                    screens,
-                    bookScreens,
+                    pageIndex,
+                    currentPage,
+                    chapterResourceIndices,
                     // Not the device the footer is drawing from: that
                     // one only holds the readings the slots ask for
                     // now, so a tap arriving at the clock would be
@@ -189,7 +191,7 @@ fun ReadingFooter(
         onNote(
             next.label,
             next != FooterMode.EMPTY &&
-                (progress == null || footerMiddle(progress, next, reflowable, screens) == null),
+                (progress == null || footerMiddle(progress, next, reflowable, pageIndex, currentPage, chapterResourceIndices) == null),
         )
     }
     val color = theme.foreground.copy(alpha = 0.6f)
@@ -213,9 +215,9 @@ fun ReadingFooter(
     val endSlot = if (leftFirst) FooterSlot.RIGHT else FooterSlot.LEFT
     val startField = if (leftFirst) left else right
     val endField = if (leftFirst) right else left
-    val startFigure = footerFigure(startField, progress, reflowable, screens, bookScreens, device)
-    val endFigure = footerFigure(endField, progress, reflowable, screens, bookScreens, device)
-    val middleContent = middleText(progress, mode, reflowable, screens)
+    val startFigure = footerFigure(startField, progress, reflowable, pageIndex, currentPage, chapterResourceIndices, device)
+    val endFigure = footerFigure(endField, progress, reflowable, pageIndex, currentPage, chapterResourceIndices, device)
+    val middleContent = middleText(progress, mode, reflowable, pageIndex, currentPage, chapterResourceIndices)
     val middle = when {
         middleContent != null -> buildString {
             if (startFigure != null) append("•")
@@ -680,10 +682,14 @@ private fun middleText(
     progress: ReaderProgress?,
     mode: FooterMode,
     reflowable: Boolean,
-    screens: SectionScreens?,
+    pageIndex: WholeBookPageIndex?,
+    currentPage: CurrentResourcePage?,
+    chapterResourceIndices: List<Int>,
 ): String? {
     if (progress == null) return null
-    return when (val middle = footerMiddle(progress, mode, reflowable, screens)) {
+    return when (val middle = footerMiddle(
+        progress, mode, reflowable, pageIndex, currentPage, chapterResourceIndices,
+    )) {
         is FooterMiddle.TimeInChapter ->
             stringResource(R.string.footer_left_in_chapter, durationText(middle.minutes))
 
