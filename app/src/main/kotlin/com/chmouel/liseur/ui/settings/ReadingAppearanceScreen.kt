@@ -96,6 +96,8 @@ fun ReadingAppearanceScreen(
     highlightPalette: HighlightPalette,
     onHighlightTintToggled: (HighlightTint) -> Unit,
     onHighlightDefaultTint: (HighlightTint) -> Unit,
+    highlightStrength: Int,
+    onHighlightStrengthChanged: (Int) -> Unit,
     fineTypography: FineTypographyActions,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -209,6 +211,8 @@ fun ReadingAppearanceScreen(
                         )
                         ReadingHighlightPaletteControls(
                             palette = highlightPalette,
+                            strength = highlightStrength,
+                            onStrengthChanged = onHighlightStrengthChanged,
                             onTintToggled = onHighlightTintToggled,
                             onDefaultChanged = onHighlightDefaultTint,
                         )
