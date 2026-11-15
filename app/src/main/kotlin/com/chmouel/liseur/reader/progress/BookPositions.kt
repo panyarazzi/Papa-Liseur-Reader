@@ -28,7 +28,7 @@ data class BookChapter(
  * end of the book. Its end is where the untitled run stops, not a
  * boundary the book declared.
  */
-fun pagesLeftInChapter(chapter: BookChapter?, position: Int): Int? {
+fun positionsLeftInChapter(chapter: BookChapter?, position: Int): Int? {
     chapter ?: return null
     if (chapter.title.isNullOrBlank()) return null
     if (position !in chapter.firstPosition..chapter.lastPosition) return null
