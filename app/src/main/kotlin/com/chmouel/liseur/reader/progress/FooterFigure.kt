@@ -133,7 +133,6 @@ private fun exactPagesLeftInChapter(
     pageInChapter: Int?,
     pagesInChapter: Int?,
 ): Int? {
-    progress.positionsLeftInChapter ?: return null
     if (!reflowable) return progress.positionsLeftInChapter
     val page = pageInChapter ?: return null
     val total = pagesInChapter ?: return null
