@@ -94,7 +94,7 @@ class ReaderActivity : FragmentActivity() {
         Log.i(
             "ReaderLifecycle",
             "event=$event activity=${System.identityHashCode(this)} pid=${android.os.Process.myPid()} " +
-                "changingConfigurations=$isChangingConfigurations target=${target?.id} " +
+                "changingConfigurations=$isChangingConfigurations " +
                 "keyboard=${config.keyboard} hardKeyboardHidden=${config.hardKeyboardHidden} " +
                 "orientation=${config.orientation} screenLayout=${config.screenLayout}",
         )
