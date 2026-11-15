@@ -309,6 +309,15 @@ fun syncableSettings(
             tint != null
         },
     ),
+    SyncableSetting(
+        key = "app.highlight_strength",
+        read = { app.current().highlightStrength.toString() },
+        write = { raw ->
+            val strength = raw.toIntOrNull()?.takeIf { it in 0..100 }
+            if (strength != null) app.setHighlightStrength(strength)
+            strength != null
+        },
+    ),
 )
 
 private fun Double?.orUnset(): String = this?.toString() ?: SETTING_UNSET
