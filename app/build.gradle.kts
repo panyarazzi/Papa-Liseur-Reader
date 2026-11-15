@@ -129,7 +129,8 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            // The launcher label is set with resValue below.
+            // Keep the development install unmistakable in the launcher.
+            resValue("string", "app_name", "Liseur Test (FOSS)")
             isMinifyEnabled = false
         }
     }
