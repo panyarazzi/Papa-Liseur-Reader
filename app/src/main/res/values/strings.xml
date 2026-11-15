@@ -670,7 +670,7 @@
 
     <!-- The colours offered when a passage is marked. -->
     <string name="reader_highlight_strength">Highlight strength</string>
-    <string name="reader_highlight_strength_help">The same strength is used for existing and new highlights on every display. Choose a number from 0 to 100.</string>
+    <string name="reader_highlight_strength_help">Shared by all books and display types, including highlights already saved. This is not part of Separate Book Settings. Choose a number from 0 to 100.</string>
     <string name="reader_highlight_strength_decrease">Decrease highlight strength</string>
     <string name="reader_highlight_strength_increase">Increase highlight strength</string>
     <string name="reader_highlight_colours">Available colours</string>
