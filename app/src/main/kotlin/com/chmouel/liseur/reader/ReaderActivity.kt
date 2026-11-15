@@ -611,6 +611,7 @@ class ReaderActivity : FragmentActivity() {
                                 ReaderScreen(
                                     publication = s.publication,
                                     pageIndexStore = pageIndexStore,
+                                    onChapterResourceIndices = viewModel::chapterResourceIndices,
                                     displayAuthors = s.displayAuthors,
                                     restoreTarget = restoreTarget,
                                     fontKey = fontKey,
