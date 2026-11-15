@@ -490,11 +490,14 @@ private fun <T> FooterSlotDropdown(
 @Composable
 fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -> Unit) {
     var sliderValue by remember(value) { mutableFloatStateOf(value.toFloat()) }
+    var sizeText by remember(value) { mutableStateOf(value.toString()) }
     val decreaseFontSize = stringResource(R.string.reader_size_decrease)
     val increaseFontSize = stringResource(R.string.reader_size_increase)
     fun step(delta: Int) {
-        val next = PinchResize.sizeAt(PinchResize.positionOf(sliderValue.toDouble()) + delta)
+        val next = (sliderValue.toDouble() + delta * 0.5)
+            .coerceIn(ReaderPrefs.MIN_FONT_SIZE, ReaderPrefs.MAX_FONT_SIZE)
         sliderValue = next.toFloat()
+        sizeText = next.toString()
         onChanged(next)
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -516,12 +519,32 @@ fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -
                 value = sliderValue,
                 enabled = enabled,
                 onValueChange = { sliderValue = it },
-                onValueChangeFinished = { onChanged(sliderValue.toDouble()) },
+                onValueChangeFinished = {
+                    sizeText = sliderValue.toDouble().toString()
+                    onChanged(sliderValue.toDouble())
+                },
                 valueRange = ReaderPrefs.MIN_FONT_SIZE.toFloat()..ReaderPrefs.MAX_FONT_SIZE.toFloat(),
                 steps = ReaderPrefs.FONT_SIZE_SLIDER_STEPS,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 8.dp),
+            )
+            OutlinedTextField(
+                value = sizeText,
+                onValueChange = { text ->
+                    sizeText = text
+                    val parsed = text.toDoubleOrNull()
+                    if (parsed != null && parsed.isFinite() &&
+                        parsed in ReaderPrefs.MIN_FONT_SIZE..ReaderPrefs.MAX_FONT_SIZE
+                    ) {
+                        sliderValue = parsed.toFloat()
+                        onChanged(parsed)
+                    }
+                },
+                enabled = enabled,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.weight(0.42f),
             )
             IconButton(
                 enabled = enabled && sliderValue < ReaderPrefs.MAX_FONT_SIZE.toFloat(),
