@@ -1324,6 +1324,11 @@ class ReaderViewModel(
         .map { it.highlightPalette }
         .stateIn(viewModelScope, SharingStarted.Eagerly, HighlightPalette())
 
+    /** The shared opacity applied to every saved and new highlight. */
+    val highlightStrength: StateFlow<Int> = appSettings.settings
+        .map { it.highlightStrength }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 65)
+
     private val _place = MutableStateFlow<Locator?>(null)
 
     /**
@@ -3141,6 +3146,9 @@ class ReaderViewModel(
     /** Which colour a plain Highlight, or an empty palette's Note, comes out in. */
     fun setHighlightDefaultTint(tint: HighlightTint) =
         viewModelScope.launch { appSettings.setHighlightDefaultTint(tint) }
+
+    fun setHighlightStrength(strength: Int) =
+        viewModelScope.launch { appSettings.setHighlightStrength(strength) }
 
     fun setAutoScrollSpeed(step: Float) =
         viewModelScope.launch { prefsRepo.setAutoScrollSpeed(step) }
