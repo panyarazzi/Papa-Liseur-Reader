@@ -539,6 +539,8 @@ class ReaderActivity : FragmentActivity() {
                                                     totalPages = totalPages,
                                                 )
                                             }
+
+                                            override fun onPageLoaded() = Unit
                                         },
                                         configuration = epubConfiguration,
                                     )
@@ -566,6 +568,8 @@ class ReaderActivity : FragmentActivity() {
                                                     totalPages = totalPages,
                                                 )
                                             }
+
+                                            override fun onPageLoaded() = Unit
                                         },
                                         configuration = epubConfiguration,
                                     )
