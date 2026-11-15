@@ -43,10 +43,10 @@ object DiagnosticExport {
             appendLine("PAPA-LISEUR COMPLETE DIAGNOSTIC EXPORT")
             appendLine("APK_FOLDER: $folderName")
             appendLine("EXPORTED_AT: $stamp")
-            appendLine("PARTS: \${parts.size}")
+            appendLine("PARTS: ${parts.size}")
             appendLine()
             parts.forEach { part ->
-                appendLine("===== PART \${part.index}/\${part.count} =====")
+                appendLine("===== PART ${part.index}/${part.count} =====")
                 appendLine(part.text)
                 appendLine()
             }
@@ -56,14 +56,14 @@ object DiagnosticExport {
 
         val info = buildString {
             appendLine("PAPA-LISEUR DIAGNOSTIC EXPORT INFO")
-            appendLine("APK_LABEL: \${BuildConfig.PAPA_BUILD_LABEL}")
-            appendLine("VERSION: \${BuildConfig.VERSION_NAME} (\${BuildConfig.VERSION_CODE})")
-            appendLine("COMMIT: \${BuildConfig.PAPA_BUILD_COMMIT}")
-            appendLine("RUN_ID: \${BuildConfig.PAPA_BUILD_RUN_ID.ifBlank { "local" }}")
-            appendLine("BUILD_EPOCH_SECONDS: \${BuildConfig.PAPA_BUILD_EPOCH_SECONDS}")
+            appendLine("APK_LABEL: ${BuildConfig.PAPA_BUILD_LABEL}")
+            appendLine("VERSION: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            appendLine("COMMIT: ${BuildConfig.PAPA_BUILD_COMMIT}")
+            appendLine("RUN_ID: ${BuildConfig.PAPA_BUILD_RUN_ID.ifBlank { "local" }}")
+            appendLine("BUILD_EPOCH_SECONDS: ${BuildConfig.PAPA_BUILD_EPOCH_SECONDS}")
             appendLine("EXPORTED_AT: $stamp")
-            appendLine("PARTS: \${parts.size}")
-            appendLine("CHARACTER_LIMIT_PER_PART: \${DiagnosticHistory.DEFAULT_CHAT_PART_CHARACTERS}")
+            appendLine("PARTS: ${parts.size}")
+            appendLine("CHARACTER_LIMIT_PER_PART: ${DiagnosticHistory.DEFAULT_CHAT_PART_CHARACTERS}")
             appendLine("Files are local diagnostic data. Review before sharing.")
         }
         writeNewFile(context, apkFolder, "$prefix-export-info.txt", info)
@@ -89,7 +89,7 @@ No diagnostic data is uploaded automatically.
             .replace(Regex("[^a-z0-9._-]+"), "-")
             .trim('-', '.', '_').take(48).ifBlank { "build" }
         val commit = BuildConfig.PAPA_BUILD_COMMIT.take(7).ifBlank { "unknown" }
-        return "APK-$label-v\${BuildConfig.VERSION_CODE}-$commit"
+        return "APK-$label-v${BuildConfig.VERSION_CODE}-$commit"
     }
 
     private fun writeNewFile(context: Context, folder: DocumentFile, name: String, contents: String) {
