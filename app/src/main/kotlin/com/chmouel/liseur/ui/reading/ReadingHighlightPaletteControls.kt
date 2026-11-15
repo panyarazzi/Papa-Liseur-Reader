@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import com.chmouel.liseur.R
 import com.chmouel.liseur.reader.annotations.HighlightPalette
 import com.chmouel.liseur.reader.annotations.HighlightTint
@@ -83,13 +84,13 @@ fun ReadingHighlightPaletteControls(
                 onClick = { onStrengthChanged((strength - 5).coerceAtLeast(0)) },
                 enabled = strength > 0,
             ) {
-                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.decrease))
+                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.reader_highlight_strength_decrease))
             }
             IconButton(
                 onClick = { onStrengthChanged((strength + 5).coerceAtMost(100)) },
                 enabled = strength < 100,
             ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.increase))
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.reader_highlight_strength_increase))
             }
         }
         Slider(
