@@ -876,6 +876,11 @@ internal fun ReaderScreen(
     var pageTranslated by remember { mutableStateOf(false) }
     // Counts the times [pageTranslated] turned, so a place measured across a turn is known.
     var pageTranslatedTurns by remember { mutableIntStateOf(0) }
+    val pageCountingAllowed = reflowableText &&
+        !effectiveScrolling &&
+        !pageTranslated &&
+        pageTranslation == null &&
+        restoringPageTranslation == null
     val translatedViews = remember { Collections.newSetFromMap(WeakHashMap<WebView, Boolean>()) }
     val view = LocalView.current
     val context = LocalContext.current
@@ -4129,7 +4134,7 @@ internal fun ReaderScreen(
                 TopProgressMode.PAGES_LEFT_CHAPTER_TITLE -> progress?.let { current ->
                     val title = current.chapterTitle?.takeIf { it.isNotBlank() }
                     val chapterPage = visibleResourcePage
-                        ?.takeIf { reflowableText }
+                        ?.takeIf { pageCountingAllowed }
                         ?.let { current ->
                             val page = pageIndex.pageInChapter(
                                 current.resourceIndex,
@@ -4531,9 +4536,9 @@ internal fun ReaderScreen(
             ReadingFooter(
                 progress = progress,
                 reflowable = reflowableText,
-                pageIndex = pageIndex,
-                currentPage = visibleResourcePage,
-                chapterResourceIndices = chapterResourceIndices,
+                pageIndex = pageIndex.takeIf { pageCountingAllowed },
+                currentPage = visibleResourcePage.takeIf { pageCountingAllowed },
+                chapterResourceIndices = chapterResourceIndices.takeIf { pageCountingAllowed }.orEmpty(),
                 mode = prefs.footerMode,
                 left = prefs.footerLeft,
                 right = prefs.footerRight,
