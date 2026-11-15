@@ -66,7 +66,7 @@ object DiagnosticExport {
 
         val readme = """PAPA LISEUR DIAGNOSTICS
 
-Each APK build has its own folder, named from its Build Label.
+Each APK build has its own folder, named from its Build Label, version code, source commit and Actions run ID (when available).
 Inside that folder:
 - export-*-diagnostics.txt: combined export for convenient review.
 - export-*-part-*.txt: individually copyable parts, each with APK and part metadata.
