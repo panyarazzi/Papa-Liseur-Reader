@@ -89,14 +89,30 @@ class PaginationMeasurementHostFragment(
 
     private suspend fun scanReadingOrder(navigator: EpubNavigatorFragment) {
         val measurementGeneration = pageIndexStore.generation
+        pageIndexStore.recordScannerEvent(
+            "pagination.scan_started",
+            mapOf("resourceCount" to publication.readingOrder.size.toString()),
+        )
         publication.readingOrder.forEachIndexed { index, link ->
             if (pageIndexStore.index.value.pagesByResource.containsKey(index)) {
                 return@forEachIndexed
             }
 
-            val locator = publication.locatorFromLink(link) ?: return@forEachIndexed
+            val locator = publication.locatorFromLink(link) ?: run {
+                pageIndexStore.recordScannerEvent(
+                    "pagination.resource_locator_missing",
+                    mapOf("resourceIndex" to index.toString()),
+                )
+                return@forEachIndexed
+            }
             val href = locator.href.toString().substringBefore('#')
-            if (!navigator.go(locator)) return@forEachIndexed
+            if (!navigator.go(locator)) {
+                pageIndexStore.recordScannerEvent(
+                    "pagination.resource_navigation_failed",
+                    mapOf("resourceIndex" to index.toString()),
+                )
+                return@forEachIndexed
+            }
 
             // Readium emits this after the resource has loaded and its page
             // count has settled. The bounded wait prevents one malformed
@@ -106,12 +122,23 @@ class PaginationMeasurementHostFragment(
                     event.generation == measurementGeneration &&
                         event.href.substringBefore('#') == href && event.totalPages > 0
                 }
-            } ?: return@forEachIndexed
+            } ?: run {
+                pageIndexStore.recordScannerEvent(
+                    "pagination.resource_callback_timeout",
+                    mapOf("resourceIndex" to index.toString()),
+                )
+                return@forEachIndexed
+            }
 
             // Apply the same runtime typography and page repairs as the
             // visible reader before accepting a resource's final count.
-            val layoutChanged = pageIndexStore.prepareResource(navigator)
-                ?: return@forEachIndexed
+            val layoutChanged = pageIndexStore.prepareResource(navigator) ?: run {
+                pageIndexStore.recordScannerEvent(
+                    "pagination.resource_prepare_failed",
+                    mapOf("resourceIndex" to index.toString()),
+                )
+                return@forEachIndexed
+            }
             val measured = if (layoutChanged) {
                 withTimeoutOrNull(RESOURCE_MEASUREMENT_TIMEOUT_MS) {
                     pageIndexStore.measurements.first { event ->
@@ -120,13 +147,29 @@ class PaginationMeasurementHostFragment(
                             event.totalPages > 0 &&
                             event.sequence > initialMeasurement.sequence
                     }
-                } ?: return@forEachIndexed
+                } ?: run {
+                    pageIndexStore.recordScannerEvent(
+                        "pagination.resource_reflow_timeout",
+                        mapOf("resourceIndex" to index.toString()),
+                    )
+                    return@forEachIndexed
+                }
             } else {
                 initialMeasurement
             }
 
             pageIndexStore.recordResource(index, measured.totalPages)
         }
+        val index = pageIndexStore.index.value
+        pageIndexStore.recordScannerEvent(
+            "pagination.scan_finished",
+            mapOf(
+                "measuredResourceCount" to index.pagesByResource.size.toString(),
+                "resourceCount" to index.resourceCount.toString(),
+                "complete" to index.isComplete.toString(),
+                "totalPages" to (index.totalPages?.toString() ?: "unknown"),
+            ),
+        )
     }
 
     companion object {
