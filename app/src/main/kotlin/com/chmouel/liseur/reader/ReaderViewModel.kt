@@ -2486,6 +2486,19 @@ class ReaderViewModel(
 
     fun resolvePage(answer: String): GoToDestination? = goToPageResolver?.resolve(answer)
 
+    /** The reading-order occurrence for a live Readium locator. */
+    fun resourceIndexFor(locator: Locator): Int? {
+        bookPositions?.resourceIndexFor(locator)?.let { return it }
+        val href = locator.href.toString().substringBefore('#')
+        return publication?.readingOrder
+            ?.indexOfFirst { it.url().toString().substringBefore('#') == href }
+            ?.takeIf { it >= 0 }
+    }
+
+    /** Resource indices belonging to the chapter containing [resourceIndex]. */
+    fun chapterResourceIndices(resourceIndex: Int): List<Int> =
+        bookPositions?.chapterResourceIndices(resourceIndex).orEmpty()
+
     /** How far through the book the reader is, as the footer prints it. */
     fun currentPercent(): Int = _progress.value?.percent ?: 0
 
