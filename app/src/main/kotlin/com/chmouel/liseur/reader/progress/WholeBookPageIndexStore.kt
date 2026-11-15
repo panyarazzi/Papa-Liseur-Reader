@@ -72,7 +72,6 @@ class WholeBookPageIndexStore(private val resourceCount: Int) {
     }
 
     @Synchronized
-    @Synchronized
     fun reset(resourceCount: Int = this.resourceCount) {
         generation += 1
         _index.value = WholeBookPageIndex.empty(resourceCount)
