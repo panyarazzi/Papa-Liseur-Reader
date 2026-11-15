@@ -623,6 +623,10 @@ private fun LiseurApp(
                             onHighlightDefaultTint = {
                                 scope.launch { repository.setHighlightDefaultTint(it) }
                             },
+                            highlightStrength = settings.highlightStrength,
+                            onHighlightStrengthChanged = {
+                                scope.launch { repository.setHighlightStrength(it) }
+                            },
                             fineTypography = FineTypographyActions(
                                 onTextAlignChanged = { scope.launch { readerPreferences.setTextAlign(it) } },
                                 onHyphensChanged = { scope.launch { readerPreferences.setHyphens(it) } },
