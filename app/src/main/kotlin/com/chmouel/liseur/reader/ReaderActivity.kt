@@ -552,7 +552,7 @@ class ReaderActivity : FragmentActivity() {
                                     pageIndexStore,
                                 ) {
                                     val firstLocator = s.publication.readingOrder.firstOrNull()
-                                        ?.let(s.publication::locatorFromLink)
+                                        ?.let { link -> s.publication.locatorFromLink(link) }
                                     s.navigatorFactory.createFragmentFactory(
                                         initialLocator = firstLocator,
                                         initialPreferences = measurementPreferencesValue,
