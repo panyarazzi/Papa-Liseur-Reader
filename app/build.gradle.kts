@@ -13,6 +13,28 @@ val papaBuildLabel = System.getenv("GITHUB_RUN_NUMBER")
     ?.let { "papa apk#$it" }
     ?: "papa local"
 
+fun gitValue(vararg arguments: String): String? = runCatching {
+    val process = ProcessBuilder("git", *arguments)
+        .directory(rootProject.projectDir)
+        .redirectErrorStream(true)
+        .start()
+    val output = process.inputStream.bufferedReader().use { it.readText().trim() }
+    if (process.waitFor() == 0) output.takeIf { it.isNotBlank() } else null
+}.getOrNull()
+
+fun buildConfigString(value: String): String =
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
+val papaBuildCommit = System.getenv("GITHUB_SHA")
+    ?.takeIf { it.isNotBlank() }
+    ?: gitValue("rev-parse", "HEAD")
+    ?: "unknown"
+val papaBuildRunId = System.getenv("GITHUB_RUN_ID").orEmpty()
+val papaBuildEpochSeconds = System.getenv("SOURCE_DATE_EPOCH")
+    ?.takeIf { it.isNotBlank() }
+    ?: gitValue("show", "-s", "--format=%ct", "HEAD")
+    ?: "0"
+
 // Release signing is optional and kept out of git: if keystore.properties
 // is absent (e.g. on a fresh clone or in CI), the release build type simply
 // stays unsigned rather than failing the build.
@@ -56,6 +78,9 @@ android {
         versionName = "0.25.0"
         // Identifies this project APK independently of the upstream Liseur version.
         buildConfigField("String", "PAPA_BUILD_LABEL", "\"$papaBuildLabel\"")
+        buildConfigField("String", "PAPA_BUILD_COMMIT", buildConfigString(papaBuildCommit))
+        buildConfigField("String", "PAPA_BUILD_RUN_ID", buildConfigString(papaBuildRunId))
+        buildConfigField("String", "PAPA_BUILD_EPOCH_SECONDS", buildConfigString(papaBuildEpochSeconds))
     }
 
     signingConfigs {
