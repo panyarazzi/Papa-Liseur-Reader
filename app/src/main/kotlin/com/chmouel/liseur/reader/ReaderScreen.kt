@@ -782,7 +782,7 @@ internal fun ReaderScreen(
         pageIndexStore.prepareResource = { measurementNavigator ->
             var fontsReady = false
             var waitedForFonts = false
-            repeat(100) {
+            for (attempt in 0 until 100) {
                 val status = try {
                     measurementNavigator.evaluateJavascript(
                         "document.readyState + '|' + (document.fonts ? document.fonts.status : 'loaded')",
@@ -795,7 +795,7 @@ internal fun ReaderScreen(
                 val values = status?.split('|')
                 if (values?.getOrNull(0) == "complete" && values.getOrNull(1) == "loaded") {
                     fontsReady = true
-                    return@repeat
+                    break
                 }
                 waitedForFonts = true
                 delay(50)
