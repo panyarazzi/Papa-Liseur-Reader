@@ -27,11 +27,11 @@ jobs:
     - name: Run unit tests before packaging
       run: ./gradlew testFossDebugUnitTest testPlayDebugUnitTest
 
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
+    - name: Build FOSS side-by-side test APK
+      run: ./gradlew assembleFossDev
 
-    - name: Upload APK artifact
+    - name: Upload FOSS test APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug-apk
-        path: app/build/outputs/apk/**/*.apk
+        name: papa-liseur-foss-dev-apk
+        path: app/build/outputs/apk/foss/dev/app-foss-dev.apk
