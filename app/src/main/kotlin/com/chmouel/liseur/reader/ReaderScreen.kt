@@ -308,6 +308,7 @@ import org.readium.r2.navigator.DecorableNavigator
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.input.DragEvent
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.preferences.ReadingProgression
@@ -425,6 +426,7 @@ private enum class ReaderSheet { NONE, TYPOGRAPHY, ADVANCED }
 internal fun ReaderScreen(
     publication: Publication,
     pageIndexStore: WholeBookPageIndexStore,
+    measurementPreferencesKey: EpubPreferences,
     onChapterResourceIndices: (Int) -> List<Int>,
     displayAuthors: List<String>,
     /**
@@ -706,15 +708,21 @@ internal fun ReaderScreen(
     // replacing the isolated whole-book measurement navigator.
     var layoutGeneration by remember { mutableIntStateOf(0) }
     var indexedLayoutGeneration by remember(pageIndexStore) { mutableIntStateOf(0) }
+    var indexedMeasurementPreferences by remember(pageIndexStore) {
+        mutableStateOf(measurementPreferencesKey)
+    }
     LaunchedEffect(customTypography) {
         // Per-book line height and indent are injected after Readium loads
         // each resource, so they form part of the page-index layout key.
         layoutGeneration++
     }
     SideEffect {
-        if (indexedLayoutGeneration != layoutGeneration) {
+        val viewportChanged = indexedLayoutGeneration != layoutGeneration
+        val preferencesChanged = indexedMeasurementPreferences != measurementPreferencesKey
+        if (viewportChanged || preferencesChanged) {
             pageIndexStore.reset()
             indexedLayoutGeneration = layoutGeneration
+            indexedMeasurementPreferences = measurementPreferencesKey
         }
     }
     val jumpBack by jumpBackFlow.collectAsStateWithLifecycle()
@@ -4013,7 +4021,7 @@ internal fun ReaderScreen(
         // It receives the same viewport, preferences and EPUB transforms,
         // but its own FragmentManager and pagination listener.
         if (reflowableText && !effectiveScrolling && !pageTranslated && pageTranslation == null && restoringPageTranslation == null) {
-            key(pageIndexStore, layoutGeneration) {
+            key(pageIndexStore, layoutGeneration, measurementPreferencesKey) {
                 AndroidFragment<PaginationMeasurementHostFragment>(
                     modifier = navigatorViewportModifier.alpha(0f),
                 )
