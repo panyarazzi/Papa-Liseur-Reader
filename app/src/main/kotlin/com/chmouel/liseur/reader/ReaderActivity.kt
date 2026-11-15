@@ -563,8 +563,17 @@ class ReaderActivity : FragmentActivity() {
                                                 totalPages: Int,
                                                 locator: org.readium.r2.shared.publication.Locator,
                                             ) {
+                                                val resourceIndex = viewModel.resourceIndexFor(locator)
+                                                pageIndexStore.recordScannerEvent(
+                                                    "pagination.measurement_callback",
+                                                    mapOf(
+                                                        "resourceIndex" to (resourceIndex?.toString() ?: "unknown"),
+                                                        "pageIndexZeroBased" to pageIndex.toString(),
+                                                        "totalPages" to totalPages.toString(),
+                                                    ),
+                                                )
                                                 pageIndexStore.publishMeasurement(
-                                                    resourceIndex = viewModel.resourceIndexFor(locator),
+                                                    resourceIndex = resourceIndex,
                                                     href = locator.href.toString(),
                                                     totalPages = totalPages,
                                                 )
