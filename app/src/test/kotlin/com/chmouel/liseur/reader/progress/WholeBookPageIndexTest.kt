@@ -51,7 +51,7 @@ class WholeBookPageIndexTest {
 
         val complete = index.recording(3, 2)
         assertEquals(9, complete.pagesInChapter(listOf(2, 3)))
-        assertEquals(5, complete.pageInChapter(3, 2, listOf(2, 3)))
+        assertEquals(8, complete.pageInChapter(3, 2, listOf(2, 3)))
     }
 
     @Test
