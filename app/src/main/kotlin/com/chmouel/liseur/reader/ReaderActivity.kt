@@ -603,6 +603,8 @@ class ReaderActivity : FragmentActivity() {
                                         viewModel::toggleHighlightTint,
                                     onHighlightDefaultTintChanged =
                                         viewModel::setHighlightDefaultTint,
+                                    highlightStrengthFlow = viewModel.highlightStrength,
+                                    onHighlightStrengthChanged = viewModel::setHighlightStrength,
                                     // Dialogs of this activity's own,
                                     // drawn over the reader. The page
                                     // must not carry on scrolling under
