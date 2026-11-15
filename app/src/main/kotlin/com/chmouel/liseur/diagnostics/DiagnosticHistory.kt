@@ -45,6 +45,9 @@ class DiagnosticHistory(context: Context) {
     ) {
         val safeEvent = event.take(MAX_EVENT_NAME_CHARS).ifBlank { "event.unnamed" }
         val safeAttributes = attributes.entries
+            .filterNot { (key, _) ->
+                SENSITIVE_ATTRIBUTE_KEY.containsMatchIn(key)
+            }
             .take(MAX_ATTRIBUTES)
             .associate { (key, value) ->
                 key.take(MAX_ATTRIBUTE_KEY_CHARS) to value.take(MAX_ATTRIBUTE_VALUE_CHARS)
@@ -61,10 +64,12 @@ class DiagnosticHistory(context: Context) {
                     .put("attributes", JSONObject(safeAttributes))
                 if (error != null) {
                     item.put("errorType", error.javaClass.name.take(200))
-                    item.put("errorMessage", error.message.orEmpty().take(500))
+                    // Exception messages can contain local file paths, book
+                    // names or provider URIs. Keep the exception type and
+                    // stack frames, but deliberately omit the message.
                     item.put(
                         "stack",
-                        error.stackTraceToString().lineSequence().take(12).joinToString("\n").take(1800),
+                        error.stackTrace.asSequence().take(12).joinToString("\n") { it.toString() }.take(1800),
                     )
                 }
                     synchronized(lock) {
@@ -162,6 +167,8 @@ class DiagnosticHistory(context: Context) {
         private const val HEADER_RESERVE = 1_200
         private const val MAX_FILE_BYTES = 256L * 1024L
         private const val MAX_RETAINED_FILES = 4
+        private val SENSITIVE_ATTRIBUTE_KEY =
+            Regex("(?i)(title|author|text|content|href|url|uri|path|token|password|secret|email|user)")
         private const val MAX_EVENT_NAME_CHARS = 100
         private const val MAX_ATTRIBUTES = 12
         private const val MAX_ATTRIBUTE_KEY_CHARS = 60
