@@ -1910,8 +1910,12 @@ internal fun ReaderScreen(
                     "targetHref" to requested.href.toString(),
                     "targetProgression" to (requested.locations.progression?.toString() ?: "unknown"),
                     "targetTotalProgression" to (requested.locations.totalProgression?.toString() ?: "unknown"),
+                    "targetPosition" to (requested.locations.position?.toString() ?: "unknown"),
                     "currentHref" to openingLocator.href.toString(),
                     "currentProgression" to (openingLocator.locations.progression?.toString() ?: "unknown"),
+                    "currentResourceIndex" to (currentResourcePage?.resourceIndex?.toString() ?: "unknown"),
+                    "currentPageInResource" to (currentResourcePage?.pageInResource?.toString() ?: "unknown"),
+                    "currentTotalPagesInResource" to (currentResourcePage?.totalPagesInResource?.toString() ?: "unknown"),
                 ),
             )
             return@LaunchedEffect
@@ -1925,9 +1929,13 @@ internal fun ReaderScreen(
                 "targetHref" to requested.href.toString(),
                 "targetProgression" to (requested.locations.progression?.toString() ?: "unknown"),
                 "targetTotalProgression" to (requested.locations.totalProgression?.toString() ?: "unknown"),
+                "targetPosition" to (requested.locations.position?.toString() ?: "unknown"),
                 "currentHref" to verifiedLocator.href.toString(),
                 "currentProgression" to (verifiedLocator.locations.progression?.toString() ?: "unknown"),
                 "currentTotalProgression" to (verifiedLocator.locations.totalProgression?.toString() ?: "unknown"),
+                "currentResourceIndex" to (currentResourcePage?.resourceIndex?.toString() ?: "unknown"),
+                "currentPageInResource" to (currentResourcePage?.pageInResource?.toString() ?: "unknown"),
+                "currentTotalPagesInResource" to (currentResourcePage?.totalPagesInResource?.toString() ?: "unknown"),
                 "elapsedMs" to (SystemClock.elapsedRealtime() - gateOpenedAt).toString(),
             ),
         )
