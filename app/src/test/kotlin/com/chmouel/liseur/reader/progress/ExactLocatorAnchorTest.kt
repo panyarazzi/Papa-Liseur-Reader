@@ -27,6 +27,7 @@ class ExactLocatorAnchorTest {
             .put("before", before)
             .put("highlight", highlight)
             .put("after", after)
+            .put("viewportTop", 123.5)
             .toString()
 
         val anchor = ExactLocatorAnchor.parseJavascriptResult(JSONObject.quote(json))
@@ -35,6 +36,7 @@ class ExactLocatorAnchorTest {
         assertEquals("🙂".repeat(32), anchor?.before)
         assertEquals("界".repeat(64), anchor?.highlight)
         assertEquals("é".repeat(32), anchor?.after)
+        assertEquals(123.5, anchor?.viewportTop ?: 0.0, 0.0)
     }
 
     @Test
@@ -160,6 +162,20 @@ class ExactLocatorAnchorTest {
     }
 
     @Test
+    fun `reflow reveal restores the captured vertical viewport coordinate`() {
+        val exact = ExactLocatorAnchor.mark(
+            locator(),
+            ViewportTextAnchor("#chapter > p", "before ", "visible", " after"),
+        )
+        val script = ExactLocatorAnchor.revealScript(exact, 137.5)
+
+        assertTrue(script.contains("const targetTop = 137.5"))
+        assertTrue(script.contains("const deltaY = rect.top - targetTop"))
+        assertTrue(script.contains("window.scrollBy(0, deltaY)"))
+        assertTrue(script.contains("root.scrollTop += remainingY"))
+    }
+
+    @Test
     fun `capture script names elements without asking about case`() {
         val script = ExactLocatorAnchor.CAPTURE_SCRIPT
 
@@ -172,6 +188,7 @@ class ExactLocatorAnchorTest {
         // element names are read through localName, lower-cased once.
         assertFalse(script.contains(".tagName"))
         assertTrue(script.contains("localName"))
+        assertTrue(script.contains("viewportTop: visibleRect.top"))
         for (tag in listOf("p", "li", "blockquote", "div", "h1", "script", "style")) {
             assertTrue(tag, script.contains("\"$tag\""))
             assertFalse(tag, script.contains("\"${tag.uppercase()}\""))
