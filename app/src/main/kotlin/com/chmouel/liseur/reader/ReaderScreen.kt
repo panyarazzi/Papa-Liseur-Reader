@@ -1413,16 +1413,17 @@ internal fun ReaderScreen(
         var verified = false
         repeat(REFLOW_ANCHOR_VERIFY_ATTEMPTS) { attempt ->
             if (verified) return@repeat
-            if (!resourceIsDisplayed()) return@repeat
-            val revealed = ExactLocatorAnchor.reveal(nav, anchor, targetTop)
-            if (revealed) {
-                settleLayout()
-                verified = ExactLocatorAnchor.verify(nav, anchor)
-                if (verified) {
-                    // Verify once more after the next layout frame. A
-                    // successful script return alone is not acceptance.
+            if (resourceIsDisplayed()) {
+                val revealed = ExactLocatorAnchor.reveal(nav, anchor, targetTop)
+                if (revealed) {
                     settleLayout()
-                    verified = resourceIsDisplayed() && ExactLocatorAnchor.verify(nav, anchor)
+                    verified = ExactLocatorAnchor.verify(nav, anchor)
+                    if (verified) {
+                        // Verify once more after the next layout frame. A
+                        // successful script return alone is not acceptance.
+                        settleLayout()
+                        verified = resourceIsDisplayed() && ExactLocatorAnchor.verify(nav, anchor)
+                    }
                 }
             }
             if (!verified && attempt + 1 < REFLOW_ANCHOR_VERIFY_ATTEMPTS) {
