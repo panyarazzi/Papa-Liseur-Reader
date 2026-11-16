@@ -33,6 +33,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -474,6 +476,9 @@ private val TopProgressMode.label: String
 @Composable
 private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Unit) {
     var text by remember(value) { mutableStateOf(value.toInt().toString()) }
+    var edited by remember(value) { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("$label: ${value.toInt()} dp", style = MaterialTheme.typography.bodyLarge)
         Row(
@@ -484,13 +489,14 @@ private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Un
             IconButton(enabled = value > 0f, onClick = {
                 val next = (value - 1f).coerceAtLeast(0f)
                 text = next.toInt().toString()
+                edited = false
                 onChanged(next)
             }) {
                 Icon(Icons.Outlined.Remove, contentDescription = "Decrease $label")
             }
             OutlinedTextField(
                 value = text,
-                onValueChange = { raw -> text = raw },
+                onValueChange = { raw -> text = raw; edited = true },
                 singleLine = true,
                 suffix = { Text("dp") },
                 keyboardOptions = KeyboardOptions(
@@ -498,9 +504,15 @@ private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Un
                     imeAction = ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(onDone = {
-                    text.toFloatOrNull()
+                    val committed = text.toFloatOrNull()
                         ?.takeIf { it.isFinite() && it in 0f..48f }
-                        ?.let(onChanged)
+                    if (edited && committed != null) {
+                        onChanged(committed)
+                        text = committed.toInt().toString()
+                        edited = false
+                    }
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
                 }),
                 modifier = Modifier.weight(1f),
             )
