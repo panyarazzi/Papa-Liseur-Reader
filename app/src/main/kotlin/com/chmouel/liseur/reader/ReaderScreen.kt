@@ -1341,6 +1341,10 @@ internal fun ReaderScreen(
         }
         effectScope.launch {
             reflow.within {
+                if (navigatorNow !== nav) {
+                    update()
+                    return@within
+                }
                 val since = moves.mark(SystemClock.elapsedRealtime())
                 val anchor = if (since == IssuedMoves.NONE) {
                     reflowAnchor = null
@@ -1354,6 +1358,7 @@ internal fun ReaderScreen(
                 val before = ExactLocatorAnchor.layoutSignature(nav)
                 update()
                 awaitChange()
+                if (navigatorNow !== nav) return@within
                 layoutGeneration++
                 awaitReflowSettled(nav, before)
                 if (anchor != null && moves.unchangedSince(since)) {
