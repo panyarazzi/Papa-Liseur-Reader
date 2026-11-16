@@ -846,7 +846,8 @@ private fun CustomMetricEditor(
             )
             IconButton(enabled = enabled && value < maximum, onClick = {
                 val next = com.chmouel.liseur.reader.CustomParagraphTypography.nudge(value, 1).coerceAtMost(maximum)
-                text = next.toString()
+                text = formatReadingMetric(next)
+                edited = false
                 onChanged(next)
             }) {
                 Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.reader_increase_value))
