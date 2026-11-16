@@ -415,6 +415,12 @@ private const val SCREEN_SETTLE_POLLS = 12
  */
 private enum class ReaderSheet { NONE, TYPOGRAPHY, ADVANCED }
 
+private data class ReflowAnchor(
+    val locator: Locator,
+    /** The anchor's original absolute screen Y, in physical pixels. */
+    val screenY: Double?,
+)
+
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalReadiumApi::class,
@@ -929,7 +935,7 @@ internal fun ReaderScreen(
     // next change, or each nudge of a slider walks the position a little
     // further from the page being read; the anchor is held until the
     // reader actually moves, and every reflow restores to the same spot.
-    var reflowAnchor by remember { mutableStateOf<Locator?>(null) }
+    var reflowAnchor by remember { mutableStateOf<ReflowAnchor?>(null) }
 
     // The place a scrolled book was last measured at, kept for the
     // moment the reader leaves. Everything that measures one and
@@ -946,6 +952,29 @@ internal fun ReaderScreen(
         val captured = onProgressAction.prepareLocator(ExactLocatorAnchor.capture(nav, locator))
         // Taken on a translated page, or across a switch: its words may be the translation's (ADR 45).
         return settleCapture(captured, turns, translated, pageTranslatedTurns, pageTranslated)
+    }
+
+    /**
+     * Captures both the exact passage and where its first visible word sat
+     * on the physical screen. The latter is deliberately kept in memory,
+     * not in the synced Locator: another device has a different viewport.
+     */
+    suspend fun captureReflowAnchor(nav: EpubNavigatorFragment, locator: Locator): ReflowAnchor {
+        val turns = pageTranslatedTurns
+        val translated = pageTranslated
+        val raw = ExactLocatorAnchor.captureForReflow(nav, locator)
+        val captured = onProgressAction.prepareLocator(raw.locator)
+        val settled = settleCapture(captured, turns, translated, pageTranslatedTurns, pageTranslated)
+        val web = visibleWebView(nav.publicationView)
+        val screenY = if (ExactLocatorAnchor.isExact(settled) && raw.viewportTop != null && web != null) {
+            val origin = IntArray(2)
+            web.getLocationOnScreen(origin)
+            val pxPerCssPixel = web.resources.displayMetrics.density * web.scale
+            if (pxPerCssPixel > 0f) {
+                origin[1] + raw.viewportTop * pxPerCssPixel
+            } else null
+        } else null
+        return ReflowAnchor(settled, screenY)
     }
 
     /**
@@ -1262,7 +1291,11 @@ internal fun ReaderScreen(
     // would be left for the reader's next page turn, which would then
     // be taken for the reflow and not saved. Anything reported before
     // the scope closes is a reflow whether or not it claims the marker.
-    suspend fun restoreAfterReflow(nav: EpubNavigatorFragment, anchor: Locator) {
+    suspend fun restoreAfterReflow(
+        nav: EpubNavigatorFragment,
+        anchor: Locator,
+        originalScreenY: Double? = null,
+    ) {
         Log.i(
             "ReaderMoveTrace",
             "reflow-restore-start nav=${System.identityHashCode(nav)} " +
@@ -1272,6 +1305,16 @@ internal fun ReaderScreen(
         )
         navigate(nav, anchor, NavigatorPositionEvent.PREFERENCE_REFLOW, verify = true)
         settleLayout()
+        val targetTop = originalScreenY?.let { screenY ->
+            val web = visibleWebView(nav.publicationView)
+            if (web == null) null else {
+                val origin = IntArray(2)
+                web.getLocationOnScreen(origin)
+                val pxPerCssPixel = web.resources.displayMetrics.density * web.scale
+                if (pxPerCssPixel > 0f) (screenY - origin[1]) / pxPerCssPixel else null
+            }
+        }
+        if (ExactLocatorAnchor.reveal(nav, anchor, targetTop)) settleLayout()
         val pendingBeforeClear = pendingPositionEvent
         if (pendingPositionEvent == NavigatorPositionEvent.PREFERENCE_REFLOW) pendingPositionEvent = null
         Log.i(
@@ -2078,9 +2121,9 @@ internal fun ReaderScreen(
                         reflowAnchor = null
                         null
                     } else {
-                        (reflowAnchor ?: capture(nav, nav.currentLocator.value)).also {
+                        (reflowAnchor ?: captureReflowAnchor(nav, nav.currentLocator.value)).also {
                             reflowAnchor = it
-                            publishUnverified(it, NavigatorPositionEvent.PREFERENCE_REFLOW)
+                            publishUnverified(it.locator, NavigatorPositionEvent.PREFERENCE_REFLOW)
                         }
                     }
                     val before = ExactLocatorAnchor.layoutSignature(nav)
@@ -2118,7 +2161,7 @@ internal fun ReaderScreen(
                     // are what the reader asked for — and only the
                     // reader's place is left where they put it.
                     if (anchor != null && moves.unchangedSince(since)) {
-                        restoreAfterReflow(nav, anchor)
+                        restoreAfterReflow(nav, anchor.locator, anchor.screenY)
                     }
                 }
             }
