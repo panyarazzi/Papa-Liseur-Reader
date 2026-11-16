@@ -1698,7 +1698,16 @@ internal fun ReaderScreen(
                 )
                 // Anywhere the reader actually goes ends the run of
                 // preference changes the held anchor was covering.
-                if (event != NavigatorPositionEvent.PREFERENCE_REFLOW) reflowAnchor = null
+                if (event != NavigatorPositionEvent.PREFERENCE_REFLOW) {
+                    reflowAnchor = null
+                    try {
+                        nav.evaluateJavascript(ExactLocatorAnchor.CLEAR_REFLOW_OFFSET_SCRIPT)
+                    } catch (cancellation: CancellationException) {
+                        throw cancellation
+                    } catch (_: Exception) {
+                        // A resource transition may already have replaced the document.
+                    }
+                }
                 if (listeningPlayingNow && (
                         event == NavigatorPositionEvent.READER_MOVEMENT ||
                             event == NavigatorPositionEvent.LOCAL_JUMP
