@@ -326,6 +326,9 @@ private const val CHROME_ANIM_MS = 300
 // does); the second is how long a reflow gets to come to rest.
 private const val REFLOW_START_POLLS = 8
 private const val REFLOW_SETTLE_POLLS = 30
+private const val REFLOW_RESOURCE_ARRIVAL_MS = 5_000L
+private const val REFLOW_ANCHOR_VERIFY_ATTEMPTS = 16
+private const val REFLOW_ANCHOR_RETRY_MS = 100L
 private const val VERIFY_ATTEMPTS = 3
 private const val CFI_CAPTURE_ATTEMPTS = 4
 private const val CFI_CAPTURE_RETRY_MS = 200L
@@ -1291,20 +1294,112 @@ internal fun ReaderScreen(
     // would be left for the reader's next page turn, which would then
     // be taken for the reflow and not saved. Anything reported before
     // the scope closes is a reflow whether or not it claims the marker.
+    /**
+     * Restores a typography reflow without using the general navigation
+     * fallback. A progression is only a starting hint after re-pagination;
+     * it is not proof that the saved passage has arrived.
+     *
+     * If the resource is already displayed, do not call nav.go at all:
+     * find the captured passage in the live DOM and reveal it there. If
+     * another resource really must be entered, wait for both Readium's
+     * current locator and the visible WebView URL to name that resource
+     * before attempting the text search.
+     */
     suspend fun restoreAfterReflow(
         nav: EpubNavigatorFragment,
         anchor: Locator,
         originalScreenY: Double? = null,
     ) {
+        val targetHref = anchor.href.toString()
+        if (!ExactLocatorAnchor.isExact(anchor)) {
+            Log.w(
+                "ReaderMoveTrace",
+                "reflow-restore-aborted reason=anchor-not-exact href=$targetHref",
+            )
+            if (pendingPositionEvent == NavigatorPositionEvent.PREFERENCE_REFLOW) {
+                pendingPositionEvent = null
+            }
+            return
+        }
+
+        fun resourceIsDisplayed(): Boolean {
+            val web = visibleWebView(nav.publicationView) ?: return false
+            val currentHref = nav.currentLocator.value.href.toString()
+            return ResourceAddress.shows(currentHref, targetHref) &&
+                ResourceAddress.shows(web.url, targetHref)
+        }
+
         Log.i(
             "ReaderMoveTrace",
             "reflow-restore-start nav=${System.identityHashCode(nav)} " +
-                "anchor=${anchor.href}@${anchor.locations.totalProgression} " +
-                "fragment=${anchor.locations.fragments.firstOrNull()} current=${nav.currentLocator.value.href} " +
+                "anchor=$targetHref@${anchor.locations.totalProgression} " +
+                "current=${nav.currentLocator.value.href} " +
+                "webUrl=${visibleWebView(nav.publicationView)?.url} " +
                 "generation=${moves.generation()} pending=$pendingPositionEvent active=${reflow.active}",
         )
-        navigate(nav, anchor, NavigatorPositionEvent.PREFERENCE_REFLOW, verify = true)
-        settleLayout()
+
+        // Do not re-navigate within the resource: Readium's progression
+        // was computed for the old pagination and can land on a different
+        // column. Only issue go when the saved resource is not current.
+        if (!ResourceAddress.shows(nav.currentLocator.value.href.toString(), targetHref)) {
+            if (!go(nav, anchor, NavigatorPositionEvent.PREFERENCE_REFLOW)) {
+                Log.w(
+                    "ReaderMoveTrace",
+                    "reflow-restore-aborted reason=navigator-rejected-target href=$targetHref",
+                )
+                if (pendingPositionEvent == NavigatorPositionEvent.PREFERENCE_REFLOW) {
+                    pendingPositionEvent = null
+                }
+                return
+            }
+        }
+
+        val arrived = withTimeoutOrNull(REFLOW_RESOURCE_ARRIVAL_MS) {
+            while (!resourceIsDisplayed()) delay(50L)
+            true
+        } ?: false
+        if (!arrived) {
+            Log.w(
+                "ReaderMoveTrace",
+                "reflow-restore-aborted reason=resource-not-displayed targetHref=$targetHref " +
+                    "currentHref=${nav.currentLocator.value.href} " +
+                    "webUrl=${visibleWebView(nav.publicationView)?.url}",
+            )
+            if (pendingPositionEvent == NavigatorPositionEvent.PREFERENCE_REFLOW) {
+                pendingPositionEvent = null
+            }
+            return
+        }
+
+        // Wait for the actual document layout, not Compose frames alone.
+        // Two consecutive equal signatures mean the resource has stopped
+        // changing size before the saved passage is searched.
+        val layoutReady = withTimeoutOrNull(REFLOW_RESOURCE_ARRIVAL_MS) {
+            var previous: String? = null
+            var stableReads = 0
+            while (stableReads < 2) {
+                val signature = ExactLocatorAnchor.layoutSignature(nav)
+                if (signature != null && signature == previous) {
+                    stableReads++
+                } else {
+                    stableReads = 0
+                }
+                previous = signature
+                delay(80L)
+            }
+            true
+        } ?: false
+        if (!layoutReady || !resourceIsDisplayed()) {
+            Log.w(
+                "ReaderMoveTrace",
+                "reflow-restore-aborted reason=layout-not-stable href=$targetHref",
+            )
+            if (pendingPositionEvent == NavigatorPositionEvent.PREFERENCE_REFLOW) {
+                pendingPositionEvent = null
+            }
+            return
+        }
+
         val targetTop = originalScreenY?.let { screenY ->
             val web = visibleWebView(nav.publicationView)
             if (web == null) null else {
@@ -1314,15 +1409,39 @@ internal fun ReaderScreen(
                 if (pxPerCssPixel > 0f) (screenY - origin[1]) / pxPerCssPixel else null
             }
         }
-        if (ExactLocatorAnchor.reveal(nav, anchor, targetTop)) settleLayout()
+
+        var verified = false
+        repeat(REFLOW_ANCHOR_VERIFY_ATTEMPTS) { attempt ->
+            if (verified) return@repeat
+            if (!resourceIsDisplayed()) return@repeat
+            val revealed = ExactLocatorAnchor.reveal(nav, anchor, targetTop)
+            if (revealed) {
+                settleLayout()
+                verified = ExactLocatorAnchor.verify(nav, anchor)
+                if (verified) {
+                    // Verify once more after the next layout frame. A
+                    // successful script return alone is not acceptance.
+                    settleLayout()
+                    verified = resourceIsDisplayed() && ExactLocatorAnchor.verify(nav, anchor)
+                }
+            }
+            if (!verified && attempt + 1 < REFLOW_ANCHOR_VERIFY_ATTEMPTS) {
+                delay(REFLOW_ANCHOR_RETRY_MS)
+            }
+        }
+
         val pendingBeforeClear = pendingPositionEvent
-        if (pendingPositionEvent == NavigatorPositionEvent.PREFERENCE_REFLOW) pendingPositionEvent = null
+        if (pendingPositionEvent == NavigatorPositionEvent.PREFERENCE_REFLOW) {
+            pendingPositionEvent = null
+        }
         Log.i(
             "ReaderMoveTrace",
-            "reflow-restore-end nav=${System.identityHashCode(nav)} " +
-                "current=${nav.currentLocator.value.href}@${nav.currentLocator.value.locations.totalProgression} " +
+            "reflow-restore-end result=${if (verified) "verified" else "failed-no-fallback"} " +
+                "targetHref=$targetHref currentHref=${nav.currentLocator.value.href} " +
+                "webUrl=${visibleWebView(nav.publicationView)?.url} " +
+                "anchor=${ExactLocatorAnchor.excerpt(anchor.toJSON().toString())} " +
                 "generation=${moves.generation()} pendingBeforeClear=$pendingBeforeClear " +
-                "pendingAfter=$pendingPositionEvent active=${reflow.active}",
+                "pendingAfter=$pendingPositionEvent",
         )
     }
 
