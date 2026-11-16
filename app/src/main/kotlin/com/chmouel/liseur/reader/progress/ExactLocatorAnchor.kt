@@ -403,8 +403,10 @@ object ExactLocatorAnchor {
                       const deltaY = rect.top - targetTop;
                       if (Math.abs(deltaY) > 0.5) {
                         window.scrollBy(0, deltaY);
-                        if (Math.abs(rect.top - targetTop) > 0.5) {
-                          root.scrollTop += deltaY;
+                        const afterScroll = range.getClientRects()[0];
+                        const remainingY = afterScroll ? afterScroll.top - targetTop : 0;
+                        if (Math.abs(remainingY) > 0.5) {
+                          root.scrollTop += remainingY;
                         }
                       }
                     } else {
