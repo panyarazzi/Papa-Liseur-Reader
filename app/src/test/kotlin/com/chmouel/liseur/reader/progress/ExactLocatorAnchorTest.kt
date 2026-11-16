@@ -172,7 +172,7 @@ class ExactLocatorAnchorTest {
         assertTrue(script.contains("const targetTop = 137.5"))
         assertTrue(script.contains("const horizontalDelta = rect.left < 0"))
         assertTrue(script.contains("window.scrollBy(horizontalDelta, 0)"))
-        assertTrue(script.contains("root.scrollLeft += horizontalDelta"))
+        assertTrue(script.contains("root.scrollLeft += remainingX"))
         assertTrue(script.contains("const deltaY = currentRect.top - targetTop"))
         assertTrue(script.contains("window.scrollBy(0, deltaY)"))
         assertTrue(script.contains("root.scrollTop += remainingY"))
