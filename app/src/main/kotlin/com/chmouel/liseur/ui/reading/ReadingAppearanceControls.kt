@@ -47,6 +47,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -58,6 +60,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import com.chmouel.liseur.R
 import com.chmouel.liseur.data.settings.ColumnMode
 import com.chmouel.liseur.data.settings.PageTurnStyle
@@ -333,6 +336,9 @@ fun ReadingFontDropdown(
     }
 }
 
+private fun formatReadingMetric(value: Double): String =
+    String.format(Locale.US, "%.1f", value)
+
 @Composable
 private fun SelectedMark(selected: Boolean) {
     if (!selected) return
@@ -492,14 +498,18 @@ private fun <T> FooterSlotDropdown(
 @Composable
 fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -> Unit) {
     var sliderValue by remember(value) { mutableFloatStateOf(value.toFloat()) }
-    var sizeText by remember(value) { mutableStateOf(value.toString()) }
+    var sizeText by remember(value) { mutableStateOf(formatReadingMetric(value)) }
+    var sizeEdited by remember(value) { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     val decreaseFontSize = stringResource(R.string.reader_size_decrease)
     val increaseFontSize = stringResource(R.string.reader_size_increase)
     fun step(delta: Int) {
         val next = (sliderValue.toDouble() + delta * 0.5)
             .coerceIn(ReaderPrefs.MIN_FONT_SIZE, ReaderPrefs.MAX_FONT_SIZE)
         sliderValue = next.toFloat()
-        sizeText = next.toString()
+        sizeText = formatReadingMetric(next)
+        sizeEdited = false
         onChanged(next)
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -522,7 +532,8 @@ fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -
                 enabled = enabled,
                 onValueChange = { sliderValue = it },
                 onValueChangeFinished = {
-                    sizeText = sliderValue.toDouble().toString()
+                    sizeText = formatReadingMetric(sliderValue.toDouble())
+                    sizeEdited = false
                     onChanged(sliderValue.toDouble())
                 },
                 valueRange = ReaderPrefs.MIN_FONT_SIZE.toFloat()..ReaderPrefs.MAX_FONT_SIZE.toFloat(),
@@ -535,6 +546,7 @@ fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -
                 value = sizeText,
                 onValueChange = { text ->
                     sizeText = text
+                    sizeEdited = true
                     text.toDoubleOrNull()
                         ?.takeIf { it.isFinite() && it in ReaderPrefs.MIN_FONT_SIZE..ReaderPrefs.MAX_FONT_SIZE }
                         ?.let { sliderValue = it.toFloat() }
@@ -546,9 +558,16 @@ fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -
                     imeAction = ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(onDone = {
-                    sizeText.toDoubleOrNull()
+                    val committed = sizeText.toDoubleOrNull()
                         ?.takeIf { it.isFinite() && it in ReaderPrefs.MIN_FONT_SIZE..ReaderPrefs.MAX_FONT_SIZE }
-                        ?.let(onChanged)
+                    if (sizeEdited && committed != null) {
+                        sliderValue = committed.toFloat()
+                        onChanged(committed)
+                        sizeText = formatReadingMetric(committed)
+                        sizeEdited = false
+                    }
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
                 }),
                 modifier = Modifier.weight(0.42f),
             )
@@ -775,9 +794,12 @@ private fun CustomMetricEditor(
     onReset: (() -> Unit)? = null,
     minimum: Double,
     maximum: Double,
-    commitOnDone: Boolean = false,
+    commitOnDone: Boolean = true,
 ) {
-    var text by remember(value) { mutableStateOf(value.toString()) }
+    var text by remember(value) { mutableStateOf(formatReadingMetric(value)) }
+    var edited by remember(value) { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.bodyMedium)
         Row(
@@ -787,7 +809,8 @@ private fun CustomMetricEditor(
         ) {
             IconButton(enabled = enabled && value > minimum, onClick = {
                 val next = com.chmouel.liseur.reader.CustomParagraphTypography.nudge(value, -1).coerceAtLeast(minimum)
-                text = next.toString()
+                text = formatReadingMetric(next)
+                edited = false
                 onChanged(next)
             }) {
                 Icon(Icons.Outlined.Remove, contentDescription = stringResource(R.string.reader_decrease_value))
@@ -796,6 +819,7 @@ private fun CustomMetricEditor(
                 value = text,
                 onValueChange = { next ->
                     text = next
+                    edited = true
                     if (!commitOnDone) {
                         next.toDoubleOrNull()?.takeIf { it.isFinite() && it in minimum..maximum }?.let(onChanged)
                     }
@@ -805,14 +829,18 @@ private fun CustomMetricEditor(
                 suffix = { if (suffix.isNotEmpty()) Text(suffix) },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Decimal,
-                    imeAction = if (commitOnDone) ImeAction.Done else ImeAction.Default,
+                    imeAction = ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(onDone = {
-                    if (commitOnDone) {
-                        text.toDoubleOrNull()
-                            ?.takeIf { it.isFinite() && it in minimum..maximum }
-                            ?.let(onChanged)
+                    val committed = text.toDoubleOrNull()
+                        ?.takeIf { it.isFinite() && it in minimum..maximum }
+                    if (commitOnDone && edited && committed != null) {
+                        onChanged(committed)
+                        text = formatReadingMetric(committed)
+                        edited = false
                     }
+                    keyboardController?.hide()
+                    focusManager.clearFocus()
                 }),
                 modifier = Modifier.weight(1f),
             )
