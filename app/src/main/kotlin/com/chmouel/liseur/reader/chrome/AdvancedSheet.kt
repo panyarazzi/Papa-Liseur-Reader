@@ -507,9 +507,13 @@ private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Un
                     val committed = text.toIntOrNull()
                         ?.takeIf { it in 0..48 }
                         ?.toFloat()
-                    if (edited && committed != null) {
-                        onChanged(committed)
-                        text = committed.toInt().toString()
+                    if (edited) {
+                        if (committed != null) {
+                            onChanged(committed)
+                            text = committed.toInt().toString()
+                        } else {
+                            text = value.toInt().toString()
+                        }
                         edited = false
                     }
                     keyboardController?.hide()
