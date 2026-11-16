@@ -411,11 +411,16 @@ object ExactLocatorAnchor {
                           : 0;
                       if (Math.abs(horizontalDelta) > 0.5) {
                         window.scrollBy(horizontalDelta, 0);
-                        let afterHorizontal = range.getClientRects()[0];
-                        if (afterHorizontal &&
-                            (afterHorizontal.left < 0 || afterHorizontal.right > window.innerWidth)) {
-                          root.scrollLeft += horizontalDelta;
-                          afterHorizontal = range.getClientRects()[0];
+                        const afterHorizontal = range.getClientRects()[0];
+                        const remainingX = afterHorizontal
+                          ? (afterHorizontal.left < 0
+                              ? afterHorizontal.left - 16
+                              : afterHorizontal.right > window.innerWidth
+                                ? afterHorizontal.left - 16
+                                : 0)
+                          : 0;
+                        if (Math.abs(remainingX) > 0.5) {
+                          root.scrollLeft += remainingX;
                         }
                       }
 
