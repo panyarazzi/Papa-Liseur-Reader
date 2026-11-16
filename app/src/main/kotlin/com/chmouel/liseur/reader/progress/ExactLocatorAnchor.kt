@@ -19,6 +19,7 @@ data class ViewportTextAnchor(
     val before: String,
     val highlight: String,
     val after: String,
+    val viewportTop: Double? = null,
 )
 
 /** App-owned exact locators, independent of fonts, columns, and viewport size. */
@@ -48,6 +49,7 @@ object ExactLocatorAnchor {
             before = json.optString("before").takeLastCodePoints(MAX_BEFORE),
             highlight = highlight.takeCodePoints(MAX_HIGHLIGHT),
             after = json.optString("after").takeCodePoints(MAX_AFTER),
+            viewportTop = json.optDouble("viewportTop").takeIf { it.isFinite() },
         )
     }
 
@@ -237,6 +239,23 @@ object ExactLocatorAnchor {
         runCatching { navigator.evaluateJavascript(CAPTURE_SCRIPT) }.getOrNull()
             ?.let { captureFromScript(it, native) }
 
+    /** The exact passage and its vertical position, kept only for an in-session reflow. */
+    data class ReflowCapture(val locator: Locator, val viewportTop: Double?)
+
+    @OptIn(ExperimentalReadiumApi::class)
+    suspend fun captureForReflow(
+        navigator: EpubNavigatorFragment,
+        native: Locator,
+    ): ReflowCapture {
+        val anchor = runCatching { navigator.evaluateJavascript(CAPTURE_SCRIPT) }
+            .getOrNull()
+            ?.let(::parseJavascriptResult)
+        return ReflowCapture(
+            locator = anchor?.let { mark(native, it) } ?: native,
+            viewportTop = anchor?.viewportTop,
+        )
+    }
+
     @OptIn(ExperimentalReadiumApi::class)
     suspend fun verify(navigator: EpubNavigatorFragment, locator: Locator): Boolean {
         if (!isExact(locator)) {
@@ -292,7 +311,11 @@ object ExactLocatorAnchor {
      * DOM range is the position the reader actually saved.
      */
     @OptIn(ExperimentalReadiumApi::class)
-    suspend fun reveal(navigator: EpubNavigatorFragment, locator: Locator): Boolean {
+    suspend fun reveal(
+        navigator: EpubNavigatorFragment,
+        locator: Locator,
+        viewportTop: Double? = null,
+    ): Boolean {
         if (!isExact(locator)) {
             Log.i("ReaderOpenTrace", "open-anchor-reveal-detail result=false reason=locator-not-exact href=${locator.href}")
             return false
@@ -307,7 +330,7 @@ object ExactLocatorAnchor {
             return false
         }
         return try {
-            val jsResult = navigator.evaluateJavascript(revealScript(locator))?.trim()
+            val jsResult = navigator.evaluateJavascript(revealScript(locator, viewportTop))?.trim()
             val result = jsResult == "true"
             Log.i(
                 "ReaderOpenTrace",
@@ -327,7 +350,7 @@ object ExactLocatorAnchor {
         }
     }
 
-    internal fun revealScript(locator: Locator): String {
+    internal fun revealScript(locator: Locator, viewportTop: Double? = null): String {
         val selector = locator.locations.otherLocations[CSS_SELECTOR] as String
         val quote = locator.text.before.orEmpty() +
             locator.text.highlight.orEmpty() +
@@ -340,6 +363,7 @@ object ExactLocatorAnchor {
               const quote = ${JSONObject.quote(quote)};
               const beforeLength = ${locator.text.before.orEmpty().length};
               const highlightLength = ${locator.text.highlight.orEmpty().length};
+              const targetTop = ${viewportTop?.takeIf { it.isFinite() } ?: -1.0};
               const walkerRange = (startOffset, endOffset) => {
                 const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
                 let node, consumed = 0, startNode = null, endNode = null;
@@ -373,16 +397,28 @@ object ExactLocatorAnchor {
                   const rect = range.getClientRects()[0];
                   if (rect && rect.width > 0 && rect.height > 0) {
                     const root = document.scrollingElement || document.documentElement;
-                    const horizontal = root.scrollWidth > root.clientWidth + 1;
-                    const start = horizontal ? rect.left : rect.top;
-                    const end = horizontal ? rect.right : rect.bottom;
-                    const extent = horizontal ? window.innerWidth : window.innerHeight;
-                    let delta = 0;
-                    if (start < 16) delta = start - 16;
-                    else if (end > extent - 16) delta = start - 16;
-                    if (delta !== 0) {
-                      if (horizontal) window.scrollBy(delta, 0);
-                      else window.scrollBy(0, delta);
+                    if (targetTop >= 0) {
+                      // Restore the first visible word to the same vertical
+                      // viewport coordinate it occupied before the reflow.
+                      const deltaY = rect.top - targetTop;
+                      if (Math.abs(deltaY) > 0.5) {
+                        window.scrollBy(0, deltaY);
+                        if (Math.abs(rect.top - targetTop) > 0.5) {
+                          root.scrollTop += deltaY;
+                        }
+                      }
+                    } else {
+                      const horizontal = root.scrollWidth > root.clientWidth + 1;
+                      const start = horizontal ? rect.left : rect.top;
+                      const end = horizontal ? rect.right : rect.bottom;
+                      const extent = horizontal ? window.innerWidth : window.innerHeight;
+                      let delta = 0;
+                      if (start < 16) delta = start - 16;
+                      else if (end > extent - 16) delta = start - 16;
+                      if (delta !== 0) {
+                        if (horizontal) window.scrollBy(delta, 0);
+                        else window.scrollBy(0, delta);
+                      }
                     }
                     return true;
                   }
@@ -472,7 +508,7 @@ object ExactLocatorAnchor {
     private val SIGNATURE_SCRIPT = """
         (() => {
           const el = document.scrollingElement || document.documentElement;
-          return el.scrollWidth + "x" + el.scrollHeight;
+          return el.clientWidth + "x" + el.clientHeight + ":" + el.scrollWidth + "x" + el.scrollHeight;
         })()
     """.trimIndent()
 
@@ -556,7 +592,8 @@ object ExactLocatorAnchor {
               const range = document.createRange();
               range.setStart(node, word.index);
               range.setEnd(node, word.index + word.text.length);
-              if (!Array.from(range.getClientRects()).some(visible)) continue;
+              const visibleRect = Array.from(range.getClientRects()).find(visible);
+              if (!visibleRect) continue;
               let block = node.parentElement;
               while (block && block !== document.body && !blockTags.has(tag(block))) {
                 block = block.parentElement;
@@ -572,7 +609,8 @@ object ExactLocatorAnchor {
               const highlight = Array.from(word.text).slice(0, 64).join("");
               const after = Array.from(afterRange.toString()).slice(0, 32).join("");
               return JSON.stringify({
-                cssSelector: selector(block), before, highlight, after
+                cssSelector: selector(block), before, highlight, after,
+                viewportTop: visibleRect.top
               });
             }
           }
