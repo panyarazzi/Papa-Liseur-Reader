@@ -87,11 +87,10 @@ internal object CustomParagraphTypography {
               else ratio = lineNumber;
             }
           }
-          // text-indent is inherited. Its computed value is an absolute
-          // length, so dividing by a descendant's font size can change a
-          // publisher's 2.2em when an ancestor supplied the declaration.
-          // Find the element where the computed value first differs from
-          // its parent, then express the value in that element's em scale.
+          // Read the resolved indent as a length, then convert it into the
+          // em scale of the paragraph that receives the custom rule. This
+          // preserves inherited publisher values even when the ancestor
+          // and paragraph use different font sizes.
           function indentPixelsFor(node) {
             var style = window.getComputedStyle(node);
             var raw = (style.textIndent || '0px').trim().toLowerCase();
