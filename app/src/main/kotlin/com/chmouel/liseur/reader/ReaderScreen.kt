@@ -1326,6 +1326,41 @@ internal fun ReaderScreen(
         )
     }
 
+    /**
+     * Changes the Compose viewport around Readium without letting its resize
+     * become an unrequested reading-position change.
+     */
+    fun preserveViewportReflow(
+        update: () -> Unit,
+        awaitChange: suspend () -> Unit,
+    ) {
+        val nav = navigatorNow
+        if (nav == null || !reflowableText) {
+            update()
+            return
+        }
+        effectScope.launch {
+            reflow.within {
+                val since = moves.mark(SystemClock.elapsedRealtime())
+                val anchor = if (since == IssuedMoves.NONE) {
+                    null
+                } else {
+                    captureReflowAnchor(nav, nav.currentLocator.value).also {
+                        publishUnverified(it.locator, NavigatorPositionEvent.PREFERENCE_REFLOW)
+                    }
+                }
+                val before = ExactLocatorAnchor.layoutSignature(nav)
+                update()
+                awaitChange()
+                layoutGeneration++
+                awaitReflowSettled(nav, before)
+                if (anchor != null && moves.unchangedSince(since)) {
+                    restoreAfterReflow(nav, anchor.locator, anchor.screenY)
+                }
+            }
+        }
+    }
+
     suspend fun openingExactAnchorArrived(nav: EpubNavigatorFragment, locator: Locator): Boolean {
         val elapsedMs = SystemClock.elapsedRealtime() - gateOpenedAt
         val budgetMs = OpeningRestoration.exactOpenVerifyBudgetMs(elapsedMs)
@@ -5533,10 +5568,30 @@ internal fun ReaderScreen(
             onCustomTextIndentChanged = onCustomTextIndentChanged,
             onPageMarginsChanged = onPrefsAction.setPageMargins,
             onFullscreenChanged = onPrefsAction.setFullscreen,
-            onTopProgressModeChanged = onPrefsAction.setTopProgressMode,
-            onProgressFontSizeChanged = onPrefsAction.setProgressFontSizeSp,
-            onMarginTopChanged = onPrefsAction.setMarginTopDp,
-            onMarginBottomChanged = onPrefsAction.setMarginBottomDp,
+            onTopProgressModeChanged = { mode ->
+                preserveViewportReflow(
+                    update = { onPrefsAction.setTopProgressMode(mode) },
+                    awaitChange = { snapshotFlow { prefs.topProgressMode }.first { it == mode } },
+                )
+            },
+            onProgressFontSizeChanged = { size ->
+                preserveViewportReflow(
+                    update = { onPrefsAction.setProgressFontSizeSp(size) },
+                    awaitChange = { snapshotFlow { prefs.progressFontSizeSp }.first { it == size } },
+                )
+            },
+            onMarginTopChanged = { value ->
+                preserveViewportReflow(
+                    update = { onPrefsAction.setMarginTopDp(value) },
+                    awaitChange = { snapshotFlow { prefs.marginTopDp }.first { it == value } },
+                )
+            },
+            onMarginBottomChanged = { value ->
+                preserveViewportReflow(
+                    update = { onPrefsAction.setMarginBottomDp(value) },
+                    awaitChange = { snapshotFlow { prefs.marginBottomDp }.first { it == value } },
+                )
+            },
             onColumnModeChanged = onPrefsAction.setColumnMode,
             onFooterModeChanged = onProgressAction.setFooterMode,
             onFooterFieldChanged = onProgressAction.setFooterField,
