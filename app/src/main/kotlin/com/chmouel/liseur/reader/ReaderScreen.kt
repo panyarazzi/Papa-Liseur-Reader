@@ -5623,25 +5623,25 @@ internal fun ReaderScreen(
             onTopProgressModeChanged = { mode ->
                 preserveViewportReflow(
                     update = { onPrefsAction.setTopProgressMode(mode) },
-                    awaitChange = { snapshotFlow { prefs.topProgressMode }.first { it == mode } },
+                    awaitChange = { prefsFlow.first { it.topProgressMode == mode } },
                 )
             },
             onProgressFontSizeChanged = { size ->
                 preserveViewportReflow(
                     update = { onPrefsAction.setProgressFontSizeSp(size) },
-                    awaitChange = { snapshotFlow { prefs.progressFontSizeSp }.first { it == size } },
+                    awaitChange = { prefsFlow.first { it.progressFontSizeSp == size } },
                 )
             },
             onMarginTopChanged = { value ->
                 preserveViewportReflow(
                     update = { onPrefsAction.setMarginTopDp(value) },
-                    awaitChange = { snapshotFlow { prefs.marginTopDp }.first { it == value } },
+                    awaitChange = { prefsFlow.first { it.marginTopDp == value } },
                 )
             },
             onMarginBottomChanged = { value ->
                 preserveViewportReflow(
                     update = { onPrefsAction.setMarginBottomDp(value) },
-                    awaitChange = { snapshotFlow { prefs.marginBottomDp }.first { it == value } },
+                    awaitChange = { prefsFlow.first { it.marginBottomDp == value } },
                 )
             },
             onColumnModeChanged = onPrefsAction.setColumnMode,
