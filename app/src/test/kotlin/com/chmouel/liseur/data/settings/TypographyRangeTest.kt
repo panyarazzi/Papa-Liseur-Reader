@@ -93,7 +93,7 @@ class TypographyRangeTest {
     }
 
     @Test
-    fun `font size range reaches 4.5 in tenth-size positions`() {
+    fun `font size range reaches maximum in tenth-size positions`() {
         assertEquals(4.5, ReaderPrefs.MAX_FONT_SIZE, 0.0)
         assertEquals(40, ReaderPrefs.FONT_SIZE_POSITIONS)
         assertEquals(0.1, (ReaderPrefs.MAX_FONT_SIZE - ReaderPrefs.MIN_FONT_SIZE) /
