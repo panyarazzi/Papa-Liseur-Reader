@@ -560,10 +560,15 @@ fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -
                 keyboardActions = KeyboardActions(onDone = {
                     val committed = sizeText.toDoubleOrNull()
                         ?.takeIf { it.isFinite() && it in ReaderPrefs.MIN_FONT_SIZE..ReaderPrefs.MAX_FONT_SIZE }
-                    if (sizeEdited && committed != null) {
-                        sliderValue = committed.toFloat()
-                        onChanged(committed)
-                        sizeText = formatReadingMetric(committed)
+                    if (sizeEdited) {
+                        if (committed != null) {
+                            sliderValue = committed.toFloat()
+                            onChanged(committed)
+                            sizeText = formatReadingMetric(committed)
+                        } else {
+                            sliderValue = value.toFloat()
+                            sizeText = formatReadingMetric(value)
+                        }
                         sizeEdited = false
                     }
                     keyboardController?.hide()
@@ -834,9 +839,13 @@ private fun CustomMetricEditor(
                 keyboardActions = KeyboardActions(onDone = {
                     val committed = text.toDoubleOrNull()
                         ?.takeIf { it.isFinite() && it in minimum..maximum }
-                    if (commitOnDone && edited && committed != null) {
-                        onChanged(committed)
-                        text = formatReadingMetric(committed)
+                    if (commitOnDone && edited) {
+                        if (committed != null) {
+                            onChanged(committed)
+                            text = formatReadingMetric(committed)
+                        } else {
+                            text = formatReadingMetric(value)
+                        }
                         edited = false
                     }
                     keyboardController?.hide()
