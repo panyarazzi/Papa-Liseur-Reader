@@ -571,8 +571,8 @@ fun ReadingFontSizeSlider(value: Double, enabled: Boolean, onChanged: (Double) -
                         }
                         sizeEdited = false
                     }
+                    focusManager.clearFocus(force = true)
                     keyboardController?.hide()
-                    focusManager.clearFocus()
                 }),
                 modifier = Modifier.weight(0.42f),
             )
@@ -848,8 +848,8 @@ private fun CustomMetricEditor(
                         }
                         edited = false
                     }
+                    focusManager.clearFocus(force = true)
                     keyboardController?.hide()
-                    focusManager.clearFocus()
                 }),
                 modifier = Modifier.weight(1f),
             )
