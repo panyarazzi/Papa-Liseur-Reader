@@ -1343,9 +1343,11 @@ internal fun ReaderScreen(
             reflow.within {
                 val since = moves.mark(SystemClock.elapsedRealtime())
                 val anchor = if (since == IssuedMoves.NONE) {
+                    reflowAnchor = null
                     null
                 } else {
-                    captureReflowAnchor(nav, nav.currentLocator.value).also {
+                    (reflowAnchor ?: captureReflowAnchor(nav, nav.currentLocator.value)).also {
+                        reflowAnchor = it
                         publishUnverified(it.locator, NavigatorPositionEvent.PREFERENCE_REFLOW)
                     }
                 }
@@ -2258,9 +2260,11 @@ internal fun ReaderScreen(
                 reflow.within {
                     val since = moves.mark(SystemClock.elapsedRealtime())
                     val anchor = if (since == IssuedMoves.NONE) {
+                        reflowAnchor = null
                         null
                     } else {
-                        captureReflowAnchor(nav, nav.currentLocator.value).also {
+                        (reflowAnchor ?: captureReflowAnchor(nav, nav.currentLocator.value)).also {
+                            reflowAnchor = it
                             publishUnverified(it.locator, NavigatorPositionEvent.PREFERENCE_REFLOW)
                         }
                     }
