@@ -111,17 +111,13 @@ internal object CustomParagraphTypography {
             }
             return number;
           }
+          // The custom rule is applied directly to every paragraph, so
+          // its em value must use the paragraph's own font size. An inherited
+          // publisher declaration may have been expressed in an ancestor's
+          // em scale; carrying that ancestor's number over unchanged makes
+          // the applied indent too small whenever the paragraph is smaller.
           var indentPixels = indentPixelsFor(el);
-          var indentOrigin = el;
-          var ancestor = el.parentElement;
-          while (ancestor) {
-            var ancestorPixels = indentPixelsFor(ancestor);
-            if (Math.abs(ancestorPixels - indentPixels) > 0.01) break;
-            indentOrigin = ancestor;
-            ancestor = ancestor.parentElement;
-          }
-          var originFontSize = parseFloat(window.getComputedStyle(indentOrigin).fontSize) || fontSize;
-          var indentEm = indentPixels / originFontSize;
+          var indentEm = indentPixels / fontSize;
           return (isFinite(ratio) ? String(ratio) : '') + '|' + (isFinite(indentEm) ? String(indentEm) : '');
         })();
     """.trimIndent()
