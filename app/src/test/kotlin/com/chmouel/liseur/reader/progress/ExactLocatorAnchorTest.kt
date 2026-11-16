@@ -173,6 +173,8 @@ class ExactLocatorAnchorTest {
         assertTrue(script.contains("const deltaY = rect.top - targetTop"))
         assertTrue(script.contains("window.scrollBy(0, deltaY)"))
         assertTrue(script.contains("root.scrollTop += remainingY"))
+        assertTrue(script.contains("document.body.style.transform"))
+        assertTrue(ExactLocatorAnchor.CLEAR_REFLOW_OFFSET_SCRIPT.contains("delete window.__liseurReflowOffset"))
     }
 
     @Test
