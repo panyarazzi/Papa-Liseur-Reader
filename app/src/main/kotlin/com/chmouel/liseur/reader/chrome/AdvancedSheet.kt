@@ -504,8 +504,9 @@ private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Un
                     imeAction = ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(onDone = {
-                    val committed = text.toFloatOrNull()
-                        ?.takeIf { it.isFinite() && it in 0f..48f }
+                    val committed = text.toIntOrNull()
+                        ?.takeIf { it in 0..48 }
+                        ?.toFloat()
                     if (edited && committed != null) {
                         onChanged(committed)
                         text = committed.toInt().toString()
