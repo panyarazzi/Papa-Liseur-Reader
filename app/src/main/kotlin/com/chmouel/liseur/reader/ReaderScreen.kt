@@ -971,7 +971,7 @@ internal fun ReaderScreen(
             web.getLocationOnScreen(origin)
             val pxPerCssPixel = web.resources.displayMetrics.density * web.scale
             if (pxPerCssPixel > 0f) {
-                origin[1] + raw.viewportTop * pxPerCssPixel
+                origin[1] + raw.viewportTop * pxPerCssPixel.toDouble()
             } else null
         } else null
         return ReflowAnchor(settled, screenY)
