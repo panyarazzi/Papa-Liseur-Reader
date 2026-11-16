@@ -2205,27 +2205,70 @@ internal fun ReaderScreen(
     // Apply the effective custom paragraph values (global or per-book). With neither value selected,
     // no style is injected and the EPUB's original paragraph CSS remains intact.
     var customParagraphStyleOn by remember { mutableStateOf<Triple<WebView, String, Pair<Double?, Double?>>?>(null) }
+    var appliedCustomTypography by remember(navigator) { mutableStateOf(customTypography) }
     LaunchedEffect(navigator, customTypography, reflowableText) {
         val nav = navigator ?: return@LaunchedEffect
         if (!reflowableText) return@LaunchedEffect
         val lineHeight = customTypography?.lineHeight
         val textIndent = customTypography?.textIndent
         val root = nav.publicationView
+        var preserveFirstApply = appliedCustomTypography != customTypography
+
         merge(nav.currentLocator.map { }, layoutPasses(root)).collect {
             val web = visibleWebView(root) ?: return@collect
             val href = web.url ?: return@collect
             val key = Triple(web, href, lineHeight to textIndent)
-            if (lineHeight == null && textIndent == null) {
-                if (customParagraphStyleOn?.first === web && customParagraphStyleOn?.second == href) {
-                    runCatching { nav.evaluateJavascript(CustomParagraphTypography.applyScript(null, null)) }
-                    customParagraphStyleOn = null
+            if (key == customParagraphStyleOn) {
+                if (preserveFirstApply) {
+                    appliedCustomTypography = customTypography
+                    preserveFirstApply = false
                 }
                 return@collect
             }
-            if (key == customParagraphStyleOn) return@collect
-            runCatching {
-                nav.evaluateJavascript(CustomParagraphTypography.applyScript(lineHeight, textIndent))
-            }.onSuccess { customParagraphStyleOn = key }
+
+            suspend fun applyCurrentStyle(): Boolean {
+                if (lineHeight == null && textIndent == null) {
+                    if (customParagraphStyleOn?.first === web && customParagraphStyleOn?.second == href) {
+                        val removed = runCatching {
+                            nav.evaluateJavascript(CustomParagraphTypography.applyScript(null, null))
+                        }.isSuccess
+                        if (removed) customParagraphStyleOn = null
+                        return removed
+                    }
+                    customParagraphStyleOn = null
+                    return true
+                }
+                val applied = runCatching {
+                    nav.evaluateJavascript(CustomParagraphTypography.applyScript(lineHeight, textIndent))
+                }.isSuccess
+                if (applied) customParagraphStyleOn = key
+                return applied
+            }
+
+            if (preserveFirstApply) {
+                reflow.within {
+                    val since = moves.mark(SystemClock.elapsedRealtime())
+                    val anchor = if (since == IssuedMoves.NONE) {
+                        null
+                    } else {
+                        captureReflowAnchor(nav, nav.currentLocator.value).also {
+                            publishUnverified(it.locator, NavigatorPositionEvent.PREFERENCE_REFLOW)
+                        }
+                    }
+                    val before = ExactLocatorAnchor.layoutSignature(nav)
+                    if (applyCurrentStyle()) {
+                        layoutGeneration++
+                        awaitReflowSettled(nav, before)
+                        if (anchor != null && moves.unchangedSince(since)) {
+                            restoreAfterReflow(nav, anchor.locator, anchor.screenY)
+                        }
+                        appliedCustomTypography = customTypography
+                        preserveFirstApply = false
+                    }
+                }
+            } else {
+                applyCurrentStyle()
+            }
         }
     }
 
