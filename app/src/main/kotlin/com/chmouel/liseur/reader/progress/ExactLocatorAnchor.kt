@@ -398,9 +398,31 @@ object ExactLocatorAnchor {
                   if (rect && rect.width > 0 && rect.height > 0) {
                     const root = document.scrollingElement || document.documentElement;
                     if (targetTop >= 0) {
+                      // Readium paginates EPUBs horizontally. The locator's
+                      // progression is only an approximation after reflow,
+                      // so the exact quote can be on a neighbouring column.
+                      // Bring that quote back into the active viewport first;
+                      // otherwise the vertical correction below can succeed
+                      // while the reader remains on the wrong page.
+                      const horizontalDelta = rect.left < 0
+                        ? rect.left - 16
+                        : rect.right > window.innerWidth
+                          ? rect.left - 16
+                          : 0;
+                      if (Math.abs(horizontalDelta) > 0.5) {
+                        window.scrollBy(horizontalDelta, 0);
+                        let afterHorizontal = range.getClientRects()[0];
+                        if (afterHorizontal &&
+                            (afterHorizontal.left < 0 || afterHorizontal.right > window.innerWidth)) {
+                          root.scrollLeft += horizontalDelta;
+                          afterHorizontal = range.getClientRects()[0];
+                        }
+                      }
+
                       // Restore the first visible word to the same vertical
                       // viewport coordinate it occupied before the reflow.
-                      const deltaY = rect.top - targetTop;
+                      const currentRect = range.getClientRects()[0] || rect;
+                      const deltaY = currentRect.top - targetTop;
                       if (Math.abs(deltaY) > 0.5) {
                         window.scrollBy(0, deltaY);
                         const afterScroll = range.getClientRects()[0];
