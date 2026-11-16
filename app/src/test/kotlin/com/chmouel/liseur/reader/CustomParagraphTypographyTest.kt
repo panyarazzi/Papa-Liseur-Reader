@@ -46,12 +46,12 @@ class CustomParagraphTypographyTest {
     }
 
     @Test
-    fun metricsProbeFindsTheOriginOfInheritedTextIndent() {
+    fun metricsProbeConvertsInheritedIndentIntoTheParagraphFontScale() {
         val script = CustomParagraphTypography.READ_METRICS_SCRIPT
         assertTrue(script.contains("function indentPixelsFor(node)"))
-        assertTrue(script.contains("var indentOrigin = el"))
-        assertTrue(script.contains("var originFontSize = parseFloat"))
-        assertTrue(script.contains("indentPixels / originFontSize"))
+        assertTrue(script.contains("var indentPixels = indentPixelsFor(el)"))
+        assertTrue(script.contains("var indentEm = indentPixels / fontSize"))
+        assertFalse(script.contains("indentPixels / originFontSize"))
     }
 
     @Test
