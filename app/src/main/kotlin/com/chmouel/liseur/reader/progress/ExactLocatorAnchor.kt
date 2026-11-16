@@ -407,6 +407,21 @@ object ExactLocatorAnchor {
                         const remainingY = afterScroll ? afterScroll.top - targetTop : 0;
                         if (Math.abs(remainingY) > 0.5) {
                           root.scrollTop += remainingY;
+                          const afterRootScroll = range.getClientRects()[0];
+                          const finalDelta = afterRootScroll ? afterRootScroll.top - targetTop : remainingY;
+                          if (Math.abs(finalDelta) > 0.5 && document.body) {
+                            const state = window.__liseurReflowOffset || {
+                              inlineTransform: document.body.style.transform,
+                              baseTransform: window.getComputedStyle(document.body).transform,
+                              offset: 0
+                            };
+                            state.offset -= finalDelta;
+                            const base = state.baseTransform && state.baseTransform !== "none"
+                              ? state.baseTransform + " "
+                              : "";
+                            document.body.style.transform = base + "translateY(" + state.offset + "px)";
+                            window.__liseurReflowOffset = state;
+                          }
                         }
                       }
                     } else {
@@ -506,6 +521,17 @@ object ExactLocatorAnchor {
         if (size <= count) return this
         return substring(offsetByCodePoints(0, size - count))
     }
+
+    /** Removes the temporary visual offset on the next real reader movement. */
+    internal val CLEAR_REFLOW_OFFSET_SCRIPT = """
+        (() => {
+          const state = window.__liseurReflowOffset;
+          if (!state || !document.body) return false;
+          document.body.style.transform = state.inlineTransform || "";
+          try { delete window.__liseurReflowOffset; } catch (ignored) {}
+          return true;
+        })()
+    """.trimIndent()
 
     private val SIGNATURE_SCRIPT = """
         (() => {
