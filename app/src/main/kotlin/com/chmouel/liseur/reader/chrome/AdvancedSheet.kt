@@ -516,8 +516,8 @@ private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Un
                         }
                         edited = false
                     }
+                    focusManager.clearFocus(force = true)
                     keyboardController?.hide()
-                    focusManager.clearFocus()
                 }),
                 modifier = Modifier.weight(1f),
             )
