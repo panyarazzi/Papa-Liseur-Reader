@@ -519,6 +519,7 @@ private fun DpMarginEditor(label: String, value: Float, onChanged: (Float) -> Un
             IconButton(enabled = value < 48f, onClick = {
                 val next = (value + 1f).coerceAtMost(48f)
                 text = next.toInt().toString()
+                edited = false
                 onChanged(next)
             }) {
                 Icon(Icons.Outlined.Add, contentDescription = "Increase $label")
