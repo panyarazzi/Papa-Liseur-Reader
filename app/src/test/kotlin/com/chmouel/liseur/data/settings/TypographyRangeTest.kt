@@ -93,6 +93,15 @@ class TypographyRangeTest {
     }
 
     @Test
+    fun `font size range reaches 4.5 in tenth-size positions`() {
+        assertEquals(4.5, ReaderPrefs.MAX_FONT_SIZE, 0.0)
+        assertEquals(40, ReaderPrefs.FONT_SIZE_POSITIONS)
+        assertEquals(0.1, (ReaderPrefs.MAX_FONT_SIZE - ReaderPrefs.MIN_FONT_SIZE) /
+            (ReaderPrefs.FONT_SIZE_POSITIONS - 1), 1e-9)
+        assertEquals(4.5, TypographyRange.FONT_SIZE.require(4.5), 1e-9)
+    }
+
+    @Test
     fun `snapping lands on a notch, counted rather than added up`() {
         for (tick in 0..slider.tickCount) {
             val exact = slider.min + tick * slider.increment
